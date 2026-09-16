@@ -26,7 +26,6 @@ const pairs = [
  ['target-user-address','developerTargetToUserAddress','선배님'],
  ['target-user-address-strength','developerTargetToUserAddressStrength','strict'],
  ['target-user-address-frequency','developerTargetToUserAddressFrequency','often'],
- ['register-shift-monitor','developerRegisterShiftMonitor',true],
 ];
 for (const [id,,value] of pairs) nodes.set(`#verba-deep-developer-${id}`,typeof value==='boolean'?new Input():new Select());
 const panel = {querySelector: s => nodes.get(s)||null};

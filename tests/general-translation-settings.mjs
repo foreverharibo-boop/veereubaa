@@ -14,8 +14,8 @@ const settings = {...defaults,developerMode:false,developerOutputSplitCount:3,
     developerRelationshipExperimentEnabled:true,developerSpeechDistance:'formal',
     developerTargetToUserRegister:'banmal',developerTargetToOtherRegister:'jondaetmal',
     developerTargetToUserAddress:'RELATIONSHIP_SENTINEL',developerTargetToUserAddressStrength:'strict',
-    developerTargetToUserAddressFrequency:'often',developerRegisterShiftMonitor:true};
-const general = Function('settings','escapeHtml','lastRegisterShiftMonitorSummary',defs
+    developerTargetToUserAddressFrequency:'often'};
+const general = Function('settings','escapeHtml',defs
     +between('function generalSplitSettingsMarkup(', 'function developerSettingsMarkup(')
     +'return generalSplitSettingsMarkup()+generalRelationshipSettingsMarkup();');
 assert.equal(general(settings,String,''),general({...settings,developerMode:true},String,''));
@@ -34,7 +34,7 @@ assert.match(style,/#verba-deep-settings #verba-deep-developer-output-split-lab,
 const before=structuredClone(settings);
 const shutdown=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
 Function('settings',shutdown)(settings);
-for (const key of Object.keys(before).filter(k=>/Relationship|SpeechDistance|TargetTo|RegisterShift|OutputSplit/.test(k))) assert.equal(settings[key],before[key],key);
+for (const key of Object.keys(before).filter(k=>/Relationship|SpeechDistance|TargetTo|OutputSplit/.test(k))) assert.equal(settings[key],before[key],key);
 
 // Prompt content remains identical across the developer lock; only target speech receives the rules.
 const segmented=core.segmentSource('Alex smiled. "Come here."');
@@ -52,8 +52,8 @@ assert.ok(!core.buildInputPrompt('안녕',settings,'male',identity).includes('RE
 class Input {}
 class Select {}
 let saves=0;
-const change=Function('settings','target','HTMLInputElement','HTMLSelectElement','saveSettings','syncDeveloperQualityControls','panel','renderRegisterShiftMonitorStatus',
-    defs+'let lastRegisterShiftMonitorSummary="";'+between("        if (target.id === 'verba-deep-developer-relationship-enabled'", "        if (target.id === 'verba-deep-quality-audit-enabled')"));
+const change=Function('settings','target','HTMLInputElement','HTMLSelectElement','saveSettings','syncDeveloperQualityControls','panel',
+    defs+between("        if (target.id === 'verba-deep-developer-relationship-enabled'", "        if (target.id === 'verba-deep-quality-audit-enabled')"));
 const choices=[
     ['relationship-enabled','developerRelationshipExperimentEnabled',false,Input],
     ['relationship-enabled','developerRelationshipExperimentEnabled',true,Input],
@@ -63,7 +63,6 @@ const choices=[
     ['target-user-address','developerTargetToUserAddress','선배님',Input],
     ['target-user-address-strength','developerTargetToUserAddressStrength','prefer',Select],
     ['target-user-address-frequency','developerTargetToUserAddressFrequency','minimal',Select],
-    ['register-shift-monitor','developerRegisterShiftMonitor',true,Input],
 ];
 for(const [id,key,value,Type] of choices){
     change(settings,Object.assign(new Type(),{id:'verba-deep-developer-'+id,checked:value,value}),Input,Select,()=>saves++,()=>{},{},()=>{});
@@ -71,16 +70,7 @@ for(const [id,key,value,Type] of choices){
 }
 assert.equal(saves,choices.length);
 
-// Local register monitor actually executes in general mode, with no AI dependency.
-const monitor=Function('settings','madKoreanExclusiveMode','strongKoreanRegisterProfile','renderRegisterShiftMonitorStatus','notify','console',
-    'let lastRegisterShiftMonitorSummary="";'+between('function runDeveloperRegisterShiftMonitor(', 'async function runExperimentalQualityAudit(')
-    +'return runDeveloperRegisterShiftMonitor;');
-let warnings=0, renders=0;
-const run=monitor(settings,()=>false,()=>({kind:'mixed'}),()=>renders++,()=>warnings++,{warn(){}});
-const rows={segments:[{id:'s1'}]}, translations=new Map([['s1','TEST']]);
-assert.equal(run(rows,translations,{s1:'target_dialogue'}).issues.length,1);
-assert.equal(warnings,1);assert.equal(renders,1);
-assert.equal(run(rows,translations,{s1:'other_dialogue'}).issues.length,0);
-settings.developerRegisterShiftMonitor=false;
-assert.equal(run(rows,translations,{s1:'target_dialogue'}).issues.length,0);
-console.log('PASS: general split/relationship layout, solid borders, lock independence, target-only prompts, saved settings and local monitor.');
+// The removed monitor has no UI, settings, runtime or styling path.
+assert.doesNotMatch(index,/developerRegisterShiftMonitor|lastRegisterShiftMonitorSummary|runDeveloperRegisterShiftMonitor|renderRegisterShiftMonitorStatus|strongKoreanRegisterProfile|register-shift-monitor/);
+assert.doesNotMatch(style,/register-monitor/);
+console.log('PASS: general split/relationship layout, solid borders, lock independence, target-only prompts, saved settings and complete monitor removal.');

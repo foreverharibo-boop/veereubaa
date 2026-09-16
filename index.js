@@ -4,7 +4,7 @@ import { normalizeBaseTranslationCustom, baseTranslationEditorMarkup, bindBaseTr
 import { sanitizeDebugValue, debugErrorChain, classifyDebugError, rememberRequestError, readErrorResponse, protectedRecoverySnapshot } from './diagnostics.js';
 import { createOutputTiming, outputTimingText } from './timing.js';
 import { bindPromptExpandEditors } from './prompt-editor.js';
-import { collectSegmentResponse } from './response-parser.js';
+import { collectSegmentResponse, repairUnexpectedProseBreaks } from './response-parser.js';
 import { minimalOutputEnabled, translateMinimalOutput } from './minimal-output.js';
 import { outputSplitCount, runOutputBatches, createSplitRequestQueue } from './output-splitting.js';
 import {
@@ -44,7 +44,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.70';
+const EXTENSION_VERSION = '0.5.71';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -234,7 +234,6 @@ const DEFAULT_SETTINGS = {
     developerTargetToUserAddressFrequency: 'natural',
     developerTargetToUserRegister: 'unset',
     developerTargetToOtherRegister: 'unset',
-    developerRegisterShiftMonitor: false,
     developerHongjinFlavorEnabled: false,
     developerMadKoreanOutputEnabled: false,
     developerMadKoreanTargetToUserRegister: 'source',
@@ -366,7 +365,6 @@ settings.developerTargetToUserRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.som
 settings.developerTargetToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === settings.developerTargetToOtherRegister)
     ? settings.developerTargetToOtherRegister
     : 'unset';
-settings.developerRegisterShiftMonitor = settings.developerRegisterShiftMonitor === true;
 settings.developerHongjinFlavorEnabled = settings.developerHongjinFlavorEnabled === true;
 settings.developerMadKoreanOutputEnabled = settings.developerMadKoreanOutputEnabled === true;
 settings.developerMadKoreanTargetToUserRegister = DEVELOPER_MAD_KOREAN_REGISTER_OPTIONS.some(option => option.value === settings.developerMadKoreanTargetToUserRegister)
@@ -603,7 +601,6 @@ let scopedParallelRequestActive = 0;
 const enqueueSplitOutputRequest = createSplitRequestQueue(3);
 let requestTail = Promise.resolve();
 let lastQualityAuditSummary = '아직 실행되지 않음';
-let lastRegisterShiftMonitorSummary = '아직 실행되지 않음';
 let chatSaveTimer = null;
 let promptEditorBackupTimer = null;
 let uiRefreshTimer = null;
@@ -1102,7 +1099,6 @@ function normalizedPromptPresetDeveloperSettings(value = null) {
         developerTargetToUserAddressFrequency: valid(DEVELOPER_USER_ADDRESS_FREQUENCY_OPTIONS, raw.developerTargetToUserAddressFrequency, DEFAULT_SETTINGS.developerTargetToUserAddressFrequency),
         developerTargetToUserRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToUserRegister, DEFAULT_SETTINGS.developerTargetToUserRegister),
         developerTargetToOtherRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToOtherRegister, DEFAULT_SETTINGS.developerTargetToOtherRegister),
-        developerRegisterShiftMonitor: raw.developerRegisterShiftMonitor === true,
 
         developerMadKoreanOutputEnabled: raw.developerMadKoreanOutputEnabled === true,
         developerMadKoreanTargetToUserRegister: valid(DEVELOPER_MAD_KOREAN_REGISTER_OPTIONS, raw.developerMadKoreanTargetToUserRegister, DEFAULT_SETTINGS.developerMadKoreanTargetToUserRegister),
@@ -1148,7 +1144,6 @@ function currentPromptPresetDeveloperSettingsSnapshot(source = settings) {
         developerTargetToUserAddressFrequency: source.developerTargetToUserAddressFrequency,
         developerTargetToUserRegister: source.developerTargetToUserRegister,
         developerTargetToOtherRegister: source.developerTargetToOtherRegister,
-        developerRegisterShiftMonitor: source.developerRegisterShiftMonitor,
 
         developerMadKoreanOutputEnabled: source.developerMadKoreanOutputEnabled,
         developerMadKoreanTargetToUserRegister: source.developerMadKoreanTargetToUserRegister,
@@ -1740,7 +1735,6 @@ function applyPromptPresetDeveloperSettings(value) {
     settings.developerTargetToUserAddressFrequency = next.developerTargetToUserAddressFrequency;
     settings.developerTargetToUserRegister = next.developerTargetToUserRegister;
     settings.developerTargetToOtherRegister = next.developerTargetToOtherRegister;
-    settings.developerRegisterShiftMonitor = next.developerRegisterShiftMonitor;
 
     settings.developerMadKoreanOutputEnabled = next.developerMadKoreanOutputEnabled;
     settings.developerMadKoreanTargetToUserRegister = next.developerMadKoreanTargetToUserRegister;
@@ -1870,7 +1864,6 @@ function applyPromptPresetTranslationSettings(value) {
     setControlValue('#verba-deep-developer-target-user-address', settings.developerTargetToUserAddress);
     setControlValue('#verba-deep-developer-target-user-address-strength', settings.developerTargetToUserAddressStrength);
     setControlValue('#verba-deep-developer-target-user-address-frequency', settings.developerTargetToUserAddressFrequency);
-    setCheckedValue('#verba-deep-developer-register-shift-monitor', settings.developerRegisterShiftMonitor);
 
     if (appliedDeveloperSettings) refreshSettingsPanelForDeveloperMode();
     syncDeveloperQualityControls(document.querySelector('#verba-deep-settings'));
@@ -4238,108 +4231,6 @@ function localQualityAuditCandidates(segmented, translations, speakerScopes) {
     return suspects;
 }
 
-function strongKoreanRegisterProfile(value) {
-    const polite = koreanPoliteEndingCount(value);
-    const casual = koreanCasualEndingCount(value);
-    if (polite >= 2 && casual === 0) return { kind: 'polite', polite, casual };
-    if (casual >= 2 && polite === 0) return { kind: 'casual', polite, casual };
-    if (polite >= 2 && casual >= 2) return { kind: 'mixed', polite, casual };
-    return { kind: 'unclear', polite, casual };
-}
-
-function runDeveloperRegisterShiftMonitor(segmented, translations, speakerScopes) {
-    if (
-        madKoreanExclusiveMode()
-        || !settings.developerRelationshipExperimentEnabled
-        || !settings.developerRegisterShiftMonitor
-    ) {
-        return { issues: [] };
-    }
-
-    const rows = (segmented.segments || [])
-        .filter(segment => (speakerScopes?.[segment.id] || '') === 'target_dialogue')
-        .map(segment => ({
-            segment,
-            translation: String(translations.get(segment.id) || ''),
-        }))
-        .filter(row => row.translation.trim())
-        .map(row => ({
-            ...row,
-            profile: strongKoreanRegisterProfile(row.translation),
-        }));
-
-    const issues = [];
-
-    for (const row of rows) {
-        if (row.profile.kind === 'mixed') {
-            issues.push({
-                id: row.segment.id,
-                reason: '한 대사 구간 안에서 존댓말·반말 종결이 강하게 혼재',
-            });
-        }
-    }
-
-    let previousStrong = null;
-    for (const row of rows) {
-        if (!['polite', 'casual'].includes(row.profile.kind)) continue;
-        if (previousStrong && previousStrong.profile.kind !== row.profile.kind) {
-            issues.push({
-                id: row.segment.id,
-                reason: `연속 TARGET CHARACTER 대사에서 ${previousStrong.profile.kind === 'polite' ? '존댓말→반말' : '반말→존댓말'} 급변 의심`,
-            });
-        }
-        previousStrong = row;
-    }
-
-    // If USER and OTHER are explicitly configured to the SAME speech level,
-    // listener identity no longer matters for local validation.
-    const userRegister = settings.developerTargetToUserRegister;
-    const otherRegister = settings.developerTargetToOtherRegister;
-    const commonExpected = userRegister !== 'unset' && userRegister === otherRegister
-        ? userRegister
-        : null;
-
-    if (commonExpected) {
-        for (const row of rows) {
-            if (commonExpected === 'banmal' && row.profile.kind === 'polite') {
-                issues.push({
-                    id: row.segment.id,
-                    reason: '청자별 설정이 모두 반말인데 존댓말 종결이 강하게 감지됨',
-                });
-            }
-            if (commonExpected === 'jondaetmal' && row.profile.kind === 'casual') {
-                issues.push({
-                    id: row.segment.id,
-                    reason: '청자별 설정이 모두 존댓말인데 반말 종결이 강하게 감지됨',
-                });
-            }
-        }
-    }
-
-    const uniqueIssues = [];
-    const seen = new Set();
-    for (const issue of issues) {
-        const key = `${issue.id}\u0000${issue.reason}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        uniqueIssues.push(issue);
-    }
-
-    lastRegisterShiftMonitorSummary = uniqueIssues.length
-        ? `급변 의심 ${uniqueIssues.length}건`
-        : rows.length
-            ? '최근 이상 없음'
-            : '검사할 캐릭터 대사 없음';
-    renderRegisterShiftMonitorStatus();
-
-    if (uniqueIssues.length) {
-        console.warn('[베에르으바아] 존댓말·반말 급변 감시', uniqueIssues);
-        notify(`말투·호칭: 존댓말·반말 급변 의심 ${uniqueIssues.length}건을 감지했어요. 자동 수정은 하지 않았습니다.`, 'warning');
-    }
-
-    return { issues: uniqueIssues };
-}
-
 async function runExperimentalQualityAudit({
     segmented,
     translations,
@@ -4543,8 +4434,6 @@ async function translateOutputText(source, options = {}) {
     });
 
     normalizeTaggedOutputTranslations(segmented, translations);
-
-    runDeveloperRegisterShiftMonitor(segmented, translations, speakerScopes);
 
     const remaining = [...translations.values()].flatMap(text => findBannedWords(text, settings));
     if (remaining.length) {
@@ -8577,7 +8466,7 @@ async function retranslateSelection(snapshot) {
         let replacement = '';
         if (candidateMode) {
             const received = (await requestSelectionCandidates(prompt, { signal: controller.signal, stage: 'selection-candidates' }))
-                .map(candidate => repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(candidate, speakerIdentity)));
+                .map(candidate => repairUnexpectedProseBreaks(repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(candidate, speakerIdentity)), expected[0]));
             const candidates = received.filter(candidate => {
                 const text = String(candidate || '').trim();
                 if (!text || sameRetranslationWording(text, snapshot.selected)) return false;
@@ -9548,24 +9437,6 @@ function generalRelationshipSettingsMarkup() {
                                 </section>
 
                                 <section class="verba-deep-relationship-section">
-                                    <label class="verba-deep-check-row">
-                                        <input type="checkbox" id="verba-deep-developer-register-shift-monitor" ${settings.developerRegisterShiftMonitor ? 'checked' : ''}>
-                                        <span>존댓말·반말 급변 감시</span>
-                                    </label>
-
-                                    <div class="verba-deep-quality-audit-status-row verba-deep-register-monitor-status-row">
-                                        <span>최근 감시</span>
-                                        <b id="verba-deep-register-shift-monitor-status">${escapeHtml(lastRegisterShiftMonitorSummary)}</b>
-                                    </div>
-
-                                    <div class="verba-deep-help verba-deep-relationship-help">
-                                        <span>추가 API 없이 최종 TARGET CHARACTER 대사만 로컬에서 검사합니다.</span>
-                                        <span>존댓말·반말이 한 대사 안에서 강하게 섞이거나, 연속 대사 사이에서 갑자기 뒤집히는 패턴만 보수적으로 감지합니다.</span>
-                                        <span>감지해도 자동 수정하지 않고 경고만 표시합니다.</span>
-                                    </div>
-                                </section>
-
-                                <section class="verba-deep-relationship-section">
                                     <div class="verba-deep-relationship-section-title">캐릭터 → USER 호칭</div>
 
                                     <label for="verba-deep-developer-target-user-address">호칭 고정</label>
@@ -9769,7 +9640,6 @@ function refreshSettingsPanelForDeveloperMode() {
     current.replaceWith(replacement);
     syncDeveloperQualityControls(panel);
     renderQualityAuditStatus();
-    renderRegisterShiftMonitorStatus();
 }
 
 function enabledQualityAuditChecks() {
@@ -9785,11 +9655,6 @@ function enabledQualityAuditChecks() {
 function renderQualityAuditStatus() {
     const target = document.querySelector('#verba-deep-quality-audit-status');
     if (target) target.textContent = lastQualityAuditSummary;
-}
-
-function renderRegisterShiftMonitorStatus() {
-    const target = document.querySelector('#verba-deep-register-shift-monitor-status');
-    if (target) target.textContent = lastRegisterShiftMonitorSummary;
 }
 
 function bindAutoInputSetting(panel) {
@@ -10664,14 +10529,6 @@ function injectSettingsPanel() {
                 ? target.value
                 : 'natural';
             saveSettings();
-            return;
-        }
-
-        if (target.id === 'verba-deep-developer-register-shift-monitor' && target instanceof HTMLInputElement) {
-            settings.developerRegisterShiftMonitor = target.checked;
-            lastRegisterShiftMonitorSummary = target.checked ? '활성화됨 · 다음 아웃풋부터 감시' : '비활성화됨';
-            saveSettings();
-            renderRegisterShiftMonitorStatus();
             return;
         }
 

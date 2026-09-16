@@ -2191,33 +2191,8 @@
     opacity: 1 !important;
 }
 
-.verba-deep-register-monitor-status-row {
-    display: grid !important;
-    grid-template-columns: minmax(72px, auto) minmax(0, 1fr) !important;
-    align-items: start !important;
-    gap: 8px 12px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    margin: 1px 0 0 !important;
-    padding: 9px 10px !important;
-    box-sizing: border-box !important;
-    line-height: 1.45 !important;
-}
 
-.verba-deep-register-monitor-status-row > span,
-.verba-deep-register-monitor-status-row > b {
-    min-width: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    line-height: 1.45 !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-}
 
-.verba-deep-register-monitor-status-row > b {
-    text-align: right !important;
-}
 
 .verba-deep-relationship-notes {
     padding-bottom: 2px !important;
@@ -2232,14 +2207,7 @@
         padding-top: 11px !important;
     }
 
-    .verba-deep-register-monitor-status-row {
-        grid-template-columns: 1fr !important;
-        gap: 3px !important;
-    }
 
-    .verba-deep-register-monitor-status-row > b {
-        text-align: left !important;
-    }
 
     .verba-deep-relationship-help {
         line-height: 1.58 !important;
@@ -3143,8 +3111,7 @@
     padding: 0 !important;
 }
 
-#verba-deep-settings .verba-deep-quality-audit-status-row,
-#verba-deep-settings .verba-deep-register-monitor-status-row {
+#verba-deep-settings .verba-deep-quality-audit-status-row {
     min-height: 0 !important;
     margin-top: 4px !important;
     padding: 5px 6px !important;

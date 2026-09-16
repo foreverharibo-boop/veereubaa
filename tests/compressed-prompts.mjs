@@ -249,7 +249,7 @@ for (const strength of ['light', 'strong', 'maximum']) {
                 absent(prompt, 'Keep the source meaning and rough sentence shape recognizable', label);
                 absent(prompt, 'repair literal stiffness while keeping the rough source shape', label);
                 contains(prompt, 'Mere recoverability is insufficient.', label);
-                contains(prompt, 'Do not retain English sentence shape for LIGHT or increase omission for STRONG/MAXIMUM.', label);
+                contains(prompt, 'Do not retain source sentence shape for LIGHT or increase omission for STRONG/MAXIMUM.', label);
                 contains(prompt, 'voice settings never authorize added/altered ellipses or invented metaphors.', label);
                 const priority = prompt.slice(prompt.indexOf('- KOREAN-ORIGINAL COMPOSITION and PRIMARY CAST REFERENCES'),
                     prompt.indexOf('- The voice exception permits only'));

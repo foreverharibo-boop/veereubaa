@@ -77,7 +77,7 @@ const madSettings = { ...standardSettings, developerMadKoreanOutputEnabled: true
 const madPrompt = builders.full(madSettings);
 has(madPrompt, 'MAD KOREAN — ULTRA-COMPACT');
 has(madPrompt, 'KIM HONG-JIN VOICE — ULTRA');
-has(madPrompt, 'USER-DIRECTED INSULT FIREWALL');
+has(madPrompt, 'USER-DIRECTED PROFANITY GUARD');
 has(madPrompt, 'PERSONAL PRONOUN DEFAULT:');
 has(madPrompt, 'he/him → 그, she/her → 그녀, his → 그의, possessive her → 그녀의');
 has(madPrompt, '.../…/……');
@@ -86,13 +86,13 @@ has(madPrompt, 'metadata/date/weekday/time/weather/location');
 has(madPrompt, 'BAN_SENTINEL');
 for (const value of ['GLOBAL_SENTINEL', 'ALL_DIALOGUE_SENTINEL', 'TARGET_DIALOGUE_SENTINEL', 'OTHER_DIALOGUE_SENTINEL']) lacks(madPrompt, value);
 assert.equal(count(madPrompt, 'TOP PRIORITY — NO MISOGYNY'), 1); checks += 1;
-assert.equal(count(madPrompt, 'USER-DIRECTED INSULT FIREWALL'), 1); checks += 1;
+assert.equal(count(madPrompt, 'USER-DIRECTED PROFANITY GUARD'), 1); checks += 1;
 lacks(builders.narration(madSettings), 'KIM HONG-JIN VOICE — ULTRA');
 has(builders.target(madSettings), 'KIM HONG-JIN VOICE — ULTRA');
 
 for (const compressed of [false, true]) {
     const prompt = builders.target({ ...base, developerCompressedPromptEnabled: compressed, developerHongjinFlavorEnabled: true });
-    has(prompt, 'USER-DIRECTED INSULT FIREWALL');
+    has(prompt, 'USER-DIRECTED PROFANITY GUARD');
 }
 
 // Presets retain the extreme choice and normalize conflicting compression flags.
