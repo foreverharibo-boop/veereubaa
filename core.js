@@ -1027,8 +1027,7 @@ const DEVELOPER_USER_ADDRESS_STRENGTH_RULES = {
 
 function developerRelationshipExperimentBlock(settings = {}, scope = 'narration') {
     if (
-        settings?.developerMode !== true
-        || settings?.developerRelationshipExperimentEnabled !== true
+        settings?.developerRelationshipExperimentEnabled !== true
         || scope !== 'target_dialogue'
     ) {
         return '';
@@ -2572,8 +2571,7 @@ ${madKoreanExclusiveEnabled(settings) ? '' : `${dialogueSubjectVocativeRule()}\n
 
 function compactRelationshipBlock(settings = {}, scope = 'mixed') {
     if (
-        settings?.developerMode !== true
-        || settings?.developerRelationshipExperimentEnabled !== true
+        settings?.developerRelationshipExperimentEnabled !== true
         || !['mixed', 'dialogue_mixed', 'target_dialogue'].includes(scope)
     ) return '';
     const address = String(settings.developerTargetToUserAddress || '').trim().slice(0, 40);

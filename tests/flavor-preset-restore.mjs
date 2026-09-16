@@ -19,9 +19,18 @@ const pairs = [
  ['hongjin-playfulness','developerHongjinPlayfulness','high'],
  ['hongjin-age-band','developerHongjinAgeBand','late20s'],
  ['hongjin-oppa-frequency','developerHongjinOppaFrequency','often'],
+ ['relationship-enabled','developerRelationshipExperimentEnabled',true],
+ ['speech-distance','developerSpeechDistance','formal'],
+ ['target-user-register','developerTargetToUserRegister','banmal'],
+ ['target-other-register','developerTargetToOtherRegister','jondaetmal'],
+ ['target-user-address','developerTargetToUserAddress','선배님'],
+ ['target-user-address-strength','developerTargetToUserAddressStrength','strict'],
+ ['target-user-address-frequency','developerTargetToUserAddressFrequency','often'],
+ ['register-shift-monitor','developerRegisterShiftMonitor',true],
 ];
 for (const [id,,value] of pairs) nodes.set(`#verba-deep-developer-${id}`,typeof value==='boolean'?new Input():new Select());
 const panel = {querySelector: s => nodes.get(s)||null};
+nodes.set('#verba-deep-developer-output-split-count',new Select());
 nodes.set('#verba-deep-settings',panel);
 for (const name of ['mad-korean','hongjin']) {
  const controls = pairs.filter(([id,,v])=>id.startsWith(name)&&typeof v!=='boolean').map(([id])=>nodes.get(`#verba-deep-developer-${id}`));
@@ -100,6 +109,7 @@ for(const dev of [false,true])for(const minimal of [false,true])for(const count 
  assert.equal(preset.translationSettings.developerSettings.developerOutputSplitCount,count);
  Object.assign(api.settings,{developerOutputSplitCount:1,developerMinimalPromptEnabled:!minimal});
  api.apply(preset);assert.equal(api.settings.developerOutputSplitCount,count);
+ assert.equal(nodes.get('#verba-deep-developer-output-split-count').value,String(count));
  assert.equal(api.settings.developerMinimalPromptEnabled,minimal);assert.equal(api.settings.developerMode,dev);
  api.apply(api.save('prompts'));assert.equal(api.settings.developerOutputSplitCount,count);
  const legacy=structuredClone(preset);delete legacy.translationSettings.developerSettings.developerOutputSplitCount;

@@ -2092,6 +2092,11 @@
     border-style: dashed !important;
 }
 
+#verba-deep-settings #verba-deep-developer-output-split-lab,
+#verba-deep-settings #verba-deep-developer-relationship-lab {
+    border-style: solid !important;
+}
+
 .verba-deep-developer-lab > summary {
     font-weight: 600 !important;
 }
