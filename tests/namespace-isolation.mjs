@@ -21,7 +21,7 @@ const sources = [
 
 assert.equal(manifest.name, 'verba-deep');
 assert.equal(manifest.display_name, '베에르으바아');
-assert.equal(manifest.version, '0.5.72');
+assert.equal(manifest.version, '0.5.73');
 assert.ok(index.includes("const EXTENSION_KEY = 'verba-deep';"));
 assert.ok(index.includes("const STATE_KEY = 'verba_deep_current_translation';"));
 assert.ok(index.includes("const SOURCE_VIEW_KEY = 'verba_deep_source_view';"));
