@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as core from '../core.js';
-import { repairUnexpectedProseBreaks } from '../response-parser.js';
+import { repairUnexpectedProseBreaks, repairSourceEllipses } from '../response-parser.js';
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const defs = index.slice(index.indexOf('const RELATION_TEMPERATURE_OPTIONS'), index.indexOf('const baseContext ='));
 const defaults = Function(defs + '\nreturn DEFAULT_SETTINGS;')();
@@ -38,12 +38,12 @@ for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtr
   }
  }
 }
-const expression=index.match(/\.map\(candidate => (repairUnexpectedProseBreaks\([^\n]+)\);/)[1];
-const clean=Function('candidate','repairUnexpectedProseBreaks','repairKoreanParticleAlternatives','repairIndivisibleIdentityNames','speakerIdentity','expected','return '+expression);
+const expression=index.match(/\.map\(candidate => (repairSourceEllipses\([^\n]+)\);/)[1];
+const clean=Function('candidate','repairUnexpectedProseBreaks','repairKoreanParticleAlternatives','repairIndivisibleIdentityNames','speakerIdentity','expected','repairSourceEllipses','return '+expression);
 const candidates=['첫째.\n다음.','둘째.<br>다음.','셋째.\n\n다음.'];
 for (const source of ['one line','two\nlines','<div>protected</div>',String.fromCharCode(96,99,111,100,101,96)]) {
  const target=[{id:'seg_0000',type:'selection',text:source}];
- const actual=candidates.map(c=>clean(c,repairUnexpectedProseBreaks,x=>x,x=>x,{},target));
+ const actual=candidates.map(c=>clean(c,repairUnexpectedProseBreaks,x=>x,x=>x,{},target,repairSourceEllipses));
  assert.deepEqual(actual,source==='one line'?['첫째. 다음.','둘째. 다음.','셋째. 다음.']:candidates);
 }
 assert.doesNotMatch(index,/developerRegisterShiftMonitor|runDeveloperRegisterShiftMonitor|register-shift-monitor/);
