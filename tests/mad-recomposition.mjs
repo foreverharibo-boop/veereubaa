@@ -38,14 +38,15 @@ for (const [name, build] of Object.entries(builders)) {
     assert.match(prompt, /audit the finished Korean for broken grammar, missing syllables\/words/);
     assert.match(prompt, /actor→action→target/);
     assert.match(prompt, /behind them.*back of the head/);
-    assert.match(prompt, /NARRATION: use easy, direct, comfortable contemporary Korean web-novel prose/);
+    assert.match(prompt, /NARRATION: reconstruct paragraph focus/);
+    assert.match(prompt, /Do not mirror English clauses/);
     assert.match(prompt, /DIALOGUE: write what this speaker would actually say aloud/);
-    assert.match(prompt, /팔치로 의 턱/);
-    assert.match(prompt, /목을 뼈까지 라버렸다/);
-    assert.match(prompt, /몰려들고→려들고/);
-    assert.match(prompt, /NARRATION TRANSFORMATION MODELS/);
+    assert.match(prompt, /공기가 얇다/);
+    assert.match(prompt, /작은 숨 헐떡임/);
+    assert.match(prompt, /담은이 몸집/);
+    assert.match(prompt, /English “ramp” means 경사로\/진입로/);
     assert.match(prompt, /BANNED KOREAN WORDS/);
-    checks += 13;
+    checks += 14;
 }
 
 const narration = builders.narration();

@@ -48,7 +48,8 @@ const voicePrompt = buildHongjinVoiceRewritePrompt({
 });
 assert.match(voicePrompt, /DEDICATED SECOND-PASS VOICE REWRITE/);
 assert.match(voicePrompt, /not a generic shouting tough guy/i);
-assert.match(voicePrompt, /Playful offer/);
+assert.match(voicePrompt, /Quoted retort/);
+assert.match(voicePrompt, /Tactical refusal/);
 assert.match(voicePrompt, /Reluctant care/);
 assert.match(voicePrompt, /Fake courtesy/);
 assert.match(voicePrompt, /Deflection/);
