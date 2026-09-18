@@ -77,6 +77,9 @@ const madSettings = { ...standardSettings, developerMadKoreanOutputEnabled: true
 const madPrompt = builders.full(madSettings);
 has(madPrompt, 'MAD KOREAN — ULTRA-COMPACT');
 has(madPrompt, 'KIM HONG-JIN VOICE — ULTRA');
+has(madPrompt, 'DEEPSEEK HONGJIN VOICE PASS — hidden');
+has(madPrompt, 'Urgent/serious lines stay terse and serious');
+has(madPrompt, 'never aim it at USER');
 has(madPrompt, 'USER-DIRECTED PROFANITY GUARD');
 has(madPrompt, 'PERSONAL PRONOUN DEFAULT:');
 has(madPrompt, 'he/him → 그, she/her → 그녀, his → 그의, possessive her → 그녀의');

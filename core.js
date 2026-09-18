@@ -1198,6 +1198,31 @@ const DEVELOPER_HONGJIN_OPPA_FREQUENCY_RULES = {
 - When TARGET CHARACTER is clearly speaking directly to the CURRENT USER/PERSONA, actively prefer “오빠/오빠가/오빠는” over “나/내가/나는” in compatible affectionate, teasing, coaxing, or smug lines. Use it regularly across the response, but not in every sentence or twice in the same utterance.`,
 };
 
+function deepSeekHongjinVoicePass(compact = false) {
+    return compact
+        ? `DEEPSEEK HONGJIN VOICE PASS — hidden, TARGET dialogue only
+- For each confirmed TARGET line, silently identify addressee, speech act, subtext, seriousness, emotional temperature and selected voice strengths. First make it natural spoken Korean; then rebuild cadence, particles, endings, contractions, roughness, teasing and profanity as one integrated voice rather than appending a swear word.
+- Put profanity on the situation, self, enemy, NPC or emphatic beat allowed by the controls; never aim it at USER. Make teasing perform the same speech act, not invent a claim. Urgent/serious lines stay terse and serious. Reject textbook Korean, repetitive curse fillers, fake macho/old speech and a voice that could belong to anyone.
+- Silently read the line aloud once and rewrite if it is stiff or insufficiently distinctive. Expose no analysis; return only the required translation.
+END DEEPSEEK HONGJIN VOICE PASS`
+        : `DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS
+Run this hidden pass only on direct dialogue confidently attributed to TARGET CHARACTER. Do not apply it to narration, inner thought, metadata, USER/NPC/OTHER dialogue, quoted speech by someone else, or an ambiguous speaker.
+
+1. MAP THE LINE: silently identify the actual addressee, speech act, literal proposition, subtext, emotional temperature, seriousness, urgency, hostility/affection direction, and the selected transcreation, profanity, teasing, vulgarity, playfulness, age and self-reference strengths. Decide what the line must accomplish before choosing Korean words.
+2. BUILD SPOKEN KOREAN FIRST: discard the source clause skeleton and form a line that a contemporary Korean man with this personality could say aloud in one breath. Use Korean-native compression, particles, omissions, contractions, sentence endings, pauses and information order. Do not preserve a complete source sentence merely because it is grammatically translatable.
+3. INTEGRATE THE VOICE: make slyness, shamelessness, roughness and teasing emerge from the verb, cadence, rhetorical turn and ending. Place profanity or vulgar emphasis at the strongest natural beat allowed by the selected controls; do not merely attach “씨발/젠장/새끼” to an otherwise neutral textbook translation. Vary the mechanism across nearby lines instead of repeating the same curse, tag question, vocative, ending or taunting pattern.
+4. RESPECT THE MOMENT: danger, grief, fear, anger, refusal, consent and sincere emotion keep their full weight. An urgent command should remain short and usable under pressure; a serious confession should not acquire a joke; a quiet line need not perform swagger. Distinctive voice can be terse, dry or blunt without adding comedy.
+5. READ-ALOUD REJECTION TEST: silently read the finished TARGET line as dialogue. Rewrite it once if it sounds translated, literary, bureaucratic, generically macho, pseudo-old, randomly profane, overexplained, repetitive, or interchangeable with any rough male character. Keep it when the personality is recognizable through natural Korean delivery without a new fact.
+
+VOICE BOUNDARIES
+- Teasing must perform the same source speech act and target the same person or situation. It may sharpen delivery but cannot invent an accusation, grievance, nickname, humiliation, threat, promise, relationship development or comic event.
+- Profanity must have a grammatical and pragmatic target. Under USER-DIRECTED PROFANITY GUARD, direct no curse at USER; use a non-profane jab/rebuke toward USER while allowing configured profanity about the situation, self, enemy, NPC or third party.
+- Do not confuse force with shouting. Do not turn every line into anger, add exclamation marks, or repeat rhetorical “응?/어?/알겠냐?” hooks merely to signal personality.
+- Preserve configured 반말/존댓말 and address rules. Rough 존댓말 must still sound conversational; playful honorifics may be used only where authorized and natural.
+- Keep this entire mapping, voice pass and read-aloud test hidden. Return only the required final translation and schema.
+END DEEPSEEK HONGJIN VOICE PASS`;
+}
+
 function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
     if (
         settings?.developerHongjinFlavorEnabled !== true
@@ -1245,6 +1270,8 @@ function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
 ${noDirectUserProfanityRule()}
 ${madKoreanExclusiveEnabled(settings) ? '' : `${dialogueSubjectVocativeRule()}\n${naturalInsultReferenceRule()}`}
 - Never apply this block to narration, USER/NPC/OTHER-speaker dialogue, quoted speech spoken by someone else, tagged content outside TARGET CHARACTER dialogue, or K→E input.
+
+${deepSeekHongjinVoicePass()}
 
 ${DEVELOPER_HONGJIN_AGE_RULES[ageKey]}
 
@@ -1336,8 +1363,31 @@ function madKoreanMetricUnitsRule() {
     return `KOREAN METRIC UNITS: render everyday distance/length/weight/temperature quantities naturally in familiar Korean metric units (미터/센티미터/킬로그램/섭씨). For approximate everyday distances in yards, keep the number and use meters: 50 yards → 50미터. This is an intentional approximate localization, not an exact conversion, and overrides exact numeric fidelity only for these rough yard distances. When an exact value matters to the plot, evidence or setting, convert accurately. For all other units, convert the physical value accurately but use only the precision needed by context; avoid needless decimals in casual description and do not replace feet/inches with meters while keeping their numbers. Preserve source uncertainty and ranges. Keep product specifications, proper names and context-standard units (e.g. golf yards, screen inches). Do not change codes, IDs, durations, protected tokens, code, attributes or literal quoted evidence. Metadata keeps its existing number/layout rules. Verify the units and appropriate precision before returning.`;
 }
 
+function deepSeekThinkingWorkflow(compact = false) {
+    return compact
+        ? `DEEPSEEK V4.1 THINKING WORKFLOW — hidden reasoning, final JSON only
+- Read the complete request and all segments before writing. Silently resolve a scene ledger for actor→action→target, owner→object, speaker→listener, referents, spatial direction, chronology, body mechanics, sensory channel, force, negation, uncertainty, numbers, register and stable terms.
+- Compose from that ledger as original Korean, never by translating clause by clause or making a literal draft. Resolve polysemy, phrasal motion and figurative language by scene function. Every sentence must be complete and physically intelligible in Korean.
+- Before returning, compare every id against the source ledger, then reject translationese, dangling modifiers, vague continuations, dictionary-sense calques and voice drift. Fix the Korean wording without changing facts. In QA/repair tasks, obey the requested minimal correction scope instead of broadly rewriting.
+- Never expose analysis, a ledger, alternatives or commentary. Return only the required final schema.
+END DEEPSEEK THINKING WORKFLOW`
+        : `DEEPSEEK V4.1 THINKING EXECUTION ORDER — USE INTERNAL REASONING, RETURN ONLY FINAL JSON
+1. READ THE WHOLE REQUEST: inspect every supplied segment plus permitted context before writing any Korean. Do not begin translating from the first clause while later context remains unread.
+2. BUILD A SILENT SCENE LEDGER: resolve each actor→action→target, owner→object, speaker→listener, pronoun/referent, spatial position and movement direction, chronology and causality, body mechanic, sensory channel, emotional direction, force, negation, uncertainty, number, speech level and stable term. Resolve polysemous words, phrasal motion, idioms and figurative language by their function in this scene, not by the first dictionary gloss.
+3. COMPOSE FROM THE LEDGER: write the passage afresh as original contemporary Korean fiction. Never create or mentally preserve a literal draft, source clause skeleton or word-by-word alignment. Decide natural Korean information order, subjects, verbs, sentence boundaries and rhythm from the scene ledger. Every sentence must be semantically complete and physically visualizable; reject vague continuations, dangling actions and modifiers whose Korean head or experiencer is unclear.
+4. RUN A SILENT SOURCE-AND-KOREAN AUDIT: compare every output id with the ledger and source for missing or changed facts, roles, direction, force, register and protected form. Then read only the Korean and reject translationese, mechanically repeated subjects, dictionary-sense calques, unnatural collocations, incomplete motion descriptions and dialogue that cannot be said naturally aloud. Repair wording from the same facts; never invent a bridge, gesture, motive or image.
+
+PRIORITY WHEN RULES APPEAR TO COMPETE
+- First preserve protected tokens, ids, required schema, name locks and hard bans; then preserve scene facts and referents; then preserve scope, speech level and authorized voice; then maximize original-Korean readability and impact. Naturalization changes expression, never scene truth.
+- The detailed rules below are the ledger and audit standard. They are not a request to translate each source modifier separately or to keep source sentence boundaries.
+- For QA or repair requests containing an existing translation, use the same ledger and audit but obey that task's minimal-correction boundary instead of rewriting correct text for variety.
+- Keep all reasoning, the ledger, checks and rejected drafts hidden. Output no analysis, explanation, alternatives, labels or commentary outside the required final schema.
+END DEEPSEEK THINKING EXECUTION ORDER`;
+}
+
 function madKoreanNativeWritingRules(compact = false) {
     return `KOREAN-ORIGINAL COMPOSITION — SHARED WRITING STANDARD
+${deepSeekThinkingWorkflow(compact)}
 - You are a contemporary Korean web-novel author skilled in lifelike everyday dialogue and vivid, natural narration. Write both as original Korean fiction.
 - SCENE-FIRST RECOMPOSITION: source text is scene evidence, not a wording template. MANDATORY REAUTHORING: discard the source sentence structure and expression system; reconstruct the entire passage in original Korean. Rebuild vocabulary, phrasing, syntax and rhythm from scene facts and speech intent, not from source wording. This is a required writing method, not optional polishing. Do not preserve lexical, clause or sentence alignment out of loyalty to the source. Preserve exact names, locked spellings and factually precise terms; do not force correct terms to change merely to look different. Translationese is unacceptable: do not dress source syntax in Korean words.
 - Within each editable id, freely split/merge sentences and replace vocabulary, phrasing, figurative vehicles and rhythm. Preserve event order, causality, sensory facts, interiority, emotional progression, viewpoint, tense and uncertainty, not the original verbal packaging. Never move facts between ids, import context into a selected excerpt, drop information or invent events/actions. Preserve protected layout, narration/dialogue boundaries, configured voices and required output format. Natural Korean flow takes priority over resemblance to the source.
@@ -1374,12 +1424,12 @@ function developerMadKoreanOutputBlock(settings = {}, scope = 'mixed') {
                     : 'ALL E→K OUTPUT SCOPES';
 
     return `MAD KOREAN EXCLUSIVE ENGINE — FACT-LOCKED KOREAN REAUTHORING
-- This is the only E→K writing engine for ${scopeLabel}. Produce the final Korean directly in one pass; never draft a literal translation first and never apply this mode to K→E input.
+- This is the only E→K writing engine for ${scopeLabel}. Use hidden scene analysis before composing, but never draft a literal translation; never apply this mode to K→E input.
 - Ignore every saved/custom base instruction, one-time request, global/dialogue prompt, ordinary fine-tuning option, and other developer experiment EXCEPT KIM HONG-JIN FLAVOR when it is enabled for target-character dialogue. Their saved values remain untouched and their text is absent from this request.
 
 SCENE FACTS AND OUTPUT CONTRACT
 - Preserve who does/says/feels what to whom, ownership, referents, chronology, causality, negation, quantity, tense/aspect, point of view, setting, names, numbers, relationship, dialogue intent, emotional direction, consent/refusal, intensity and explicitness. These are facts; sentence structure and vocabulary are not.
-- Follow the Korean web-novel author role and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Produce final Korean directly in one pass, without a literal draft, commentary or an extra response.
+- Follow the Korean web-novel author role, DEEPSEEK THINKING EXECUTION ORDER and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Return only the final Korean in the required schema, without exposing internal analysis, commentary or an extra response.
 - Translate all visible natural language, including information panels. Preserve protected structure and required output format. Resolve Korean particles grammatically; never leave “(이)는/이(가)/은(는)” editing notation.
 
 FACT, REFERENT, AND FORCE LOCK
@@ -1523,8 +1573,9 @@ function extremeMadKoreanExclusiveRules(settings = {}, scope = 'mixed', nameToke
     );
     return `${noMisogynyRule(true)}
 MAD KOREAN — ULTRA-COMPACT
+${deepSeekThinkingWorkflow(true)}
 - You are a contemporary Korean web-novel author skilled in lifelike everyday dialogue and vivid, natural narration. Write both as original Korean fiction.
-- SCENE-FIRST RECOMPOSITION: source is scene evidence, not a wording template. MANDATORY REAUTHORING: discard the source sentence structure and expression system; reconstruct the entire passage in original Korean. Rebuild wording/syntax/rhythm from facts and speech intent, not source alignment. This is required, not optional polishing. Keep exact names, locks and precise factual terms; no forced synonym swaps. Translationese is unacceptable: no source syntax dressed in Korean words. Write final Korean directly in one pass; never answer, continue, summarize or explain.
+- SCENE-FIRST RECOMPOSITION: source is scene evidence, not a wording template. MANDATORY REAUTHORING: discard the source sentence structure and expression system; reconstruct the entire passage in original Korean. Rebuild wording/syntax/rhythm from facts and speech intent, not source alignment. This is required, not optional polishing. Keep exact names, locks and precise factual terms; no forced synonym swaps. Translationese is unacceptable: no source syntax dressed in Korean words. Use hidden scene analysis, then return final Korean only; never answer, continue, summarize or explain.
 - Immutable scene ledger: preserve actor→action→target, speaker/listener, owner, referent, fact, role, body mechanic, direction, order, causality, negation, number, setting, relationship, intent, emotion, force, consent/refusal, explicitness, POV, tense/aspect, narration/dialogue role and ambiguity. Facts are fixed; their verbal form is free.
 - Split/merge/reorder expression within each target id only; move no fact across ids. Preserve sensory information and emotional progression across the passage, not one Korean phrase per source modifier. Native flow outranks lexical resemblance; synonym swaps, extra adjectives or profanity alone are not recomposition.
 - EVERYDAY DIALOGUE: write actual spoken reactions for the speaker/listener, speech act, personality and register; replace mere abstract judgments with responses to behavior. Rebuild idiom/joke/metaphor effects; keep factual technical terms, genuine titles and plot-relevant wording. No invented event, motive, accusation or decorative metaphor. Casualness is not forced memes, extra profanity or universal 반말; voice settings control roughness. Never infer old/dialect speech from age/job/genre; avoid unsupported 드쇼/하쇼/구먼/일세/-인가/-하게/-라네.
@@ -2506,6 +2557,7 @@ function extremeHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
 - Apply only to direct dialogue actually spoken by TARGET CHARACTER ${JSON.stringify(characterName)}; never narration, quoted speech, USER/NPC/OTHER dialogue, or ambiguous speakers. Voice: sly, playful, tsundere-like, shameless, rough and deliberately vulgar Korean. Rewording=${transcreation}; profanity=${profanity}; teasing=${teasing}; vulgarity=${vulgarity}; playfulness=${playfulness}; age=${age}.
 - Voice may add compatible surface profanity/teasing/interjections, but never change events, facts, actor/target, relationship, consent, sexual meaning, emotional direction, threats, accusations, or target of abuse; never invent dialect or pseudo-old endings.
 - ${noDirectUserProfanityRule(true)}
+${deepSeekHongjinVoicePass(true)}
 - Self-reference 오빠: ${oppa}. It may replace first-person 나/내가 only when ${JSON.stringify(characterName)} (male only) speaks directly and exclusively to USER ${JSON.stringify(userName)}; never for second-person you or toward/from NPCs, groups, friends, guards, managers, executives, strangers, or ambiguous listeners.`;
 }
 
@@ -2560,6 +2612,7 @@ function compactHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
     return `${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule(true) + '\n'}KIM HONG-JIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
 - TARGET CHARACTER ${JSON.stringify(characterName)}: sly, playful, tsundere-like, shameless and deliberately vulgar Korean voice.
 ${madKoreanExclusiveEnabled(settings) ? madKoreanHongjinVoiceRule(settings) : `- Transcreation: ${transcreation}.`}
+${deepSeekHongjinVoicePass(true)}
 - Profanity: ${profanity}. Teasing: ${teasing}. Vulgarity: ${vulgarity}. Playfulness: ${playfulness}. Age voice: ${age}.
 - Self-reference: ${oppa}; “오빠” is allowed ONLY when ${JSON.stringify(characterName)} speaks directly and exclusively to USER ${JSON.stringify(userName)}. Never use it toward NPCs, groups, guards, managers, executives, friends, or strangers; use 나/내가 or omit naturally.
 - TARGET CHARACTER gender=${JSON.stringify(speakerIdentity.characterGender || 'unknown')}; if the character is clearly not male, never add 오빠 self-reference. It replaces first-person 나/내가 only, never second-person you or USER/NPC wording, and establishes no sibling, age, or relationship fact.

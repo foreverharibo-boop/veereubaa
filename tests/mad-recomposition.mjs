@@ -41,6 +41,18 @@ for(const flags of [{},{developerCompressedPromptEnabled:true},{developerExtreme
    assert.match(prompt,/not a fixed substitution or a mandate for 반말/);
    assert.match(prompt,/EVERYDAY DIALOGUE/);
    assert.match(prompt,/EVERYDAY NARRATION/);
+   assert.equal(
+       (prompt.split('DEEPSEEK V4.1 THINKING EXECUTION ORDER').length - 1)
+       + (prompt.split('DEEPSEEK V4.1 THINKING WORKFLOW').length - 1),
+       1,
+       `${name}: DeepSeek workflow occurs once`,
+   );
+   assert.match(prompt,/BUILD A SILENT SCENE LEDGER|Silently resolve a scene ledger/);
+   assert.match(prompt,/actor→action→target/);
+   assert.match(prompt,/Compose from that ledger|COMPOSE FROM THE LEDGER/);
+   assert.match(prompt,/dictionary-sense calques/);
+   assert.match(prompt,/Every sentence must be (?:semantically )?complete and physically (?:intelligible|visualizable)/);
+   assert.match(prompt,/Never expose analysis|Keep all reasoning/);
    assert.equal(prompt.split('PERSONAL PRONOUN DEFAULT:').length-1,1);
    assert.match(prompt,/he\/him → 그, she\/her → 그녀, his → 그의, possessive her → 그녀의/);
    assert.match(prompt,/여자\/남자\/녀석/);
@@ -75,7 +87,7 @@ for(const flags of [{},{developerCompressedPromptEnabled:true},{developerExtreme
    assert.match(prompt,/Metadata keeps its existing number\/layout rules/);
    assert.equal(build({...settings,developerMode:false}).includes('KOREAN METRIC UNITS:'),true);
    assert.equal(build({...settings,developerMadKoreanOutputEnabled:false}).includes('KOREAN METRIC UNITS:'),false);
-   checks+=49;
+   checks+=56;
   }
   assert.equal(core.buildInputPrompt('안녕',settings,'male',identity).includes(marker),false);
   assert.equal(core.buildInputPrompt('안녕',settings,'male',identity).includes('KOREAN METRIC UNITS:'),false);
