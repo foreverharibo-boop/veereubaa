@@ -70,13 +70,13 @@ const prompt = buildMadKoreanTargetedAuditPrompt({
         userName: '담은',
         nameLocks: [{ source: 'Alex', target: '민철' }],
     },
-    settings: { developerHongjinProfanity: 'natural' },
+    settings: { developerHongjinFlavorEnabled: true, developerHongjinProfanity: 'natural' },
 });
 assert.match(prompt, /SPARSE SECOND PASS/);
 assert.match(prompt, /"repairs":\[\]/);
-assert.match(prompt, /MISSING KIM HONG-JIN VOICE/);
-assert.match(prompt, /selected profanity strength="natural"/);
-assert.match(prompt, /two or more compatible TARGET lines exist and all are clean/);
+assert.match(prompt, /KIM HONG-JIN VOICE DAMAGE/);
+assert.match(prompt, /profanity strength="natural"/);
+assert.match(prompt, /dedicated voice pass already ran/i);
 assert.match(prompt, /is WRONG because .* means easy\/weak/);
 assert.match(prompt, /service entrance is not an emergency exit/i);
 assert.match(prompt, /LOCKED=\["민철"\]/);

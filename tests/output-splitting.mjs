@@ -102,6 +102,7 @@ const fullEnv={...env, ...core, minimalOutputEnabled,translateMinimalOutput,
  classifyOutputDialogueSpeakers:async()=>{classified++;return scopes;},requestScopedOutputTranslations:route,
  repairRepeatedRoleTermConsistency:async()=>{},repairProtectedTokenIntegrity:async()=>{},
  findBannedWords:()=>[],findUntranslatedSegments:()=>[],repairIndivisibleIdentityNames:t=>t,repairStrictCanonicalIdentityNames:t=>t,repairOutputIdentityNames:t=>t,repairKoreanParticleAlternatives:t=>t,repairDialogueQuotationEnvelope:t=>t,
+ runHongjinVoiceRewrite:async({segmented:s})=>{assert.equal(s.segments.length,segmented.segments.length);},
  runMadKoreanTargetedAudit:async({segmented:s})=>{targetedAudited++;assert.equal(s.segments.length,segmented.segments.length);},
  runExperimentalQualityAudit:async({segmented:s})=>{audited++;assert.equal(s.segments.length,segmented.segments.length);},
  buildSourceMap:(_s,_t,result)=>[{start:0,end:result.length}],console};

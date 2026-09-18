@@ -11,6 +11,7 @@ import { activateTranslationExtension, isTranslationExtensionActive, registerTra
 import {
     assembleTranslation,
     buildBannedRepairPrompt,
+    buildHongjinVoiceRewritePrompt,
     buildInputPrompt,
     buildIdentityNameFallbackPrompt,
     buildMadKoreanTargetedAuditPrompt,
@@ -50,7 +51,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.94';
+const EXTENSION_VERSION = '0.5.95';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -4424,6 +4425,125 @@ function localQualityAuditCandidates(segmented, translations, speakerScopes) {
     return suspects;
 }
 
+async function runHongjinVoiceRewrite({
+    segmented,
+    translations,
+    speakerScopes,
+    speakerIdentity,
+    options,
+}) {
+    if (settings.developerHongjinFlavorEnabled !== true) {
+        return { checked: 0, changed: 0 };
+    }
+
+    const candidates = (segmented.segments || [])
+        .filter(segment => outputScopeForSegment(segment, speakerScopes) === 'target_dialogue')
+        .map(segment => ({ ...segment, outputScope: 'target_dialogue' }));
+    if (!candidates.length) return { checked: 0, changed: 0 };
+
+    const originalTranslations = new Map(translations);
+    const fullSourceContext = (segmented.segments || []).map(segment => segment.text).join('\n');
+
+    try {
+        const chunks = splitMadFlashScopeSegments('target_dialogue', candidates);
+        const rewrittenGroups = await runWithConcurrency(
+            chunks,
+            SCOPED_PARALLEL_REQUEST_LIMIT,
+            async chunk => {
+                const prompt = buildHongjinVoiceRewritePrompt({
+                    segments: chunk,
+                    currentTranslations: translations,
+                    sourceContext: fullSourceContext,
+                    speakerIdentity,
+                    settings,
+                    nameTokens: segmented.nameTokens || [],
+                });
+                const expected = chunk.map(segment => ({
+                    id: segment.id,
+                    type: segment.type,
+                    text: String(translations.get(segment.id) || ''),
+                }));
+                return requestSegments(prompt, expected, {
+                    ...options,
+                    parallelRequest: true,
+                    stage: 'hongjin-voice-rewrite',
+                });
+            },
+        );
+
+        const changed = [];
+        for (const rewritten of rewrittenGroups) {
+            for (const [id, value] of rewritten) {
+                const segment = candidates.find(row => row.id === id);
+                if (!segment) continue;
+                const before = String(translations.get(id) || '');
+                const after = String(value || '');
+                if (!after.trim() || after === before) continue;
+                translations.set(
+                    id,
+                    repairKoreanParticleAlternatives(
+                        repairStrictCanonicalIdentityNames(
+                            repairCanonicalKoreanVocatives(
+                                repairIndivisibleIdentityNames(after, speakerIdentity),
+                                segment,
+                                canonicalKoreanIdentityNames(speakerIdentity),
+                                segmented.nameTokens || [],
+                            ),
+                            speakerIdentity,
+                        ),
+                    ),
+                );
+                changed.push(segment);
+            }
+        }
+
+        if (changed.length) {
+            const banned = changed.filter(segment =>
+                findBannedWords(translations.get(segment.id), settings).length,
+            );
+            if (banned.length) {
+                await repairSegmentsByOutputScope({
+                    invalid: banned,
+                    segmented,
+                    translations,
+                    speakerScopes,
+                    options: { ...options, speakerIdentity },
+                    buildPrompt: buildBannedRepairPrompt,
+                    stage: 'hongjin-voice-banned-repair',
+                });
+            }
+
+            const untranslated = findUntranslatedSegments(changed, translations, settings, speakerScopes);
+            if (untranslated.length) {
+                await repairSegmentsByOutputScope({
+                    invalid: untranslated,
+                    segmented,
+                    translations,
+                    speakerScopes,
+                    options: { ...options, speakerIdentity },
+                    buildPrompt: buildUntranslatedRepairPrompt,
+                    stage: 'hongjin-voice-untranslated-repair',
+                });
+            }
+
+            await repairProtectedTokenIntegrity(segmented, translations, {
+                ...options,
+                speakerIdentity,
+                speakerScopes,
+            });
+        }
+
+        console.info(`[베에르으바아] 김홍진 보이스 전용 패스 완료: ${candidates.length}구간 · ${changed.length}구간 재작성`);
+        return { checked: candidates.length, changed: changed.length };
+    } catch (error) {
+        if (isAbort(error, options.signal)) throw error;
+        translations.clear();
+        for (const [id, translation] of originalTranslations) translations.set(id, translation);
+        console.warn('[베에르으바아] 김홍진 보이스 전용 패스 실패 — 1차 번역을 유지합니다.', error);
+        return { checked: candidates.length, changed: 0, error };
+    }
+}
+
 async function runMadKoreanTargetedAudit({
     segmented,
     translations,
@@ -4431,7 +4551,7 @@ async function runMadKoreanTargetedAudit({
     speakerIdentity,
     options,
 }) {
-    if (!madKoreanExclusiveMode() || settings.developerHongjinFlavorEnabled !== true) {
+    if (!madKoreanExclusiveMode()) {
         return { checked: 0, changed: 0 };
     }
 
@@ -4887,6 +5007,14 @@ async function translateOutputText(source, options = {}) {
             ),
         );
     }
+
+    await runHongjinVoiceRewrite({
+        segmented,
+        translations,
+        speakerScopes,
+        speakerIdentity,
+        options,
+    });
 
     await runMadKoreanTargetedAudit({
         segmented,
