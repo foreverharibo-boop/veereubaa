@@ -996,6 +996,147 @@ export function segmentSource(value, nameLocks = []) {
     };
 }
 
+function koreanIdentityVariants(value) {
+    const name = String(value || '').trim();
+    if (!name) return [];
+    if (/^[가-힣]{3}$/u.test(name)) return [name, [...name].slice(1).join('')];
+    return [name];
+}
+
+/**
+ * Resolve only high-confidence TARGET dialogue locally. Mad Korean avoids an
+ * extra speaker-attribution API call, but defaulting every quote to OTHER made
+ * the Hongjin voice and its sparse audit unreachable. Uncertainty stays OTHER.
+ */
+export function inferLocalTargetDialogueScopes(segmented = {}, speakerIdentity = {}) {
+    const segments = Array.isArray(segmented?.segments) ? segmented.segments : [];
+    const scopes = Object.fromEntries(segments
+        .filter(segment => segment?.type === 'dialogue_candidate')
+        .map(segment => [String(segment.id || ''), 'other_dialogue']));
+    if (!Object.keys(scopes).length) return scopes;
+
+    const targetNames = new Set(koreanIdentityVariants(speakerIdentity.characterName));
+    const userNames = new Set(koreanIdentityVariants(speakerIdentity.userName));
+    const sourceTargetNames = new Set([
+        String(speakerIdentity.sourceCharacterName || '').trim(),
+        String(speakerIdentity.characterName || '').trim(),
+    ].filter(Boolean));
+    const sourceUserNames = new Set([
+        String(speakerIdentity.sourceUserName || '').trim(),
+        String(speakerIdentity.userName || '').trim(),
+    ].filter(Boolean));
+
+    for (const row of normalizeNameLocks(speakerIdentity.nameLocks)) {
+        const fixed = String(row.target || '').trim();
+        if (targetNames.has(fixed)) sourceTargetNames.add(String(row.source || '').trim());
+        if (userNames.has(fixed)) sourceUserNames.add(String(row.source || '').trim());
+    }
+
+    const targetMarkers = new Set([...sourceTargetNames, ...targetNames].filter(Boolean));
+    const userMarkers = new Set([...sourceUserNames, ...userNames].filter(Boolean));
+    for (const token of Array.isArray(segmented?.nameTokens) ? segmented.nameTokens : []) {
+        const fixed = String(token?.value || '').trim();
+        const source = String(token?.source || '').trim();
+        const marker = String(token?.token || '').trim();
+        if (targetNames.has(fixed) || sourceTargetNames.has(source)) targetMarkers.add(marker);
+        if (userNames.has(fixed) || sourceUserNames.has(source)) userMarkers.add(marker);
+    }
+
+    const markerPosition = (text, markers) => {
+        const haystack = String(text || '').toLocaleLowerCase();
+        let position = -1;
+        for (const marker of markers) {
+            const needle = String(marker || '').toLocaleLowerCase();
+            if (needle) position = Math.max(position, haystack.lastIndexOf(needle));
+        }
+        return position;
+    };
+    const lastExplicitRole = text => {
+        const target = markerPosition(text, targetMarkers);
+        const user = markerPosition(text, userMarkers);
+        if (target < 0 && user < 0) return 'unknown';
+        return target > user ? 'target' : 'other';
+    };
+    const startsWithMarker = (text, markers) => {
+        const value = String(text || '').trimStart().toLocaleLowerCase();
+        return [...markers].some(marker => {
+            const needle = String(marker || '').toLocaleLowerCase();
+            return needle && value.startsWith(needle);
+        });
+    };
+    const sentences = text => String(text || '').trim()
+        .split(/(?:\r?\n)+|(?<=[.!?])\s+/u)
+        .filter(Boolean);
+    const gender = String(speakerIdentity.characterGender || '').toLocaleLowerCase();
+    const targetPronoun = gender === 'female' ? /^(?:she|her)\b/iu
+        : gender === 'neutral' ? /^(?:they|them)\b/iu
+            : /^(?:he|him)\b/iu;
+    const oppositePronoun = gender === 'female' ? /^(?:he|him)\b/iu
+        : gender === 'male' ? /^(?:she|her)\b/iu
+            : null;
+    const speechVerb = /\b(?:said|asked|answered|replied|added|continued|shouted|yelled|barked|ordered|warned|called|snapped|growled|muttered|whispered|spat|gasped|breathed|grunted|demanded)\b/iu;
+
+    const narrationRole = (text, activeRole = 'unknown') => {
+        const rows = sentences(text);
+        if (!rows.length) return activeRole;
+        const tail = rows.at(-1);
+        if (startsWithMarker(tail, targetMarkers)) return 'target';
+        if (startsWithMarker(tail, userMarkers)) return 'other';
+        if (targetPronoun.test(tail) && activeRole === 'target') return 'target';
+        if (oppositePronoun?.test(tail)) return 'other';
+        const explicit = lastExplicitRole(text);
+        if (explicit !== 'unknown') return explicit;
+        const first = rows[0];
+        if (targetPronoun.test(first) && activeRole === 'target') return 'target';
+        if (oppositePronoun?.test(first)) return 'other';
+        return activeRole;
+    };
+    const speechTagRole = (text, activeRole = 'unknown', targetObserved = false) => {
+        const lead = String(text || '').trimStart().slice(0, 240);
+        if (!speechVerb.test(lead)) return 'unknown';
+        if (startsWithMarker(lead, targetMarkers)) return 'target';
+        if (startsWithMarker(lead, userMarkers)) return 'other';
+        // In a character output the target is often introduced by name, the
+        // USER is mentioned next, and only then a post-quote "he/she said"
+        // identifies the speaker. Requiring the immediately active actor to
+        // remain TARGET misclassified exactly that common construction. Once
+        // the target has been explicitly anchored in this passage, a matching
+        // gendered speech tag is strong enough; without that anchor (for
+        // example, "A guard ... he shouted") it deliberately stays OTHER.
+        if (targetPronoun.test(lead) && (activeRole === 'target' || targetObserved)) return 'target';
+        if (oppositePronoun?.test(lead)) return 'other';
+        return 'unknown';
+    };
+
+    let activeRole = 'unknown';
+    let lastDialogueRole = 'unknown';
+    let targetObserved = false;
+    for (let index = 0; index < segments.length; index += 1) {
+        const segment = segments[index];
+        if (segment?.type !== 'dialogue_candidate') {
+            if (segment?.type === 'narration') {
+                if (markerPosition(segment.text, targetMarkers) >= 0) targetObserved = true;
+                activeRole = narrationRole(segment.text, activeRole);
+            }
+            continue;
+        }
+
+        const nextNarration = segments[index + 1]?.type === 'narration' ? segments[index + 1].text : '';
+        let role = speechTagRole(nextNarration, activeRole, targetObserved);
+        if (role === 'unknown' && activeRole === 'target') role = 'target';
+        if (role === 'unknown' && lastDialogueRole === 'target') {
+            const bridge = segments[index - 1]?.type === 'narration' ? String(segments[index - 1].text || '') : '';
+            if (!bridge || speechTagRole(bridge, 'target', targetObserved) === 'target') role = 'target';
+        }
+        if (role === 'target') scopes[segment.id] = 'target_dialogue';
+        if (role !== 'unknown') {
+            activeRole = role;
+            lastDialogueRole = role;
+        }
+    }
+    return scopes;
+}
+
 export function assembleTranslation(segmented, translations) {
     const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
     const joined = segmented.parts.map(part => {
@@ -3891,8 +4032,15 @@ BANNED KOREAN WORDS — absolute, including particles or suffixes attached
 ${bannedWords.length ? bannedWords.join(', ') : '(없음)'}`;
 }
 
-export function buildOutputPrompt(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null) {
-    const payload = segmented.segments.map(({ id, type, text }) => ({ id, type, text }));
+export function buildOutputPrompt(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}) {
+    const payload = segmented.segments.map(({ id, type, text }) => ({
+        id,
+        type,
+        ...(type === 'dialogue_candidate' && speakerScopes?.[id]
+            ? { speaker_scope: speakerScopes[id] }
+            : {}),
+        text,
+    }));
     const madExclusive = madKoreanExclusiveEnabled(settings);
     const compressed = developerCompressedPromptEnabled(settings);
     const taskRules = compressed
@@ -3922,6 +4070,9 @@ ${promptIdentityAliasBlock(speakerIdentity)}
 
 TASK
 ${taskRules}
+${madExclusive && settings?.developerHongjinFlavorEnabled === true
+        ? '- A dialogue row marked speaker_scope="target_dialogue" is already confirmed as TARGET CHARACTER speech: apply every Kim Hong-jin voice requirement. Never apply that voice to speaker_scope="other_dialogue".'
+        : ''}
 - Silently check that every segment id is returned exactly once.
 
 Return exactly this schema:

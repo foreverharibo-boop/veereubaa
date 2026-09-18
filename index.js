@@ -35,6 +35,7 @@ import {
     hasForeignText,
     hasKorean,
     hashText,
+    inferLocalTargetDialogueScopes,
     isPredominantlyKorean,
     normalizeStructuredMetadataTranslation,
     parseSegmentResponse,
@@ -49,7 +50,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.91';
+const EXTENSION_VERSION = '0.5.92';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3949,7 +3950,13 @@ function speakerAttributionCacheKey(segmented, speakerIdentity = {}) {
 
 async function classifyOutputDialogueSpeakers(segmented, speakerIdentity, options = {}) {
     const dialogueSegments = (segmented?.segments || []).filter(segment => segment.type === 'dialogue_candidate');
-    const scopes = Object.fromEntries(dialogueSegments.map(segment => [segment.id, 'other_dialogue']));
+    const localScopes = settings.developerHongjinFlavorEnabled === true
+        ? inferLocalTargetDialogueScopes(segmented, speakerIdentity)
+        : {};
+    const scopes = Object.fromEntries(dialogueSegments.map(segment => [
+        segment.id,
+        localScopes[segment.id] === 'target_dialogue' ? 'target_dialogue' : 'other_dialogue',
+    ]));
 
     const needsSpeakerIsolation = madKoreanExclusiveMode()
         ? false
@@ -4086,6 +4093,7 @@ async function requestScopedOutputTranslations(segmented, speakerScopes, options
             options.oneTimeInstruction || '',
             options.speakerIdentity || {},
             options.tuning || null,
+            speakerScopes,
         );
         return requestSegments(prompt, segmented.segments, {
             ...options,
