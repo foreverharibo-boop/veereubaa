@@ -100,8 +100,8 @@ for (const flags of [{}, { developerMadKoreanOutputEnabled: true }, { developerM
                 contains(block, 'never turn a reference to a third person into direct address');
                 contains(block, 'neither 께서 nor playful honorifics are banned');
                 contains(block, 'Preserve configured 반말/존댓말 and established relationships');
-                contains(block, 'Do not place a comma after every name, omit subjects wholesale');
-                contains(block, 'omission must still meet the applicable subject/possessive rule');
+                contains(block, 'Do not place a comma after every name or invent a nickname or action');
+                absent(block, 'omission must still meet the applicable subject/possessive rule');
                 contains(block, 'ellipsis fidelity remains unchanged');
                 equal(count(prompt, 'EVERYDAY KOREAN EXAMPLES —'), 1, 'everyday examples once: ' + name);
                 contains(block, '"I can explain." → "잠깐만, 말 좀 들어봐."');
@@ -117,8 +117,8 @@ for (const flags of [{}, { developerMadKoreanOutputEnabled: true }, { developerM
                 equal(count(prompt, 'NATURAL PERSON REFERENCES — PRIMARY CAST REFERENCES'), 1, 'shared name policy once: ' + name);
                 contains(prompt, identity.characterName); contains(prompt, identity.userName);
                 absent(prompt, 'Omit recoverable subjects/possessors when clear.');
-                equal(count(prompt, 'OMIT ONLY WHEN MORE NATURAL:'), 1, 'omission criterion once: ' + name);
-                contains(prompt, 'Mere recoverability is insufficient.');
+                absent(prompt, 'OMIT ONLY WHEN MORE NATURAL:', 'no subject-omission criterion: ' + name);
+                absent(prompt, 'Mere recoverability is insufficient.');
                 equal(count(prompt, 'RE-ANCHOR THE SUBJECT:'), 1, 'subject re-anchoring once: ' + name);
                 contains(prompt, 'EVEN IF THE SAME PERSON CONTINUES');
                 contains(prompt, 'At a new paragraph linking speech and action, normally identify');
@@ -155,7 +155,7 @@ for (const flags of [{}, { developerMadKoreanOutputEnabled: true }, { developerM
                 absent(prompt, 'Canonical names are the default');
                 absent(prompt, 'use the canonical name as the reference by default');
                 absent(prompt, 'not “그/그녀/그의/그녀의”');
-                contains(prompt, 'do not add a reference to every sentence or every paragraph mechanically');
+                absent(prompt, 'do not add a reference to every sentence or every paragraph mechanically');
                 absent(prompt, 'At each new narrative paragraph, speaker change, or actor change');
                 contains(prompt, 'Do not guess an uncertain referent');
                 contains(prompt, 'not first/second-person dialogue address');
@@ -260,8 +260,9 @@ for (const strength of ['light', 'strong', 'maximum']) {
                 absent(prompt, 'drop recoverable subjects', label);
                 absent(prompt, 'Keep the source meaning and rough sentence shape recognizable', label);
                 absent(prompt, 'repair literal stiffness while keeping the rough source shape', label);
-                contains(prompt, 'Mere recoverability is insufficient.', label);
-                contains(prompt, 'Do not retain source sentence shape for LIGHT or increase omission for STRONG/MAXIMUM.', label);
+                absent(prompt, 'Mere recoverability is insufficient.', label);
+                contains(prompt, 'Do not retain source sentence shape for LIGHT.', label);
+                absent(prompt, 'increase omission for STRONG/MAXIMUM.', label);
                 contains(prompt, 'voice settings never authorize added/altered ellipses or invented metaphors.', label);
                 const priority = prompt.slice(prompt.indexOf('- KOREAN-ORIGINAL COMPOSITION and PRIMARY CAST REFERENCES'),
                     prompt.indexOf('- The voice exception permits only'));
