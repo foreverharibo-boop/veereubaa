@@ -15,18 +15,14 @@ function assertMadGate(prompt, dataMarker, label, { hongjin = false } = {}) {
     assert.equal(prompt.split(marker).length - 1, 1, `${label}: Mad gate count`);
     assert.ok(prompt.lastIndexOf(marker) > prompt.lastIndexOf(dataMarker), `${label}: Mad gate must follow source data`);
     const gate = prompt.slice(prompt.lastIndexOf(marker), hongjin && prompt.includes(hongjinMarker) ? prompt.lastIndexOf(hongjinMarker) : undefined);
-    assert.match(gate, /mandatory acceptance test/i, `${label}: mandatory`);
-    assert.match(gate, /English clause order/i, `${label}: source structure audit`);
-    assert.match(gate, /contemporary Korean web novel originally written in Korean/i, `${label}: Korean web-novel target`);
-    assert.match(gate, /clear, comfortable, fast to understand/i, `${label}: readability`);
-    assert.match(gate, /literary grandeur, abstract noun stacks, layered modifiers/i, `${label}: over-writing rejection`);
-    assert.match(gate, /actor→action→target/i, `${label}: fact roles`);
-    assert.match(gate, /FACTUAL INVENTION BOUNDARY/i, `${label}: factual invention guard`);
-    assert.match(gate, /EXPRESSIVE RECOMPOSITION IS REQUIRED, NOT BANNED/i, `${label}: bold naturalization remains required`);
-    assert.match(gate, /surface choices are not factual inventions/i, `${label}: voice surface additions allowed`);
-    assert.match(gate, /bold Korean wording for the same established fact is allowed and expected/i, `${label}: conservative fallback rejected`);
-    assert.match(gate, /semantically complete and physically intelligible/i, `${label}: sentence audit`);
-    assert.match(gate, /Never print this gate/i, `${label}: hidden audit`);
+    assert.match(gate, /FINAL KOREAN CHECK/i, `${label}: mandatory`);
+    assert.match(gate, /source-language clause order/i, `${label}: source structure audit`);
+    assert.match(gate, /sounds translated/i, `${label}: translationese audit`);
+    assert.match(gate, /unnatural collocation/i, `${label}: collocation audit`);
+    assert.match(gate, /particle\/syllable/i, `${label}: corruption audit`);
+    assert.match(gate, /actor\/action\/target/i, `${label}: fact roles`);
+    assert.match(gate, /Add no event or bodily reaction/i, `${label}: factual invention guard`);
+    assert.match(gate, /Return only the requested JSON/i, `${label}: hidden audit`);
     if (hongjin) {
         assert.equal(prompt.split(hongjinMarker).length - 1, 1, `${label}: Hongjin gate count`);
         assert.ok(prompt.lastIndexOf(marker) < prompt.lastIndexOf(hongjinMarker), `${label}: Mad gate precedes Hongjin gate`);

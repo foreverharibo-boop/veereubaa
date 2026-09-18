@@ -31,39 +31,29 @@ const builders = {
 let checks = 0;
 for (const [name, build] of Object.entries(builders)) {
     const prompt = build();
-    assert.equal(prompt.split('SHORT MANDATORY KOREAN REAUTHORING CONTRACT').length - 1, 1, `${name}: one contract`);
-    assert.match(prompt, /SCENE-FIRST RECOMPOSITION: SOURCE IS SCENE EVIDENCE, NOT A WORDING TEMPLATE/);
-    assert.match(prompt, /silently resolve facts and referents/);
-    assert.match(prompt, /compose original Korean/);
-    assert.match(prompt, /audit the finished Korean for broken grammar, missing syllables\/words/);
-    assert.match(prompt, /actor→action→target/);
-    assert.match(prompt, /behind them.*back of the head/);
-    assert.match(prompt, /NARRATION: reconstruct paragraph focus/);
-    assert.match(prompt, /Do not mirror English clauses/);
-    assert.match(prompt, /DIALOGUE: write what this speaker would actually say aloud/);
+    assert.equal(prompt.split('DEEPSEEK V4.1 FLASH — KOREAN RECOMPOSITION').length - 1, 1, `${name}: one contract`);
+    assert.match(prompt, /originally been written in contemporary Korean/);
+    assert.match(prompt, /Preserve who did what to whom/);
+    assert.match(prompt, /Never copy source-language clause order/);
+    assert.match(prompt, /missing particle\/syllable/);
+    assert.match(prompt, /physical attachment and direction/);
+    assert.match(prompt, /Dialogue must sound spoken/);
     assert.match(prompt, /공기가 얇다/);
     assert.match(prompt, /작은 숨 헐떡임/);
     assert.match(prompt, /담은이 몸집/);
-    assert.match(prompt, /English “ramp” means 경사로\/진입로/);
+    assert.match(prompt, /Road\/overpass “ramp” is 경사로\/진입로/);
     assert.match(prompt, /BANNED KOREAN WORDS/);
-    checks += 14;
+    checks += 11;
 }
 
 const narration = builders.narration();
 const target = builders.targetDialogue();
 const other = builders.otherDialogue();
 assert.doesNotMatch(narration, /DIVERSE VOICE MODELS/);
-assert.match(target, /DIVERSE VOICE MODELS/);
-assert.doesNotMatch(other, /DIVERSE VOICE MODELS/);
-assert.match(target, /Urgent command/);
-assert.match(target, /Rough concern/);
-assert.match(target, /Protective warning/);
-assert.match(target, /Annoyed correction/);
-assert.match(target, /Time pressure/);
-assert.match(target, /Defiant reassurance/);
-assert.match(target, /Dismissal/);
-assert.match(target, /Rough 존댓말/);
-assert.match(target, /Contextual expletive choice/);
+assert.match(target, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
+assert.doesNotMatch(other, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
+assert.match(target, /sly confidence/);
+assert.match(target, /Serious or tactical lines stay short/);
 
 const off = core.buildOutputPrompt(segmented, { ...settings, developerMadKoreanOutputEnabled: false }, '', identity);
 assert.doesNotMatch(off, /SHORT MANDATORY KOREAN REAUTHORING CONTRACT/);

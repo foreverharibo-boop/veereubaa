@@ -72,22 +72,15 @@ const prompt = buildMadKoreanTargetedAuditPrompt({
     },
     settings: { developerHongjinFlavorEnabled: true, developerHongjinProfanity: 'natural' },
 });
-assert.match(prompt, /SPARSE SECOND PASS/);
-assert.match(prompt, /"repairs":\[\]/);
-assert.match(prompt, /KIM HONG-JIN VOICE DAMAGE/);
-assert.match(prompt, /profanity strength="natural"/);
-assert.match(prompt, /dedicated voice pass already ran/i);
-assert.match(prompt, /is WRONG because .* means easy\/weak/);
-assert.match(prompt, /service entrance is not an emergency exit/i);
-assert.match(prompt, /LOCKED=\["민철"\]/);
-assert.match(prompt, /담은을\/민철을/);
-assert.match(prompt, /Dam-eun!.*담은아!/s);
-assert.match(prompt, /각으로 문을 걷어찼다/);
-assert.match(prompt, /홍진 속도를 늦추지 않았다/);
-assert.match(prompt, /담은 발소리가 들렸다/);
-assert.match(prompt, /Every overt name and noun phrase/);
-assert.match(prompt, /“씨발” may appear at most once/);
-assert.match(prompt, /edit only the name and its directly attached suffix/);
+assert.match(prompt, /FINAL REWRITE PASS/);
+assert.match(prompt, /for EVERY row/);
+assert.match(prompt, /active rewrite, not a conservative proofread/i);
+assert.match(prompt, /dedicated voice pass/i);
+assert.match(prompt, /담은 손/);
+assert.match(prompt, /홍진 목소리/);
+assert.match(prompt, /손을 물다/);
+assert.match(prompt, /road\/overpass ramp=경사로\/진입로/);
+assert.match(prompt, /every local_flags item/i);
 
 // Exercise the exact sparse parser/request loop extracted from index.js.
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');

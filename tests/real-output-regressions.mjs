@@ -26,7 +26,7 @@ const settings = {
 const source = 'The overpass ramp rose ahead. "Keep your voice down," he said.';
 const segmented = segmentSource(source);
 const outputPrompt = buildOutputPrompt(segmented, settings, '', identity);
-assert.match(outputPrompt, /English “ramp” means 경사로\/진입로, never 조명 “램프”/);
+assert.match(outputPrompt, /Road\/overpass “ramp” is 경사로\/진입로/);
 assert.match(outputPrompt, /“공기가 얇다”/);
 assert.match(outputPrompt, /“작은 숨 헐떡임”/);
 assert.match(outputPrompt, /“담은이 몸집”/);

@@ -20,36 +20,21 @@ const settings = {
 const build = scope => core.buildScopedOutputPrompt({ segments, sourceContext: '', settings, scope, speakerIdentity: identity });
 const prompt = build('target_dialogue');
 
-assert.equal(prompt.split('KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION').length - 1, 1);
-assert.equal(prompt.split('END KIM HONG-JIN RAW VOICE').length - 1, 1);
-assert.equal(prompt.split('MANDATORY TRANSLATION CONTRACT').length - 1, 1);
+assert.equal(prompt.split('TARGET DIALOGUE ONLY — KIM HONG-JIN').length - 1, 1);
+assert.equal(prompt.split('MANDATORY AUTHORIZED VOICE OVERRIDE').length - 1, 1);
 assert.match(prompt, /maximum re-authoring/);
 assert.match(prompt, /most eligible TARGET lines/);
 assert.match(prompt, /active cheeky needling/);
 assert.match(prompt, /openly crude, brazen diction/);
 assert.match(prompt, /highly visible playful audacity/);
-assert.match(prompt, /neutral translation with one detachable “씨발” fails/);
-assert.match(prompt, /voice remains recognizable after removing explicit curses/);
-assert.match(prompt, /Serious danger.*blocks forced comedy, not blunt diction/);
+assert.match(prompt, /not by attaching one curse to a neutral sentence/);
+assert.match(prompt, /Serious or tactical lines stay short/);
 assert.match(prompt, /USER-DIRECTED PROFANITY GUARD/);
 assert.match(prompt, /Profanity diversity is mandatory/);
-assert.match(prompt, /use “씨발” at most once/i);
-assert.match(prompt, /Never use terminal “, 씨발” as a command template/);
-
-for (const example of [
-    '당장 발 놀려. 꾸물대지 말고.',
-    '하, 개같네. 어디 다친 데 없어?',
-    '내 뒤에 처붙어. 떨어지지 마.',
-    '말을 존나 안 들어요, 아주.',
-    '그거 붙잡고 이 지랄 할 시간 없어.',
-    '이 정도로 뒈지겠냐.',
-    '쟤들이 뭐라 지랄하든 알 게 뭐야.',
-    '그거 좀 그만하시죠. 사람 환장하게 만들지 말고.',
-    '좆됐네.',
-]) assert.ok(prompt.includes(example), `missing diverse example: ${example}`);
+assert.match(prompt, /crude idioms and curse-free rawness/);
 
 for (const scope of ['narration', 'other_dialogue', 'tagged_content']) {
-    assert.doesNotMatch(build(scope), /KIM HONG-JIN RAW VOICE/);
+    assert.doesNotMatch(build(scope), /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
 }
 
 const off = core.buildScopedOutputPrompt({
@@ -59,7 +44,7 @@ const off = core.buildScopedOutputPrompt({
     scope: 'target_dialogue',
     speakerIdentity: identity,
 });
-assert.doesNotMatch(off, /KIM HONG-JIN RAW VOICE/);
-assert.doesNotMatch(core.buildInputPrompt('안녕', settings, 'male', identity), /KIM HONG-JIN RAW VOICE/);
+assert.doesNotMatch(off, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
+assert.doesNotMatch(core.buildInputPrompt('안녕', settings, 'male', identity), /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
 
 console.log('PASS: Flash-optimized Kim Hong-jin voice is mandatory, varied, settings-aware, and restricted to confirmed target dialogue.');

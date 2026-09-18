@@ -32,7 +32,7 @@ for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtr
    assert.doesNotMatch(prompt, /USER-DIRECTED INSULT FIREWALL|45\.72미터, never 50미터/);
    if (prompt.includes('USER-DIRECTED PROFANITY GUARD')) {
     assert.ok(hongjin);
-    assert.match(prompt, /TARGET CHARACTER(?: direct)? dialogue|TARGET-CHARACTER DIALOGUE/i);
+    assert.match(prompt, /TARGET CHARACTER(?: direct)? dialogue|TARGET-CHARACTER DIALOGUE|TARGET DIALOGUE ONLY/i);
     assert.match(prompt, /rough non-profane rebuke|Non-abusive rebukes and teasing/);
     assert.match(prompt, /never curse at USER as a person|not all criticism or teasing/);
     assert.match(prompt, /NO MISOGYNY|misogyny/i);

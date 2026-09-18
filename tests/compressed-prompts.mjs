@@ -28,8 +28,8 @@ assert.doesNotMatch(ordinaryCompactPrompt, /SHORT MANDATORY KOREAN REAUTHORING C
 const madPrompt = build(core, mad);
 const compactPrompt = build(core, madCompact);
 const extremePrompt = build(core, madExtreme);
-assert.match(madPrompt, /SHORT MANDATORY KOREAN REAUTHORING CONTRACT/);
-assert.match(madPrompt, /DIVERSE VOICE MODELS/);
+assert.match(madPrompt, /DEEPSEEK V4\.1 FLASH — KOREAN RECOMPOSITION/);
+assert.match(madPrompt, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
 assert.match(compactPrompt, /MAD KOREAN EXCLUSIVE — COMPACT EXPERIMENT/);
 assert.match(extremePrompt, /MAD KOREAN — ULTRA-COMPACT/);
 assert.doesNotMatch(compactPrompt, /SHORT MANDATORY KOREAN REAUTHORING CONTRACT/);
@@ -39,7 +39,7 @@ assert.ok(madPrompt.length < extremePrompt.length, 'the new Flash-first standard
 
 for (const prompt of [madPrompt, compactPrompt, extremePrompt]) {
     assert.equal(prompt.split('TOP PRIORITY — NO MISOGYNY').length - 1, 1);
-    assert.equal(prompt.split('KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION').length - 1, 1);
+    assert.match(prompt, /KIM HONG-JIN|Kim Hong-jin/);
     assert.match(prompt, /BANNED KOREAN WORDS/);
     assert.match(prompt, /김홍진/);
     assert.match(prompt, /담은/);
