@@ -1231,14 +1231,90 @@ const DEVELOPER_HONGJIN_OPPA_FREQUENCY_RULES = {
 - When TARGET CHARACTER is clearly speaking directly to the CURRENT USER/PERSONA, actively prefer “오빠/오빠가/오빠는” over “나/내가/나는” in compatible affectionate, teasing, coaxing, or smug lines. Use it regularly across the response, but not in every sentence or twice in the same utterance.`,
 };
 
+function hongjinRawVoiceMandate(compact = false) {
+    return compact
+        ? `KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION
+- The final TARGET dialogue must sound unmistakably like Kim Hong-jin, not like a generally natural translation. When active settings authorize roughness, a clean, polite, neutral, textbook-like or merely accurate line is a FAILURE.
+- Do not translate neutrally and decorate the result with one curse. Rebuild the whole utterance through blunt vocabulary, shameless street-level cadence, rough particles/endings, brazen reactions, cheeky pressure and vulgar emphasis. The voice must remain recognizable even if every explicit curse is removed.
+- “Preserve meaning” preserves facts, intent, relationship, consent, emotional direction and the target of aggression—not source wording, restraint, politeness, clause shape or rhetorical packaging. Rewrite as boldly as the selected controls allow.
+- Misogyny and USER-directed profanity bans restrict only the forbidden expression or curse target. They never authorize cleaning the rest of the line. Free expletives and profanity aimed at the situation, action, urgency, pain, self, obstacle, enemy, NPC or third party remain mandatory at NATURAL/HIGH when compatible.
+- Reject and rewrite a line that could belong to any generic Korean male character, relies on only “젠장/빌어먹을/망할”, or adds a detachable swear word to otherwise neutral prose. Seriousness blocks forced jokes, not rawness.
+END KIM HONG-JIN RAW VOICE`
+        : `KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION
+- The final Korean dialogue MUST sound unmistakably like Kim Hong-jin, not like a generally natural Korean translation.
+- A clean, polite, neutral, textbook-like, restrained, elegant, or merely accurate translation is a FAILURE whenever the selected voice settings authorize roughness, profanity, vulgarity, teasing, or shamelessness.
+- Do not first produce a neutral translation and then decorate it with an isolated curse. Rebuild the entire utterance around Kim Hong-jin's vocabulary, cadence, particles, sentence endings, rhetorical turns, vulgar emphasis, brazen reactions, and shameless conversational attitude.
+- His voice must remain recognizable even after every explicit curse is removed. Profanity strengthens the voice; it does not create the voice by itself.
+
+DEFAULT STRONG CHOICES
+- Prefer blunt and bodily directness over tasteful euphemism; shameless street-level phrasing over polished or literary wording; cheeky pressure, brazen reactions, and sly verbal turns over neutral delivery.
+- Prefer concrete contemporary Korean curses and vulgar intensifiers over repeatedly retreating to only “젠장”, “빌어먹을”, or “망할”. Prefer short, forceful spoken rhythm over complete explanatory sentences.
+- Keep emotionally appropriate roughness in fear, urgency, pain, concern, relief, frustration, anger, and serious scenes. Seriousness suppresses forced comedy, not raw diction, a free expletive, or situation-directed profanity.
+- “Preserve meaning” does NOT mean preserving source wording, politeness, restraint, sentence structure, or rhetorical packaging. Preserve the actual event, proposition, speech act, intent, relationship, consent, emotional direction, scene stakes, and target of aggression while rewriting the spoken expression as boldly as the selected controls allow.
+- The bans on misogyny and USER-directed profanity restrict only forbidden expressions and forbidden curse targets. They do NOT authorize sanitizing the rest of the line. Situation-directed profanity, free-standing expletives, vulgar intensifiers, enemy/NPC/third-party curses, crude idioms, and rough non-profane scolding of USER's behavior remain active at the configured strength.
+
+VOICE TRANSFORMATION MODELS
+These examples demonstrate transformation strength, cadence, and integration—not fixed substitutions. Recreate every new line from its own facts, speech act, register, addressee, and emotional context. Preserve source ellipses exactly; punctuation inside an example never authorizes a new ellipsis.
+
+Source: “Move. Now.”
+WEAK FAILURE: “움직여. 지금.”
+KIM HONG-JIN: “씨발, 당장 움직여.”
+
+Source: “Are you hurt?”
+WEAK FAILURE: “다쳤어?”
+KIM HONG-JIN: “하, 씨발. 어디 다친 데 없어?”
+
+Source: “That was close.”
+WEAK FAILURE: “아슬아슬했네.”
+KIM HONG-JIN: “와, 씨발. 방금 진짜 좆될 뻔했네.”
+
+Source: “I told you not to touch it.”
+WEAK FAILURE: “만지지 말라고 했잖아.”
+KIM HONG-JIN: “건들지 말랬지. 말을 존나 안 들어요, 아주.”
+
+Source: “Stay behind me.”
+WEAK FAILURE: “내 뒤에 있어.”
+KIM HONG-JIN: “내 뒤에 딱 붙어. 씨발, 떨어지지 마.”
+
+Source: “You should have told me sooner.”
+WEAK FAILURE: “진작 말했어야지.”
+KIM HONG-JIN: “그걸 진작 처말했어야지. 사람 존나 빡치게 하네.”
+
+Source: “Leave it. We don't have time.”
+WEAK FAILURE: “그냥 둬. 시간이 없어.”
+KIM HONG-JIN: “냅둬. 씨발, 그거 붙잡고 늘어질 시간 없어.”
+
+Source: “I'm fine.”
+WEAK FAILURE: “괜찮아.”
+KIM HONG-JIN: “멀쩡해. 씨발, 이 정도는 아무것도 아니야.”
+
+Source: “Wait here.”
+WEAK FAILURE: “여기서 기다려.”
+KIM HONG-JIN: “여기 처박혀 있어. 괜히 기어나오지 말고.”
+
+Source: “I don't care what they think.”
+WEAK FAILURE: “그들이 어떻게 생각하든 상관없어.”
+KIM HONG-JIN: “쟤들이 뭐라 생각하든 알 게 뭐야. 씨발, 냅둬.”
+
+FINAL RAWNESS GATE
+- Reject and rewrite the line if its personality disappears after removing one detachable swear word, if it could belong to any generic rough male character, or if its diction remains polite translation prose under a profanity sticker.
+- Reject habitual reliance on “젠장/빌어먹을/망할”, fake macho shouting, random curse repetition, or identical “응?/어?/알겠냐?” hooks. Rawness must come from the entire utterance, not noise.
+- Apply the selected frequency positively: NATURAL must leave compatible multi-line TARGET dialogue audibly rough rather than mostly clean; HIGH must make raw diction, vulgar emphasis, crude idiom, or concrete profanity visible in most eligible lines.
+END KIM HONG-JIN RAW VOICE`;
+}
+
 function deepSeekHongjinVoicePass(compact = false) {
     return compact
-        ? `DEEPSEEK HONGJIN VOICE PASS — hidden, TARGET dialogue only
+        ? `${hongjinRawVoiceMandate(true)}
+
+DEEPSEEK HONGJIN VOICE PASS — hidden, TARGET dialogue only
 - For each confirmed TARGET line, silently identify addressee, speech act, subtext, seriousness, emotional temperature and selected voice strengths. First make it natural spoken Korean; then rebuild cadence, particles, endings, contractions, roughness, teasing and profanity as one integrated voice rather than appending a swear word.
 - Classify the listener and each curse target separately. USER may hear profanity aimed at the situation, urgency, pain, self, enemy, obstacle, NPC or an unassigned emotional expletive; never aim it at USER. Serious/urgent lines stay terse and serious, but serious does not mean clean. Reject textbook Korean, semantically misplaced or repetitive curse fillers, fake macho/old speech and a voice that could belong to anyone; do not mislabel configured NATURAL/HIGH swearing as random merely because the source is clean.
 - Silently read the line aloud once and rewrite if it is stiff or insufficiently distinctive. Expose no analysis; return only the required translation.
 END DEEPSEEK HONGJIN VOICE PASS`
-        : `DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS
+        : `${hongjinRawVoiceMandate(false)}
+
+DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS
 Run this hidden pass only on direct dialogue confidently attributed to TARGET CHARACTER. Do not apply it to narration, inner thought, metadata, USER/NPC/OTHER dialogue, quoted speech by someone else, or an ambiguous speaker.
 
 1. MAP THE LINE: silently identify the actual addressee, speech act, literal proposition, subtext, emotional temperature, seriousness, urgency, hostility/affection direction, and the selected transcreation, profanity, teasing, vulgarity, playfulness, age and self-reference strengths. Decide what the line must accomplish before choosing Korean words.
