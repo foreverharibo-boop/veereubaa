@@ -78,7 +78,7 @@ const madPrompt = builders.full(madSettings);
 has(madPrompt, 'MAD KOREAN — ULTRA-COMPACT');
 has(madPrompt, 'KIM HONG-JIN VOICE — ULTRA');
 has(madPrompt, 'DEEPSEEK HONGJIN VOICE PASS — hidden');
-has(madPrompt, 'Urgent/serious lines stay terse and serious');
+has(madPrompt, 'Serious/urgent lines stay terse and serious, but serious does not mean clean');
 has(madPrompt, 'never aim it at USER');
 has(madPrompt, 'USER-DIRECTED PROFANITY GUARD');
 has(madPrompt, 'PERSONAL PRONOUN DEFAULT:');

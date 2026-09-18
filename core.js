@@ -1097,13 +1097,20 @@ const DEVELOPER_HONGJIN_TRANSCREATION_RULES = {
 
 const DEVELOPER_HONGJIN_PROFANITY_RULES = {
     low: `PROFANITY — LOW
-- Add profanity only occasionally, at genuinely strong emphasis/annoyance/comedic beats. Prefer rough casual wording over explicit swearing most of the time.`,
+- Preserve explicit source profanity at comparable force; LOW limits newly added profanity, not faithful rendering of source swearing.
+- Add a concrete curse only occasionally, at genuinely strong emphasis, annoyance, danger, pain, shock, or comic beats. Prefer rough casual wording over explicit swearing most of the time.
+- A line addressed to USER is not automatically profanity-free: a free-standing expletive or an intensifier aimed at the situation/action remains allowed under the USER-DIRECTED PROFANITY GUARD.`,
     natural: `PROFANITY — NATURAL
-- Profanity and vulgar intensifiers may be added even when absent from the source when they naturally strengthen exasperation, emphasis, teasing, shamelessness, or comic timing.
-- Vary placement and wording; do not mechanically swear in every sentence.`,
+- Profanity and vulgar intensifiers may be added even when absent from the source when they naturally strengthen exasperation, urgency, fear, pain, emphasis, teasing, shamelessness, or comic timing.
+- Do not sanitize an otherwise eligible multi-line response into uniformly clean speech. When TARGET has two or more compatible lines, normally give at least one line a concrete Korean curse, expletive, vulgar intensifier, or crude idiom; omit it only when every line is genuinely quiet, tender, solemn, or incompatible with swearing.
+- Preserve explicit source profanity at comparable force. Do not habitually flatten fuck/fucking/shit into only “젠장/빌어먹을/망할.” Use stronger everyday Korean forms where the scene and target permit them.
+- Vary placement and wording; do not mechanically swear in every sentence or repeat the same filler. A line spoken to USER may still curse at the situation, self, enemy, obstacle, pain, or urgency.`,
     high: `PROFANITY — HIGH
-- Use frequent, characterful Korean profanity/vulgar intensifiers where conversationally plausible, including source lines that contain no profanity.
-- Profanity should feel habitual and shameless, but still follow the scene's emotional direction rather than turning every line into indiscriminate rage.`,
+- This is a positive frequency requirement, not mere permission. Use frequent, unmistakable, characterful Korean profanity, vulgar intensifiers, and crude idioms wherever conversationally plausible, including source lines that contain no profanity.
+- In a multi-line response, most eligible TARGET lines should carry either a concrete curse, a vulgar intensifier, a crude idiom, or profanity-shaped rhythm. Do not make every line identical, but do not return a mostly sanitized voice when compatible beats exist.
+- Preserve explicit source profanity at equal or stronger natural Korean force. Do not default to mild “젠장/빌어먹을/망할” throughout the response; actively draw from ordinary strong Korean speech such as “아, 씨발”, “존나”, “개-”, “좆됐네/좆같네”, “이 지랄”, and “저 새끼/개새끼” when their grammatical target is allowed.
+- Profanity may express urgency, fear, pain, disbelief, relief, frustration, or rough affection without becoming rage. Seriousness suppresses forced jokes, NOT situation-directed expletives or emphatic swearing.
+- A line addressed to USER may still contain frequent profanity aimed at the situation, self, enemy, obstacle, action, or urgency. Only profanity whose target is USER is forbidden.`,
 };
 
 const DEVELOPER_HONGJIN_TEASING_RULES = {
@@ -1152,11 +1159,37 @@ END TOP PRIORITY`;
 
 function noDirectUserProfanityRule(compact = false) {
     return compact
-        ? `USER-DIRECTED PROFANITY GUARD: Applies only to TARGET CHARACTER dialogue. Do not direct profanity or curse words at CURRENT USER/PERSONA. Non-abusive rebukes and teasing are allowed; profanity about the situation, himself, NPCs or other people remains allowed at the selected strength. If the source curses at USER, preserve anger, conflict and force through a non-profane rebuke. This rule prohibits user-directed profanity, not all criticism or teasing. The misogyny ban remains higher priority.`
+        ? `USER-DIRECTED PROFANITY GUARD: Applies only to TARGET CHARACTER dialogue. Ban profanity whose grammatical/pragmatic target is CURRENT USER/PERSONA; do NOT ban all profanity merely because USER hears the line. First identify the curse target separately from the listener. Free expletives and profanity aimed at the situation, urgency, pain, self, an obstacle, an enemy, NPC or third party remain allowed—and at NATURAL/HIGH must remain active—inside USER-addressed dialogue. ALLOWED models: “아, 씨발. 뒤 보지 마.” / “존나 빨리 뛰어.” / “씨발, 문이 안 열리잖아.” / “이 상황 진짜 좆같네.” / “저 개새끼들 또 온다.” / “내가 이 지랄까지 해야 돼?” / “하, 씨발... 다친 데 없어?” FORBIDDEN toward USER: “야, 이 새끼야.” / “너 병신이냐?” / “미친년아.” / “너 같은 개새끼.” Serious/urgent emotion blocks forced joking, not allowed expletives or intensifiers. If source profanity attacks USER, preserve anger/conflict through a natural non-profane rebuke. Non-abusive rebukes and teasing remain allowed; this prohibits user-directed profanity, not all criticism or teasing. Never sanitize an entire response solely because USER is the addressee. The misogyny ban remains higher priority; examples are contextual models, never fixed insertions.`
         : `USER-DIRECTED PROFANITY GUARD — KIM HONG-JIN VOICE
-- Applies only to TARGET CHARACTER dialogue. Do not address or describe CURRENT USER/PERSONA with profanity or curse words directed at them, such as “이 새끼”, “병신”, or “미친놈”.
-- Non-abusive rebukes and teasing of USER are allowed. Profanity about the situation, himself, an NPC, an enemy, or a third party remains allowed according to the selected profanity strength.
-- If the source curses at USER, preserve the anger, conflict, pragmatic force, and relationship through a natural non-profane rebuke. This prohibition concerns user-directed profanity, not all criticism or teasing. It overrides profanity, vulgarity, teasing, playfulness, and transcreation strength without softening the surrounding scene or prohibiting all rough language.
+- Applies only to TARGET CHARACTER dialogue. This guard controls only the TARGET of a curse. Do not address, label, describe, or attack CURRENT USER/PERSONA with profanity, such as “이 새끼”, “병신”, “미친놈”, or any misogynistic/gendered slur.
+- The listener and the curse target are different questions. A line does NOT become profanity-free merely because TARGET is speaking to USER. For every curse, first identify what the profanity grammatically and pragmatically attacks or intensifies:
+  1) USER as a person, USER's identity, or a contemptuous name for USER → FORBIDDEN;
+  2) the situation, danger, obstacle, failed object, pain, shock, urgency, TARGET himself, an enemy, infected creature, NPC, or third party → ALLOWED at the selected profanity strength;
+  3) a free-standing emotional expletive that names no person (“아, 씨발”, “하, 씨발...”) → ALLOWED even inside a command, warning, question, or reassurance spoken to USER;
+  4) an adverbial/vulgar intensifier modifying speed, degree, difficulty, or an action rather than USER (“존나 빨리”, “개빡세게”, “더럽게 안 열리네”) → ALLOWED when natural.
+- ALLOWED — USER is the listener, but profanity targets urgency, situation, obstacle, enemy, self, or emotion:
+  * “아, 씨발. 뒤 보지 마.”
+  * “존나 빨리 뛰어.”
+  * “씨발, 문이 안 열리잖아.”
+  * “이 상황 진짜 좆같네.”
+  * “저 개새끼들 또 몰려온다.”
+  * “내가 이 개지랄까지 해야 돼?”
+  * “뭐 이런 개같은 경우가 다 있냐.”
+  * “하, 씨발... 다친 데 없어?”
+  * “씨발, 놀랐잖아. 멀쩡하면 말을 해.”
+  * “이러다 둘 다 좆돼. 내 뒤에 붙어.”
+- FORBIDDEN — profanity directly names, modifies, or contemptuously attacks USER:
+  * “야, 이 새끼야.”
+  * “너 병신이냐?”
+  * “미친년아.” / “이 씨발년아.”
+  * “너 같은 개새끼.”
+  * “존나 멍청한 년이네.”
+  * Recasting USER's name, title, body, gender, or identity as a curse target.
+- Quick test: if removing the USER vocative still leaves the curse aimed at the situation/action/obstacle, it is normally allowed. If the curse functions as USER's label or says USER is the cursed thing, it is forbidden.
+- Non-abusive rebukes and teasing of USER remain allowed, as do blunt non-profane criticism and impatience. This guard prohibits user-directed profanity, not all criticism or teasing. If the source itself curses at USER, preserve its anger, conflict, pragmatic force, and relationship through a natural non-profane rebuke rather than redirecting the curse elsewhere.
+- Apply the selected profanity frequency AFTER this target test. NATURAL/HIGH must not be silently reduced to clean speech merely because USER is the addressee. Do not replace every strong curse with “젠장/빌어먹을/망할”; choose forceful contemporary Korean when its target is allowed.
+- Seriousness, danger, fear, pain, grief, or urgency suppresses forced jokes and playful mockery; it does NOT suppress allowed expletives, vulgar intensifiers, or situation-directed swearing. A terse serious line can still be profane.
+- These examples demonstrate target logic and register, not fixed substitutions or mandatory wording. Vary the expression and preserve the actual scene, speech act, emotional direction, and configured 반말/존댓말.
 - The higher-priority ban on misogyny and gender-based derogation remains unchanged.`;
 }
 
@@ -1202,7 +1235,7 @@ function deepSeekHongjinVoicePass(compact = false) {
     return compact
         ? `DEEPSEEK HONGJIN VOICE PASS — hidden, TARGET dialogue only
 - For each confirmed TARGET line, silently identify addressee, speech act, subtext, seriousness, emotional temperature and selected voice strengths. First make it natural spoken Korean; then rebuild cadence, particles, endings, contractions, roughness, teasing and profanity as one integrated voice rather than appending a swear word.
-- Put profanity on the situation, self, enemy, NPC or emphatic beat allowed by the controls; never aim it at USER. Make teasing perform the same speech act, not invent a claim. Urgent/serious lines stay terse and serious. Reject textbook Korean, repetitive curse fillers, fake macho/old speech and a voice that could belong to anyone.
+- Classify the listener and each curse target separately. USER may hear profanity aimed at the situation, urgency, pain, self, enemy, obstacle, NPC or an unassigned emotional expletive; never aim it at USER. Serious/urgent lines stay terse and serious, but serious does not mean clean. Reject textbook Korean, semantically misplaced or repetitive curse fillers, fake macho/old speech and a voice that could belong to anyone; do not mislabel configured NATURAL/HIGH swearing as random merely because the source is clean.
 - Silently read the line aloud once and rewrite if it is stiff or insufficiently distinctive. Expose no analysis; return only the required translation.
 END DEEPSEEK HONGJIN VOICE PASS`
         : `DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS
@@ -1210,13 +1243,14 @@ Run this hidden pass only on direct dialogue confidently attributed to TARGET CH
 
 1. MAP THE LINE: silently identify the actual addressee, speech act, literal proposition, subtext, emotional temperature, seriousness, urgency, hostility/affection direction, and the selected transcreation, profanity, teasing, vulgarity, playfulness, age and self-reference strengths. Decide what the line must accomplish before choosing Korean words.
 2. BUILD SPOKEN KOREAN FIRST: discard the source clause skeleton and form a line that a contemporary Korean man with this personality could say aloud in one breath. Use Korean-native compression, particles, omissions, contractions, sentence endings, pauses and information order. Do not preserve a complete source sentence merely because it is grammatically translatable.
-3. INTEGRATE THE VOICE: make slyness, shamelessness, roughness and teasing emerge from the verb, cadence, rhetorical turn and ending. Place profanity or vulgar emphasis at the strongest natural beat allowed by the selected controls; do not merely attach “씨발/젠장/새끼” to an otherwise neutral textbook translation. Vary the mechanism across nearby lines instead of repeating the same curse, tag question, vocative, ending or taunting pattern.
-4. RESPECT THE MOMENT: danger, grief, fear, anger, refusal, consent and sincere emotion keep their full weight. An urgent command should remain short and usable under pressure; a serious confession should not acquire a joke; a quiet line need not perform swagger. Distinctive voice can be terse, dry or blunt without adding comedy.
-5. READ-ALOUD REJECTION TEST: silently read the finished TARGET line as dialogue. Rewrite it once if it sounds translated, literary, bureaucratic, generically macho, pseudo-old, randomly profane, overexplained, repetitive, or interchangeable with any rough male character. Keep it when the personality is recognizable through natural Korean delivery without a new fact.
+3. INTEGRATE THE VOICE: make slyness, shamelessness, roughness and teasing emerge from the verb, cadence, rhetorical turn and ending. Place profanity or vulgar emphasis at the strongest natural beat allowed by the selected controls; do not merely attach “씨발/젠장/새끼” to an otherwise neutral textbook translation. Vary the mechanism across nearby lines instead of repeating the same curse, tag question, vocative, ending or taunting pattern. When NATURAL/HIGH is selected, absence of source profanity is not a reason to omit compatible Korean profanity.
+4. RESPECT THE MOMENT WITHOUT SANITIZING IT: danger, grief, fear, anger, refusal, consent and sincere emotion keep their full weight. An urgent command should remain short and usable under pressure; a serious confession should not acquire a joke; a quiet line need not perform swagger. However, serious does NOT mean clean: fear, pain, urgency, shock, frustration and rough concern may naturally use a free expletive, vulgar intensifier or situation-directed curse. Suppress forced comedy, not configured profanity.
+5. READ-ALOUD REJECTION TEST: silently read the finished TARGET line as dialogue. Rewrite it once if it sounds translated, literary, bureaucratic, generically macho, pseudo-old, semantically misplaced, overexplained, mechanically repetitive, or interchangeable with any rough male character. Do not reject a curse merely because the literal source lacked one: the active voice setting explicitly authorizes added surface profanity. Keep the line when the personality is recognizable through natural Korean delivery without a new fact.
 
 VOICE BOUNDARIES
 - Teasing must perform the same source speech act and target the same person or situation. It may sharpen delivery but cannot invent an accusation, grievance, nickname, humiliation, threat, promise, relationship development or comic event.
-- Profanity must have a grammatical and pragmatic target. Under USER-DIRECTED PROFANITY GUARD, direct no curse at USER; use a non-profane jab/rebuke toward USER while allowing configured profanity about the situation, self, enemy, NPC or third party.
+- Profanity must have a grammatical and pragmatic target, including the valid target “no person / free emotional expletive.” Under USER-DIRECTED PROFANITY GUARD, direct no curse at USER; use a non-profane jab/rebuke toward USER while allowing configured profanity about the situation, urgency, pain, obstacle, self, enemy, NPC, third party, or an unassigned emotional outburst. Determine the curse target independently of the listener.
+- USER-LISTENER EXAMPLES: “아, 씨발. 뒤 보지 마.”, “존나 빨리 뛰어.”, “씨발, 문이 안 열리잖아.”, “하, 씨발... 다친 데 없어?” are allowed because USER is only the listener. “야, 이 새끼야.”, “너 병신이냐?”, and “너 같은 개새끼.” are forbidden because USER is the curse target. Use the logic, not the exact wording.
 - Do not confuse force with shouting. Do not turn every line into anger, add exclamation marks, or repeat rhetorical “응?/어?/알겠냐?” hooks merely to signal personality.
 - Preserve configured 반말/존댓말 and address rules. Rough 존댓말 must still sound conversational; playful honorifics may be used only where authorized and natural.
 - Keep this entire mapping, voice pass and read-aloud test hidden. Return only the required final translation and schema.
@@ -2537,7 +2571,11 @@ function extremeHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
         strong: 'strong Korean-native rewording',
         maximum: 'maximum re-authoring from unchanged intent/facts',
     }, settings.developerHongjinTranscreation, 'strong Korean-native rewording');
-    const profanity = pick({ low: 'low', natural: 'natural', high: 'high but not indiscriminate rage' }, settings.developerHongjinProfanity, 'natural');
+    const profanity = pick({
+        low: 'low: preserve source swearing; add only occasional curses at strong compatible beats',
+        natural: 'natural: do not sanitize eligible multi-line dialogue; normally use at least one concrete curse/intensifier when compatible',
+        high: 'HIGH POSITIVE REQUIREMENT: most eligible lines carry a concrete curse, vulgar intensifier, crude idiom or profanity-shaped rhythm; serious blocks jokes, not allowed swearing',
+    }, settings.developerHongjinProfanity, 'natural: do not sanitize eligible multi-line dialogue; normally use at least one concrete curse/intensifier when compatible');
     const teasing = pick({ light: 'light', natural: 'natural smug teasing', active: 'active cheeky needling' }, settings.developerHongjinTeasing, 'natural smug teasing');
     const vulgarity = pick({ restrained: 'restrained', natural: 'natural rough/street-level', open: 'openly crude without invented sexual/body facts' }, settings.developerHongjinVulgarity, 'natural rough/street-level');
     const playfulness = pick({ low: 'low', natural: 'natural where compatible', high: 'high without trivializing serious emotion' }, settings.developerHongjinPlayfulness, 'natural where compatible');
@@ -2575,10 +2613,10 @@ function compactHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
         maximum: 'treat source wording as disposable and re-author from unchanged intent/facts',
     }[settings.developerHongjinTranscreation] || 'aggressively rebuild syntax, rhythm, and wording as original Korean speech';
     const profanity = {
-        low: 'occasional only at strong natural beats',
-        natural: 'natural profanity/rough intensifiers may be added where compatible',
-        high: 'frequent characterful profanity where plausible, never indiscriminate rage',
-    }[settings.developerHongjinProfanity] || 'natural profanity/rough intensifiers may be added where compatible';
+        low: 'preserve source swearing; add profanity only occasionally at strong compatible beats',
+        natural: 'do not sanitize eligible multi-line dialogue; normally include at least one concrete Korean curse, vulgar intensifier or crude idiom when compatible',
+        high: 'positive frequency requirement: most eligible lines use a concrete curse, vulgar intensifier, crude idiom or profanity-shaped rhythm; serious blocks forced jokes, not allowed swearing',
+    }[settings.developerHongjinProfanity] || 'do not sanitize eligible multi-line dialogue; normally include at least one concrete Korean curse, vulgar intensifier or crude idiom when compatible';
     const teasing = {
         light: 'faint sly needling only',
         natural: 'natural smug teasing and playful verbal jabs',

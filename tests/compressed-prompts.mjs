@@ -252,7 +252,7 @@ for (const strength of ['light', 'strong', 'maximum']) {
                 contains(prompt, 'read', label);
                 if (compressed) {
                     contains(prompt, 'never aim it at USER', label);
-                    contains(prompt, 'Urgent/serious lines stay terse and serious', label);
+                    contains(prompt, 'Serious/urgent lines stay terse and serious, but serious does not mean clean', label);
                 } else {
                     contains(prompt, 'direct no curse at USER', label);
                     contains(prompt, 'An urgent command should remain short', label);
