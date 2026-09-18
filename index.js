@@ -40,6 +40,7 @@ import {
     parseSelectionCandidateResponse,
     replaceOutsideProtected,
     repairCanonicalKoreanNameSuffixes,
+    repairCanonicalKoreanVocatives,
     restoreProtected,
     resolveOutputSpeakerIdentity,
     segmentSource,
@@ -47,7 +48,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.88';
+const EXTENSION_VERSION = '0.5.89';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3316,7 +3317,7 @@ Do not add markdown fences, commentary, or explanations.`
     );
 }
 
-function restoredSegmentText(value, segmented, useSourceNames = false, speakerIdentity = {}) {
+function restoredSegmentText(value, segmented, useSourceNames = false, speakerIdentity = {}, sourceSegment = {}) {
     const nameTokens = (segmented.nameTokens || []).map(entry => ({
         token: entry.token,
         value: useSourceNames ? entry.source : entry.value,
@@ -3327,7 +3328,7 @@ function restoredSegmentText(value, segmented, useSourceNames = false, speakerId
     // Keep this helper usable by the minimal-output module and its isolated
     // tests, which intentionally load it without the full identity pipeline.
     const identityRepaired = typeof repairOutputIdentityNames === 'function'
-        ? repairOutputIdentityNames(fullyRestored, speakerIdentity)
+        ? repairOutputIdentityNames(fullyRestored, speakerIdentity, sourceSegment, segmented.nameTokens || [])
         : fullyRestored;
     return repairKoreanParticleAlternatives(identityRepaired);
 }
@@ -3336,7 +3337,7 @@ function buildSourceMap(segmented, translations, completeTranslation, speakerIde
     const entries = [];
     let cursor = 0;
     for (const segment of segmented.segments || []) {
-        const translated = restoredSegmentText(String(translations.get(segment.id) || ''), segmented, false, speakerIdentity);
+        const translated = restoredSegmentText(String(translations.get(segment.id) || ''), segmented, false, speakerIdentity, segment);
         const source = restoredSegmentText(segment.text, segmented, true);
         if (!translated.trim() || !source.trim()) continue;
         let start = completeTranslation.indexOf(translated, cursor);
@@ -3801,22 +3802,34 @@ function repairIndivisibleIdentityNames(value, speakerIdentity = {}) {
     return result;
 }
 
-function repairStrictCanonicalIdentityNames(value, speakerIdentity = {}) {
-    const canonicalNames = [
+function canonicalKoreanIdentityNames(speakerIdentity = {}) {
+    const identityNames = [
         String(speakerIdentity.userName || '').trim(),
         String(speakerIdentity.characterName || '').trim(),
+    ].filter(name => /^[가-힣]{2,12}$/u.test(name));
+    const lockedNames = [
         ...(Array.isArray(speakerIdentity.nameLocks) ? speakerIdentity.nameLocks : [])
             .flatMap(row => [row?.target, row?.value])
             .map(name => String(name || '').trim()),
-    ].filter(Boolean);
-    return repairCanonicalKoreanNameSuffixes(value, canonicalNames);
+    ].filter(name => /^[가-힣]{2,12}$/u.test(name));
+    const identityVariants = identityNames.flatMap(name => (
+        [...name].length === 3 ? [name, [...name].slice(1).join('')] : [name]
+    ));
+    // A generic lock may be a title/place/object rather than a person's full
+    // name, so never invent a shortened alias from lock targets.
+    return [...new Set([...identityVariants, ...lockedNames])];
 }
 
-function repairOutputIdentityNames(value, speakerIdentity = {}) {
+function repairStrictCanonicalIdentityNames(value, speakerIdentity = {}) {
+    return repairCanonicalKoreanNameSuffixes(value, canonicalKoreanIdentityNames(speakerIdentity));
+}
+
+function repairOutputIdentityNames(value, speakerIdentity = {}, sourceSegment = {}, nameTokens = []) {
     const indivisible = repairIndivisibleIdentityNames(value, speakerIdentity);
-    return madKoreanExclusiveMode()
-        ? repairStrictCanonicalIdentityNames(indivisible, speakerIdentity)
-        : indivisible;
+    if (!madKoreanExclusiveMode()) return indivisible;
+    const canonicalNames = canonicalKoreanIdentityNames(speakerIdentity);
+    const particlesRepaired = repairCanonicalKoreanNameSuffixes(indivisible, canonicalNames);
+    return repairCanonicalKoreanVocatives(particlesRepaired, sourceSegment, canonicalNames, nameTokens);
 }
 
 function hasKoreanFinalConsonant(value) {
@@ -4370,7 +4383,12 @@ async function runMadKoreanTargetedAudit({
                 segment.id,
                 repairKoreanParticleAlternatives(
                     repairStrictCanonicalIdentityNames(
-                        repairIndivisibleIdentityNames(after, speakerIdentity),
+                        repairCanonicalKoreanVocatives(
+                            repairIndivisibleIdentityNames(after, speakerIdentity),
+                            segment,
+                            canonicalKoreanIdentityNames(speakerIdentity),
+                            segmented.nameTokens || [],
+                        ),
                         speakerIdentity,
                     ),
                 ),
@@ -4616,12 +4634,13 @@ async function translateOutputText(source, options = {}) {
     });
 
     for (const [id, translation] of translations) {
+        const sourceSegment = segmented.segments.find(segment => segment.id === id) || {};
         const indivisible = repairIndivisibleIdentityNames(translation, speakerIdentity);
         translations.set(
             id,
             repairKoreanParticleAlternatives(
                 madKoreanExclusiveMode()
-                    ? repairStrictCanonicalIdentityNames(indivisible, speakerIdentity)
+                    ? repairOutputIdentityNames(indivisible, speakerIdentity, sourceSegment, segmented.nameTokens || [])
                     : indivisible,
             ),
         );
@@ -4642,6 +4661,21 @@ async function translateOutputText(source, options = {}) {
         speakerIdentity,
         options,
     });
+
+    // A sparse audit may invoke a downstream repair prompt. Re-run the local
+    // Mad-name surface repair once so that the final repair response cannot
+    // reintroduce doubled particles or a subject-form vocative.
+    if (madKoreanExclusiveMode()) {
+        for (const [id, translation] of translations) {
+            const sourceSegment = segmented.segments.find(segment => segment.id === id) || {};
+            translations.set(
+                id,
+                repairKoreanParticleAlternatives(
+                    repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
+                ),
+            );
+        }
+    }
 
     normalizeTaggedOutputTranslations(segmented, translations);
 

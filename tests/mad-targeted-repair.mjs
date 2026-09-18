@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {
     buildMadKoreanTargetedAuditPrompt,
     repairCanonicalKoreanNameSuffixes,
+    repairCanonicalKoreanVocatives,
 } from '../core.js';
 
 const names = ['담은', '민철', '지수', '혜담은'];
@@ -11,6 +12,10 @@ const repaired = repairCanonicalKoreanNameSuffixes(
     names,
 );
 assert.equal(repaired, '담은을 밀고 민철은 멈춰 서있었다. 지수를 불렀고, 혜담은에게 줄 것도 챙겼다.');
+assert.equal(
+    repairCanonicalKoreanNameSuffixes('담은이은 담은이을 담은이과 담은이에서 봤다.', names),
+    '담은은 담은을 담은과 담은에서 봤다.',
+);
 
 // A normal subject particle, vocative, comitative and unrelated noun survive.
 for (const [before, after] of [
@@ -21,6 +26,33 @@ for (const [before, after] of [
 ]) {
     assert.equal(repairCanonicalKoreanNameSuffixes(before, names), after);
 }
+
+assert.equal(
+    repairCanonicalKoreanVocatives('"담은이!"', { type: 'dialogue_candidate', text: '"Dam-eun!"' }, names),
+    '"담은아!"',
+);
+assert.equal(
+    repairCanonicalKoreanVocatives('"지수이, 뛰어!"', { type: 'dialogue_candidate', text: '"Jisoo, run!"' }, names),
+    '"지수야, 뛰어!"',
+);
+assert.equal(
+    repairCanonicalKoreanVocatives('담은이 파이프를 휘둘렀다.', { type: 'narration', text: 'Dam-eun swung the pipe.' }, names),
+    '담은이 파이프를 휘둘렀다.',
+);
+assert.equal(
+    repairCanonicalKoreanVocatives('"담은이!"', { type: 'dialogue_candidate', text: '"It is Dam-eun!"' }, names),
+    '"담은이!"',
+);
+const nameToken = '@@VERBA_DEEP_NAME_0000@@';
+assert.equal(
+    repairCanonicalKoreanVocatives(
+        `"${nameToken}이! 뛰어!"`,
+        { type: 'dialogue_candidate', text: `"${nameToken}! Run!"` },
+        names,
+        [{ token: nameToken, value: '담은' }],
+    ),
+    `"${nameToken}아! 뛰어!"`,
+);
 
 const segments = [
     { id: 'seg_0000', type: 'dialogue_candidate', outputScope: 'target_dialogue', text: '"The front\'s a death trap!"' },
@@ -45,6 +77,7 @@ assert.match(prompt, /is WRONG because .* means easy\/weak/);
 assert.match(prompt, /service entrance is not an emergency exit/i);
 assert.match(prompt, /LOCKED=\["민철"\]/);
 assert.match(prompt, /담은을\/민철을/);
+assert.match(prompt, /Dam-eun!.*담은아!/s);
 assert.match(prompt, /각으로 문을 걷어찼다/);
 
 // Exercise the exact sparse parser/request loop extracted from index.js.
@@ -77,6 +110,38 @@ assert.throws(
     /중복 수정/,
 );
 
+const identityStart = index.indexOf('function canonicalKoreanIdentityNames(');
+const identityEnd = index.indexOf('function hasKoreanFinalConsonant(', identityStart);
+const identityHelpers = Function(
+    'repairCanonicalKoreanNameSuffixes',
+    'repairCanonicalKoreanVocatives',
+    'repairIndivisibleIdentityNames',
+    'madKoreanExclusiveMode',
+    `${index.slice(identityStart, identityEnd)}\nreturn {canonicalKoreanIdentityNames, repairOutputIdentityNames};`,
+)(repairCanonicalKoreanNameSuffixes, repairCanonicalKoreanVocatives, value => value, () => true);
+const fullIdentity = { userName: '혜담은', characterName: '김홍진' };
+assert.deepEqual(identityHelpers.canonicalKoreanIdentityNames(fullIdentity), ['혜담은', '담은', '김홍진', '홍진']);
+assert.equal(
+    identityHelpers.repairOutputIdentityNames('담은이은 담은이을 밀었다.', fullIdentity, { type: 'narration' }),
+    '담은은 담은을 밀었다.',
+);
+assert.equal(
+    identityHelpers.repairOutputIdentityNames('"담은이!"', fullIdentity, { type: 'dialogue_candidate', text: '"Dam-eun!"' }),
+    '"담은아!"',
+);
+assert.equal(
+    identityHelpers.repairOutputIdentityNames('담은이 파이프를 휘둘렀다.', fullIdentity, { type: 'narration', text: 'Dam-eun swung the pipe.' }),
+    '담은이 파이프를 휘둘렀다.',
+);
+assert.equal(
+    identityHelpers.repairOutputIdentityNames(
+        '담은이은 물러났다. 담은이의 후드를 잡고 담은이을 밀었다. 담은이 놓친 파이프였다. 담은이 아니라 홍진이었다. 담은이가 말을 듣는지 봤다.',
+        fullIdentity,
+        { type: 'narration' },
+    ),
+    '담은은 물러났다. 담은의 후드를 잡고 담은을 밀었다. 담은이 놓친 파이프였다. 담은이 아니라 홍진이었다. 담은이 말을 듣는지 봤다.',
+);
+
 // The audit is transactional: any downstream validation failure restores the
 // complete first-pass translation map instead of leaving a half-applied repair.
 const auditStart = index.indexOf('async function runMadKoreanTargetedAudit(');
@@ -95,6 +160,8 @@ const auditEnv = {
     },
     repairKoreanParticleAlternatives: value => value,
     repairStrictCanonicalIdentityNames: value => value,
+    repairCanonicalKoreanVocatives: value => value,
+    canonicalKoreanIdentityNames: () => [],
     repairIndivisibleIdentityNames: value => value,
     findBannedWords: () => [],
     repairSegmentsByOutputScope: async () => {},
@@ -133,4 +200,4 @@ assert.equal(auditTranslations.get('seg_0000'), '1차 번역');
 assert.equal(auditTranslations.get('seg_0001'), '민철이를 비상구로 밀었다.');
 assert.equal(auditRequests, 2);
 
-console.log('PASS: generic canonical-name suffix repair, sparse Mad+Hongjin semantic audit prompt, lock-name coverage, parser and transactional rollback.');
+console.log('PASS: generic canonical-name suffix/vocative repair, full-name given-name aliases, sparse Mad+Hongjin semantic audit prompt, parser and transactional rollback.');

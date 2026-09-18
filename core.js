@@ -582,15 +582,24 @@ export function repairCanonicalKoreanNameSuffixes(value, names = []) {
             ['이로부터', '로부터'],
             ['이에게', '에게'],
             ['이한테', '한테'],
+            ['이에서', '에서'],
             ['이께서', '께서'],
             ['이처럼', '처럼'],
             ['이만큼', '만큼'],
             ['이보다', '보다'],
             ['이까지', '까지'],
             ['이부터', '부터'],
+            ['이하고', '하고'],
+            ['이으로', direction],
+            ['이은', topic],
+            ['이을', object],
+            ['이이', subject],
+            ['이과', companion],
             ['이를', object],
             ['이는', topic],
             ['이가', subject],
+            ['이에', '에'],
+            ['이께', '께'],
             ['이의', '의'],
             ['이도', '도'],
             ['이만', '만'],
@@ -603,6 +612,61 @@ export function repairCanonicalKoreanNameSuffixes(value, names = []) {
                 `${name}${target}`,
             );
         }
+    }
+    return result;
+}
+
+/**
+ * A bare English name used as direct address ("Dam-eun!") is sometimes
+ * rendered as the Korean subject form (담은이!) instead of a vocative
+ * (담은아!).  Repair only a name at the beginning of a direct-dialogue
+ * segment and only when the source also begins with a punctuated name call.
+ * This deliberately leaves ordinary narration such as "담은이 파이프를..."
+ * untouched.
+ */
+export function repairCanonicalKoreanVocatives(value, sourceSegment = {}, names = [], nameTokens = []) {
+    let result = String(value || '');
+    if (String(sourceSegment?.type || '') !== 'dialogue_candidate') return result;
+    const source = String(sourceSegment?.text || '');
+    const opening = '([\\s"\'“”‘’]*)';
+    const callPunctuation = '(?=\\s*[,!?….])';
+    const sourceHasBareLatinCall = new RegExp(
+        `^${opening}[\\p{Lu}][\\p{L}\\p{M}]*(?:[-'][\\p{L}\\p{M}]+)*${callPunctuation}`,
+        'u',
+    ).test(source);
+
+    const canonicalNames = [...new Set((names || [])
+        .map(name => String(name || '').trim())
+        .filter(name => /^[가-힣]{2,12}$/u.test(name)))]
+        .sort((left, right) => right.length - left.length);
+
+    for (const entry of nameTokens || []) {
+        const token = String(entry?.token || '');
+        const target = String(entry?.value || '').trim();
+        const info = koreanFinalConsonantInfo(target);
+        if (!token || !info) continue;
+        const sourceHasTokenCall = new RegExp(`^${opening}${escapeRegExp(token)}${callPunctuation}`, 'u').test(source);
+        if (!sourceHasTokenCall) continue;
+        const vocative = info.hasBatchim ? '아' : '야';
+        result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(token)}이${callPunctuation}`, 'u'),
+            `$1${token}${vocative}`,
+        );
+        result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(target)}이${callPunctuation}`, 'u'),
+            `$1${target}${vocative}`,
+        );
+    }
+
+    if (!sourceHasBareLatinCall) return result;
+    for (const name of canonicalNames) {
+        const info = koreanFinalConsonantInfo(name);
+        if (!info) continue;
+        const vocative = info.hasBatchim ? '아' : '야';
+        result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(name)}이${callPunctuation}`, 'u'),
+            `$1${name}${vocative}`,
+        );
     }
     return result;
 }
@@ -1944,7 +2008,7 @@ ORIGINAL-KOREAN WRITING — REQUIRED
 - NARRATION: use easy, direct, comfortable contemporary Korean web-novel prose. Rebuild information order and sentence boundaries around Korean flow. Prefer concrete verbs and clear actors; avoid literal modifier chains, abstract noun piles, grandiose poetry, stiff passive phrasing and English sensory clichés. Keep every established sensation and image, but freely replace its wording or figurative vehicle with a natural Korean equivalent.
 - DIALOGUE: write what this speaker would actually say aloud to this listener. Rebuild the whole utterance through Korean-native compression, particles, contractions, endings, timing and subtext. Preserve established 반말/존댓말, hierarchy and emotional direction. Do not preserve a complete source sentence merely because it is translatable.
 - Every Korean sentence must be complete, grammatical and physically intelligible. Reject missing syllables or fragments such as “팔치로 의 턱”, “목을 뼈까지 라버렸다”, “팔을 아채”, “틈은→은”, “몰려들고→려들고” or a valid word accidentally shortened into a different word. Read the final Korean once from beginning to end and repair all such corruption before output.
-- Preserve each canonical Korean name exactly. Do not add the affectionate suffix “-이” before another particle: write “담은을/민철을”, not “담은이를/민철이를”, unless that expanded form is explicitly established as the name itself. Normal subject particles and vocatives remain grammatical.
+- Preserve each canonical Korean name exactly. Do not add the affectionate suffix “-이” before another particle: write “담은을/민철을”, not “담은이를/민철이를”, and never produce broken double particles such as “담은이은/담은이을”. Distinguish subject marking from direct address: narration may say “담은이 파이프를 휘둘렀다”, but a shouted “Dam-eun!” must be “담은아!” or “담은!”, never “담은이!”.
 
 NARRATION TRANSFORMATION MODELS — freedom of expression, never fixed substitutions
 - “His expression was flat and unreadable.” → “표정만 봐서는 무슨 생각을 하는지 알 수 없었다.”
@@ -4420,8 +4484,8 @@ MANDATORY ERROR CHECKS
 2. ACTOR / ACTION / TARGET / DIRECTION: verify who acts on whom, body part, inside/outside, left/right, before/after and grammatical attachment. “behind them” must not become an action performed with the back of the head.
 3. OBJECT AND PLACE IDENTITY: preserve the actual kind and function. A service entrance is not an emergency exit unless the source says so. “before the door gives” means before the door/barrier fails, not before the door exits.
 4. LOCAL CONTRADICTION: adjacent Korean sentences must not simultaneously call the same route easy/safe and lethal/dangerous unless the source itself does.
-5. BROKEN KOREAN: repair missing syllables/words, malformed attachments and impossible phrases such as “각으로 문을 걷어찼다”, “팔치로 의 턱”, “목을 뼈까지 라버렸다”, “팔을 아채”, or a valid word accidentally shortened into another word. Prefer the smallest plain grammatical correction.
-6. CANONICAL NAMES: TARGET=${JSON.stringify(characterName)}; USER=${JSON.stringify(userName)}; LOCKED=${JSON.stringify(lockedKoreanNames)}. Apply this generically to every listed Korean name, not only the examples. Do not invent the affectionate NAME+이 form before another particle. For a consonant-final canonical name, use forms such as “담은을/민철을”, not “담은이를/민철이를”, unless NAME+이 is explicitly established as the canonical name. Do not alter a normal subject particle, vocative or valid comitative.
+5. BROKEN KOREAN: repair missing syllables/words, malformed attachments and impossible phrases such as “각으로 문을 걷어찼다”, “팔치로 의 턱”, “목을 뼈까지 라버렸다”, “팔을 아채”, “담은이은/담은이을”, or a valid word accidentally shortened into another word. Prefer the smallest plain grammatical correction.
+6. CANONICAL NAMES: TARGET=${JSON.stringify(characterName)}; USER=${JSON.stringify(userName)}; LOCKED=${JSON.stringify(lockedKoreanNames)}. Apply this generically to every listed Korean name and an already-established shorter given-name form, not only the examples. Do not invent the affectionate NAME+이 form before another particle. For a consonant-final name, use forms such as “담은을/민철을”, not “담은이를/민철이를”. Distinguish a normal subject particle from a vocative: narration may use “담은이 파이프를...”, but direct “Dam-eun!” must be “담은아!” or “담은!”, never “담은이!”. Preserve valid comitatives such as “담은이랑”.
 7. VOICE FIREWALL: preserve authorized Kim Hong-jin roughness and diverse situation-directed profanity. Do not sanitize, neutralize or remove a valid curse merely because it is vulgar. Never add USER-directed profanity or misogynistic wording while repairing.
 8. SCOPE: Kim Hong-jin dialogue voice belongs only to confirmed target-character direct dialogue. Remove accidental character-vulgarity leakage from narration only when it is clearly unsupported by the source/narrative style.
 9. Preserve every protected token, ellipsis sequence, number, tag, HTML/CSS/code block, macro, URL, emoji and layout exactly. Never invent a new action, sensation, injury, threat, motive, joke or fact.
