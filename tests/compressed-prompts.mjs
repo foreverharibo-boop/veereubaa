@@ -265,7 +265,7 @@ for (const strength of ['light', 'strong', 'maximum']) {
                 absent(prompt, 'increase omission for STRONG/MAXIMUM.', label);
                 contains(prompt, 'voice settings never authorize added/altered ellipses or invented metaphors.', label);
                 const priority = prompt.slice(prompt.indexOf('- KOREAN-ORIGINAL COMPOSITION and PRIMARY CAST REFERENCES'),
-                    prompt.indexOf('- The voice exception permits only'));
+                    prompt.indexOf('- The voice exception permits the authorized'));
                 sharedVoicePriority ??= priority;
                 equal(priority, sharedVoicePriority, 'same composition priority across strengths/routes: ' + label);
             }
@@ -336,7 +336,7 @@ contains(builders.full(core, hongjin), 'never second-person you or USER/NPC word
 contains(builders.full(core, { ...hongjin, developerHongjinOppaFrequency: 'rare' }), 'at most one');
 absent(builders.narration(core, hongjin), 'KIM HONG-JIN FLAVOR');
 absent(builders.other_dialogue(core, hongjin), 'KIM HONG-JIN FLAVOR');
-contains(builders.full(core, { ...hongjin, developerMadKoreanOutputEnabled: true }), 'SOLE VOICE EXCEPTION');
+contains(builders.full(core, { ...hongjin, developerMadKoreanOutputEnabled: true }), 'MANDATORY AUTHORIZED VOICE OVERRIDE');
 const female = core.buildOutputPrompt(segmented, hongjin, '', { ...identity, characterGender: 'female' });
 contains(female, 'TARGET CHARACTER gender="female"'); contains(female, 'if the character is clearly not male, never add');
 const stressed = { ...flavors, ...authored, ...hongjin, developerRelationshipExperimentEnabled: true,
