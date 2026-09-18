@@ -52,8 +52,10 @@ for (const mode of [
             assert.ok(prompt.indexOf('MANDATORY TRANSLATION CONTRACT') < prompt.indexOf('Fixed personality premise'));
             assert.match(prompt, /VOICE TRANSFORMATION MODELS/);
             assert.match(prompt, /WEAK FAILURE: “움직여\. 지금\.”/);
-            assert.match(prompt, /KIM HONG-JIN: “씨발, 당장 움직여\.”/);
-            assert.match(prompt, /KIM HONG-JIN: “하, 씨발\. 어디 다친 데 없어\?”/);
+            assert.match(prompt, /KIM HONG-JIN: “당장 발 놀려\. 씨발\.”/);
+            assert.match(prompt, /KIM HONG-JIN: “하, 개같네\. 어디 다친 데 없어\?”/);
+            assert.match(prompt, /KIM HONG-JIN: “냅둬\. 그거 붙잡고 이 지랄 할 시간 없어\.”/);
+            assert.match(prompt, /same explicit curse appears in the same position in nearby lines/i);
             assert.match(prompt, /examples demonstrate transformation strength/);
         }
         assert.ok(!build(settings, 'narration').includes('KIM HONG-JIN RAW VOICE'));

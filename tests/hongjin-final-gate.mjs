@@ -22,6 +22,8 @@ function assertGateAfter(prompt, dataMarker, label, expectedForce) {
     assert.match(gate, /all compatible lines are clean, neutral, textbook-like/i, `${label}: clean-output rejection`);
     assert.match(gate, /generic survival-thriller man/i, `${label}: generic voice rejection`);
     assert.match(gate, /detachable swear word.*does not pass/i, `${label}: sticker profanity rejection`);
+    assert.match(gate, /PROFANITY DIVERSITY IS A PASS\/FAIL CONDITION/i, `${label}: diversity is mandatory`);
+    assert.match(gate, /Do not start every eligible line with “씨발”/i, `${label}: no repeated ssi-bal template`);
     assert.match(gate, /USER may hear situation-directed/i, `${label}: listener and target split`);
     assert.match(gate, /Never aim profanity at USER/i, `${label}: user curse target guard`);
     assert.match(gate, /Never print this gate/i, `${label}: hidden gate`);

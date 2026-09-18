@@ -47,14 +47,16 @@ for (const [mode, flags] of Object.entries(modes)) {
         assert.match(prompt, /USER-DIRECTED PROFANITY GUARD/, `${mode}/mad=${mad}: guard`);
         assert.match(prompt, /아, 씨발\. 뒤 보지 마\./, `${mode}/mad=${mad}: allowed urgency example`);
         assert.match(prompt, /존나 빨리 뛰어\./, `${mode}/mad=${mad}: allowed intensifier example`);
-        assert.match(prompt, /씨발, 문이 안 열리잖아\./, `${mode}/mad=${mad}: allowed obstacle example`);
-        assert.match(prompt, /하, 씨발\.\.\. 다친 데 없어\?/, `${mode}/mad=${mad}: allowed concern example`);
+        assert.match(prompt, /문이 더럽게 안 열리잖아\./, `${mode}/mad=${mad}: allowed obstacle example`);
+        assert.match(prompt, /하, 개같네\. 다친 데 없어\?/, `${mode}/mad=${mad}: allowed concern example`);
         assert.match(prompt, /야, 이 새끼야\./, `${mode}/mad=${mad}: forbidden USER-target example`);
         assert.match(prompt, /너 병신이냐\?/, `${mode}/mad=${mad}: forbidden USER-target question`);
         assert.match(prompt, /listener|addressee/i, `${mode}/mad=${mad}: listener separated from curse target`);
         assert.match(prompt, /serious[^\n]*(?:does not|does NOT|not)[^\n]*clean|Serious[^\n]*not[^\n]*swearing/i, `${mode}/mad=${mad}: serious scene does not sanitize`);
         assert.match(prompt, /positive frequency requirement|positive requirement/i, `${mode}/mad=${mad}: high is mandatory`);
         assert.match(prompt, /misogyny|NO MISOGYNY/i, `${mode}/mad=${mad}: higher safety remains`);
+        assert.match(prompt, /same explicit curse appears in the same (?:sentence )?position/i, `${mode}/mad=${mad}: repeated curse rejection`);
+        assert.match(prompt, /Do not start every eligible line with “씨발”|never copy one curse/i, `${mode}/mad=${mad}: no single-curse template`);
     }
 
     const low = build({ ...flags, developerHongjinProfanity: 'low' });
