@@ -5,8 +5,23 @@ import { repairUnexpectedProseBreaks, repairSourceEllipses } from '../response-p
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const defs = index.slice(index.indexOf('const RELATION_TEMPERATURE_OPTIONS'), index.indexOf('const baseContext ='));
 const defaults = Function(defs + '\nreturn DEFAULT_SETTINGS;')();
-const matrix = fs.readFileSync(new URL('./compressed-prompts.mjs', import.meta.url), 'utf8');
-const {builders, identity} = Function(matrix.slice(matrix.indexOf('const identity ='), matrix.indexOf('const baseline =')) + '\nreturn {builders,identity};')();
+const identity = { characterName: '김홍진', userName: '담은', characterGender: 'male' };
+const segmented = core.segmentSource('He waited. "Come here."');
+const translations = new Map(segmented.segments.map(row => [row.id, '번역']));
+const selection = { source: 'He waited.', translation: '기다렸다.', selected: '기다렸다.', start: 0, end: 5, speakerIdentity: identity };
+const builders = {
+ output: (m,s) => m.buildOutputPrompt(segmented,s,'',identity),
+ narration: (m,s) => m.buildScopedOutputPrompt({segments:segmented.segments,sourceContext:'',settings:s,scope:'narration',speakerIdentity:identity}),
+ target: (m,s) => m.buildScopedOutputPrompt({segments:segmented.segments,sourceContext:'',settings:s,scope:'target_dialogue',speakerIdentity:identity}),
+ other: (m,s) => m.buildScopedOutputPrompt({segments:segmented.segments,sourceContext:'',settings:s,scope:'other_dialogue',speakerIdentity:identity}),
+ input: (m,s) => m.buildInputPrompt('안녕',s,'male',identity),
+ selection: (m,s) => m.buildSelectionPrompt({...selection,settings:s}),
+ multi: (m,s) => m.buildMultiSelectionPrompt({source:selection.source,translation:selection.translation,selections:[{id:'m0',selected:selection.selected,start:0,end:5}],settings:s,speakerIdentity:identity}),
+ qa: (m,s) => m.buildQualityAuditPrompt({segments:segmented.segments,currentTranslations:translations,sourceContext:'',settings:s,speakerIdentity:identity,enabledChecks:['meaning','voice']}),
+ banned: (m,s) => m.buildBannedRepairPrompt(segmented.segments,translations,s,identity),
+ token: (m,s) => m.buildProtectedTokenRepairPrompt(segmented.segments,translations,s,identity),
+ untranslated: (m,s) => m.buildUntranslatedRepairPrompt(segmented.segments,translations,s,identity),
+};
 let routes = 0;
 for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtremeCompressedPromptEnabled:true}]) {
  for (const mad of [false,true]) for (const hongjin of [false,true]) {
@@ -17,9 +32,9 @@ for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtr
    assert.doesNotMatch(prompt, /USER-DIRECTED INSULT FIREWALL|45\.72미터, never 50미터/);
    if (prompt.includes('USER-DIRECTED PROFANITY GUARD')) {
     assert.ok(hongjin);
-    assert.match(prompt, /Applies only to TARGET CHARACTER dialogue/);
-    assert.match(prompt, /Non-abusive rebukes and teasing/);
-    assert.match(prompt, /not all criticism or teasing/);
+    assert.match(prompt, /TARGET CHARACTER(?: direct)? dialogue|TARGET-CHARACTER DIALOGUE/i);
+    assert.match(prompt, /rough non-profane rebuke|Non-abusive rebukes and teasing/);
+    assert.match(prompt, /never curse at USER as a person|not all criticism or teasing/);
     assert.match(prompt, /NO MISOGYNY|misogyny/i);
    }
    if (prompt.includes('KOREAN METRIC UNITS:')) {
