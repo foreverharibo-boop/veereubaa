@@ -59,7 +59,7 @@ for (const gap of ['\n', '\n\n', '\r\n\r\n', '\n\n\n']) {
 // browser dependencies; no network request is involved in this step.
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const expression = index.match(/\.map\(candidate => (repairSourceEllipses\([^\n]+)\);/)[1];
-const cleanCandidate = Function('candidate', 'repairUnexpectedProseBreaks', 'repairKoreanParticleAlternatives', 'repairOutputIdentityNames', 'speakerIdentity', 'expected', 'repairSourceEllipses', 'return ' + expression);
+const cleanCandidate = Function('candidate', 'repairUnexpectedProseBreaks', 'repairKoreanParticleAlternatives', 'repairIndivisibleIdentityNames', 'speakerIdentity', 'expected', 'repairSourceEllipses', 'return ' + expression);
 assert.equal(cleanCandidate(candidate, repair, x => x, x => x, {}, [prose], repairSourceEllipses), '첫 문장. 다음 문장.');
 
 const sample = ('그는 기다렸다.\n\n그녀는 웃었다. '.repeat(1500));

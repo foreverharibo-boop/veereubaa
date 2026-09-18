@@ -31,15 +31,10 @@ for (const mode of [
         developerMadKoreanOutputEnabled: true,
         developerHongjinFlavorEnabled: false,
     });
-    if (!mode.developerCompressedPromptEnabled && !mode.developerExtremeCompressedPromptEnabled) {
-        assert.match(madOnly, /ONLY CONTENT BOUNDARY/);
-        assert.match(madOnly, /Do not treat wording, sentence length, literal propositions or source rhetoric as protected content/);
-        assert.match(madOnly, /write the passage again from a blank page/);
-    } else {
-        assert.match(madOnly, /source is scene evidence|SCENE-FIRST RECOMPOSITION/i);
-        assert.match(madOnly, /Surface verbal intensity may change|surface verbal intensity is flexible/i);
-        assert.match(madOnly, /original Korean|Korean-original/i);
-    }
+    assert.match(madOnly, /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\n]+may be freely adjusted/u);
+    assert.match(madOnly, /facts/);
+    assert.match(madOnly, /emotional direction/);
+    assert.match(madOnly, /consent/);
 
     const hongjin = build({
         ...base,
@@ -52,17 +47,12 @@ for (const mode of [
         developerHongjinPlayfulness: 'high',
     });
     assert.match(hongjin, /MANDATORY AUTHORIZED VOICE OVERRIDE/);
-    if (!mode.developerCompressedPromptEnabled && !mode.developerExtremeCompressedPromptEnabled) {
-        assert.match(hongjin, /Short fragments may become complete spoken lines/i);
-        assert.match(hongjin, /Across the dialogue set, distribute/i);
-        assert.match(hongjin, /If the full set remains clean, neutral, terse/i);
-    } else {
-        assert.match(hongjin, /freely strengthen surface profanity|stronger than the literal source/i);
-        assert.match(hongjin, /KIM HONG-JIN|Kim Hongjin/i);
-        assert.match(hongjin, /USER-DIRECTED PROFANITY GUARD/i);
-    }
+    assert.match(hongjin, /(?:freely strengthen|stronger than the literal source|may add compatible surface profanity)/i);
+    assert.match(hongjin, /facts/);
+    assert.match(hongjin, /emotional direction/);
+    assert.match(hongjin, /consent/);
     assert.doesNotMatch(hongjin, /SOLE OPTIONAL STYLE ADD-ON|SOLE VOICE EXCEPTION|Preserve intensity both ways|Naturalization may neither censor nor escalate|source facts\/force\/consent/u);
-    checks += 12;
+    checks += 14;
 }
 
 const narration = core.buildScopedOutputPrompt({
