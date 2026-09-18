@@ -93,8 +93,20 @@ const flashNamePrompt = core.buildOutputPrompt(segmented, {
     developerMadKoreanOutputEnabled: true,
     developerCompressedPromptEnabled: false,
 }, '', resolved);
-check(flashNamePrompt.includes('MANDATORY KOREAN NAME FORMS — MECHANICAL GRAMMAR'), 'flash prompt contains dynamic mechanical name table');
+check(flashNamePrompt.includes('MANDATORY KOREAN NAME FORMS — LOCAL MECHANICAL GRAMMAR'), 'flash prompt contains dynamic local mechanical name table');
 check(flashNamePrompt.includes('"base":"담은","subject":"담은이","topic":"담은은","object":"담은을"'), 'flash prompt lists exact Korean particles');
+check(flashNamePrompt.includes('Never rewrite, sanitize, neutralize, shorten, or otherwise alter the surrounding dialogue'), 'name repair cannot sanitize surrounding voice');
+check(!flashNamePrompt.includes('This check overrides style and voice'), 'name repair no longer overrides character voice');
+const flashHongjinPrompt = core.buildOutputPrompt(segmented, {
+    ...defaults,
+    developerMode: true,
+    developerMadKoreanOutputEnabled: true,
+    developerHongjinFlavorEnabled: true,
+    developerCompressedPromptEnabled: false,
+    developerHongjinProfanity: 'natural',
+}, '', resolved);
+check(flashHongjinPrompt.indexOf('KIM HONG-JIN VOICE — FIRST EXECUTION GATE') < flashHongjinPrompt.indexOf('MANDATORY KOREAN NAME FORMS — LOCAL MECHANICAL GRAMMAR'), 'Hongjin voice execution gate precedes name grammar table');
+check(flashHongjinPrompt.includes('Name repair may edit only name/direct suffix'), 'early voice gate protects voice from later name repair');
 assert.equal(core.repairCanonicalKoreanNameSuffixes('담은이의 후드와 담은이를 잡았다.', ['담은']), '담은의 후드와 담은을 잡았다.');
 assert.equal(core.repairCanonicalKoreanVocatives('"담은이아!" 그가 외쳤다.', { type: 'dialogue_candidate', text: '"Dam-eun!" he shouted.' }, ['담은']), '"담은아!" 그가 외쳤다.');
 assert.equal(core.repairCanonicalKoreanVocatives('"담은이야!" 그가 외쳤다.', { type: 'dialogue_candidate', text: '"Dam-eun!" he shouted.' }, ['담은']), '"담은아!" 그가 외쳤다.');

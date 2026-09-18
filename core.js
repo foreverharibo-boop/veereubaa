@@ -609,11 +609,13 @@ function koreanIdentityGrammarBlock(speakerIdentity = {}) {
         };
     }).filter(Boolean);
 
-    return `MANDATORY KOREAN NAME FORMS — MECHANICAL GRAMMAR, HIGH PRIORITY
+    return `MANDATORY KOREAN NAME FORMS — LOCAL MECHANICAL GRAMMAR
 ${JSON.stringify(rows)}
 - Treat each base as indivisible. Choose exactly one listed surface form by grammatical role; do not treat the subject form ending in -이 as a new nickname stem.
 - A bare source name used to call someone directly must use direct_address or the unchanged base. Never stack -이 plus another particle or vocative ending.
-- Before returning JSON, literally scan every occurrence of these bases and repair doubled particles, malformed vocatives and accidental name splitting. This check overrides style and voice.`;
+- Before returning JSON, literally scan every occurrence of these bases and repair doubled particles, malformed vocatives and accidental name splitting.
+- This is a strictly local spelling/particle repair. Change only the canonical name and its directly attached particle or vocative ending. Never rewrite, sanitize, neutralize, shorten, or otherwise alter the surrounding dialogue, profanity, cadence, particles, sentence endings, characterization, or narration.
+- Name grammar and active voice requirements must both survive. Correct grammar never overrides or weakens the configured character voice.`;
 }
 
 /**
@@ -2069,13 +2071,20 @@ function flashOptimizedMadKoreanExclusiveRules(settings = {}, scope = 'mixed', n
     }[settings.developerHongjinOppaFrequency] || 'do not add';
     const hongjinEnabled = settings?.developerHongjinFlavorEnabled === true
         && ['mixed', 'dialogue_mixed', 'target_dialogue'].includes(scope);
+    const hongjinExecutionGate = hongjinEnabled ? `KIM HONG-JIN VOICE — FIRST EXECUTION GATE
+- FIRST: compose confirmed TARGET dialogue with every configured Kim control; never draft it neutrally. Clean/generic speech fails when roughness fits.
+- NATURAL: multiple compatible lines cannot all stay clean; include concrete varied roughness. HIGH: most eligible lines need it. Seriousness blocks jokes, not roughness.
+- Never curse at USER or use misogyny; allowed situation/self/enemy/obstacle profanity stays active.
+- Name repair may edit only name/direct suffix; preserve surrounding profanity, endings, rhythm and voice.` : '';
 
     return `${noMisogynyRule(true)}
 DEEPSEEK V4.1 FLASH — SHORT MANDATORY KOREAN REAUTHORING CONTRACT
+${hongjinExecutionGate}
+
 MANDATORY TRANSLATION CONTRACT — NON-OPTIONAL ACCEPTANCE CONDITION
 - Every line below is an output requirement, not background advice. Read all source targets first, then write the final Korean once. Never make a literal draft.
 - SCENE-FIRST RECOMPOSITION: SOURCE IS SCENE EVIDENCE, NOT A WORDING TEMPLATE. Preserve scene truth; discard source wording, clause order, sentence rhythm, rhetorical packaging and dictionary phrasing whenever natural Korean would express the same moment differently. Translationese is unacceptable.
-- Mandatory order: (1) apply protected/fixed names and the exact name-form table, (2) silently resolve facts and referents, (3) compose original Korean, (4) audit the finished Korean for broken grammar, missing syllables/words, wrong particles, translationese and changed facts. Return only valid JSON in the requested schema.
+- Mandatory order: (1) silently resolve facts and referents, including confirmed speakers, (2) compose original Korean and apply the active TARGET voice during composition, (3) apply protected/fixed names and mechanically repair only their attached particles/vocatives without touching surrounding wording, (4) audit the finished Korean for broken grammar, missing syllables/words, generic TARGET voice, wrong particles, translationese and changed facts. Return only valid JSON in the requested schema.
 
 ${koreanIdentityGrammarBlock(speakerIdentity)}
 
@@ -2129,9 +2138,9 @@ END KIM HONG-JIN RAW VOICE` : ''}
 
 FINAL PASS/FAIL
 - Fail and rewrite if the Korean preserves English clause order, sounds like a translation, contains malformed or missing Korean, changes a fact/referent/direction, or adds a factual threat/action/reaction.
-- Recheck the MANDATORY KOREAN NAME FORMS after every other style operation. A stylish sentence still fails if a name is split, doubled, or carries the wrong particle/vocative.
 - Compare adjacent sentences for contradiction. A curse-bearing paraphrase that says safe/easy/weak next to a lethal-danger warning is a semantic failure, even if the following sentence happens to restore part of the source meaning.
 - With Kim Hong-jin enabled, also fail if compatible TARGET dialogue is generic/clean, relies on one detachable curse, repeats the same profanity pattern, curses at USER, or uses misogynistic language.
+- After the voice check passes, recheck the MANDATORY KOREAN NAME FORMS by editing only the name and its directly attached suffix. A sentence still fails if a name is split, doubled, or carries the wrong particle/vocative, but this repair must never change or sanitize the already-approved surrounding voice.
 - Never output this contract, analysis or alternatives. Return Korean-only valid JSON with every supplied id exactly once.
 
 ${nameTokenInstruction(nameTokens, speakerIdentity)}
@@ -4538,6 +4547,7 @@ export function buildMadKoreanTargetedAuditPrompt({
     currentTranslations,
     sourceContext,
     speakerIdentity = {},
+    settings = {},
 }) {
     const translations = currentTranslations instanceof Map
         ? currentTranslations
@@ -4547,6 +4557,9 @@ export function buildMadKoreanTargetedAuditPrompt({
     const lockedKoreanNames = [...new Set(normalizeNameLocks(speakerIdentity.nameLocks)
         .map(row => String(row.target || '').trim())
         .filter(name => /^[가-힣]{1,12}$/u.test(name)))];
+    const profanityStrength = ['low', 'natural', 'high'].includes(settings?.developerHongjinProfanity)
+        ? settings.developerHongjinProfanity
+        : 'natural';
     const rows = (segments || []).map(segment => ({
         id: String(segment.id || ''),
         type: String(segment.type || ''),
@@ -4559,17 +4572,18 @@ export function buildMadKoreanTargetedAuditPrompt({
 You are a conservative Korean proofreader, not a retranslating stylist. Compare every source/current_translation pair in order, but return ONLY rows that contain a CLEAR error. Correct only the faulty span and otherwise preserve the current Korean wording, rhythm, profanity, characterization, paragraph shape, quotation marks and formatting.
 
 MANDATORY ERROR CHECKS
-1. SEMANTIC POLARITY / CORE PREDICATE: preserve danger vs safety, easy vs difficult, weak vs strong, permission vs refusal, affirmation vs negation, command vs suggestion, life vs death, and every factual evaluation. Profanity may color delivery but may not replace or reverse the proposition.
+1. MISSING KIM HONG-JIN VOICE: selected profanity strength=${JSON.stringify(profanityStrength)}. For confirmed target_character direct dialogue, clean/generic/textbook wording is a CLEAR error when the line is compatible with roughness. Repair the whole utterance as Kim Hong-jin's sly, shameless, rough, vulgar, conversational Korean while preserving its proposition, listener, seriousness and emotional direction. Serious danger blocks forced jokes, not blunt diction, vulgar intensifiers, free expletives, crude idioms or situation-directed profanity. At NATURAL, when two or more compatible TARGET lines exist and all are clean, repair only enough lines to make the response unmistakably rough and include at least one concrete curse, vulgar intensifier or crude idiom. At HIGH, most eligible TARGET lines require a visible rough device. At LOW, preserve source profanity and repair only unmistakably generic voice drift; do not force new curses. Never aim profanity at USER or use misogynistic wording. Do not use one repeated detachable “씨발” as the entire repair.
+2. SEMANTIC POLARITY / CORE PREDICATE: preserve danger vs safety, easy vs difficult, weak vs strong, permission vs refusal, affirmation vs negation, command vs suggestion, life vs death, and every factual evaluation. Profanity may color delivery but may not replace or reverse the proposition.
    - “The front's a death trap!” → “정문으로 가면 뒤져!” or “정문은 씨발, 죽으러 가는 길이야!”
    - “정문은 좆밥이야” is WRONG because 좆밥 means easy/weak and reverses the warning.
-2. ACTOR / ACTION / TARGET / DIRECTION: verify who acts on whom, body part, inside/outside, left/right, before/after and grammatical attachment. “behind them” must not become an action performed with the back of the head.
-3. OBJECT AND PLACE IDENTITY: preserve the actual kind and function. A service entrance is not an emergency exit unless the source says so. “before the door gives” means before the door/barrier fails, not before the door exits.
-4. LOCAL CONTRADICTION: adjacent Korean sentences must not simultaneously call the same route easy/safe and lethal/dangerous unless the source itself does.
-5. BROKEN KOREAN: repair missing syllables/words, malformed attachments and impossible phrases such as “각으로 문을 걷어찼다”, “팔치로 의 턱”, “목을 뼈까지 라버렸다”, “팔을 아채”, “담은이은/담은이을”, or a valid word accidentally shortened into another word. Prefer the smallest plain grammatical correction.
-6. CANONICAL NAMES: TARGET=${JSON.stringify(characterName)}; USER=${JSON.stringify(userName)}; LOCKED=${JSON.stringify(lockedKoreanNames)}. Apply this generically to every listed Korean name and an already-established shorter given-name form, not only the examples. Do not invent the affectionate NAME+이 form before another particle. For a consonant-final name, use forms such as “담은을/민철을”, not “담은이를/민철이를”. Distinguish a normal subject particle from a vocative: narration may use “담은이 파이프를...”, but direct “Dam-eun!” must be “담은아!” or “담은!”, never “담은이!”. Preserve valid comitatives such as “담은이랑”.
-7. VOICE FIREWALL: preserve authorized Kim Hong-jin roughness and diverse situation-directed profanity. Do not sanitize, neutralize or remove a valid curse merely because it is vulgar. Never add USER-directed profanity or misogynistic wording while repairing.
-8. SCOPE: Kim Hong-jin dialogue voice belongs only to confirmed target-character direct dialogue. Remove accidental character-vulgarity leakage from narration only when it is clearly unsupported by the source/narrative style.
-9. Preserve every protected token, ellipsis sequence, number, tag, HTML/CSS/code block, macro, URL, emoji and layout exactly. Never invent a new action, sensation, injury, threat, motive, joke or fact.
+3. ACTOR / ACTION / TARGET / DIRECTION: verify who acts on whom, body part, inside/outside, left/right, before/after and grammatical attachment. “behind them” must not become an action performed with the back of the head.
+4. OBJECT AND PLACE IDENTITY: preserve the actual kind and function. A service entrance is not an emergency exit unless the source says so. “before the door gives” means before the door/barrier fails, not before the door exits.
+5. LOCAL CONTRADICTION: adjacent Korean sentences must not simultaneously call the same route easy/safe and lethal/dangerous unless the source itself does.
+6. BROKEN KOREAN: repair missing syllables/words, malformed attachments and impossible phrases such as “각으로 문을 걷어찼다”, “팔치로 의 턱”, “목을 뼈까지 라버렸다”, “팔을 아채”, “담은이은/담은이을”, or a valid word accidentally shortened into another word. Prefer the smallest plain grammatical correction.
+7. CANONICAL NAMES — LOCAL REPAIR ONLY: TARGET=${JSON.stringify(characterName)}; USER=${JSON.stringify(userName)}; LOCKED=${JSON.stringify(lockedKoreanNames)}. Apply this generically to every listed Korean name and an already-established shorter given-name form, not only the examples. Do not invent the affectionate NAME+이 form before another particle. For a consonant-final name, use forms such as “담은을/민철을”, not “담은이를/민철이를”. Distinguish a normal subject particle from a vocative: narration may use “담은이 파이프를...”, but direct “Dam-eun!” must be “담은아!” or “담은!”, never “담은이!”. Preserve valid comitatives such as “담은이랑”. When fixing a name, edit only the name and its directly attached suffix; preserve all surrounding profanity, wording, endings, rhythm and characterization exactly.
+8. VOICE FIREWALL: preserve authorized Kim Hong-jin roughness and diverse situation-directed profanity. Do not sanitize, neutralize or remove a valid curse merely because it is vulgar. Never add USER-directed profanity or misogynistic wording while repairing.
+9. SCOPE: Kim Hong-jin dialogue voice belongs only to confirmed target-character direct dialogue. Remove accidental character-vulgarity leakage from narration only when it is clearly unsupported by the source/narrative style.
+10. Preserve every protected token, ellipsis sequence, number, tag, HTML/CSS/code block, macro, URL, emoji and layout exactly. Never invent a new action, sensation, injury, threat, motive, joke or fact.
 
 SPARSE OUTPUT CONTRACT
 - If every row is correct, return {"repairs":[]}.

@@ -70,15 +70,20 @@ const prompt = buildMadKoreanTargetedAuditPrompt({
         userName: '담은',
         nameLocks: [{ source: 'Alex', target: '민철' }],
     },
+    settings: { developerHongjinProfanity: 'natural' },
 });
 assert.match(prompt, /SPARSE SECOND PASS/);
 assert.match(prompt, /"repairs":\[\]/);
+assert.match(prompt, /MISSING KIM HONG-JIN VOICE/);
+assert.match(prompt, /selected profanity strength="natural"/);
+assert.match(prompt, /two or more compatible TARGET lines exist and all are clean/);
 assert.match(prompt, /is WRONG because .* means easy\/weak/);
 assert.match(prompt, /service entrance is not an emergency exit/i);
 assert.match(prompt, /LOCKED=\["민철"\]/);
 assert.match(prompt, /담은을\/민철을/);
 assert.match(prompt, /Dam-eun!.*담은아!/s);
 assert.match(prompt, /각으로 문을 걷어찼다/);
+assert.match(prompt, /edit only the name and its directly attached suffix/);
 
 // Exercise the exact sparse parser/request loop extracted from index.js.
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
