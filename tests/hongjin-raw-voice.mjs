@@ -22,16 +22,18 @@ const prompt = build('target_dialogue');
 
 assert.equal(prompt.split('TARGET DIALOGUE ONLY — KIM HONG-JIN').length - 1, 1);
 assert.equal(prompt.split('MANDATORY AUTHORIZED VOICE OVERRIDE').length - 1, 1);
-assert.match(prompt, /maximum re-authoring/);
+assert.match(prompt, /Do not translate confirmed/);
+assert.match(prompt, /write from scratch/);
+assert.match(prompt, /Short fragments may become complete spoken lines/);
 assert.match(prompt, /most eligible TARGET lines/);
 assert.match(prompt, /active cheeky needling/);
 assert.match(prompt, /openly crude, brazen diction/);
 assert.match(prompt, /highly visible playful audacity/);
 assert.match(prompt, /not by attaching one curse to a neutral sentence/);
-assert.match(prompt, /Serious or tactical lines stay short/);
+assert.match(prompt, /Across the dialogue set, distribute/);
 assert.match(prompt, /USER-DIRECTED PROFANITY GUARD/);
-assert.match(prompt, /Profanity diversity is mandatory/);
-assert.match(prompt, /crude idioms and curse-free rawness/);
+assert.match(prompt, /situation-directed profanity and curse-free rawness/);
+assert.match(prompt, /generic serious man/);
 
 for (const scope of ['narration', 'other_dialogue', 'tagged_content']) {
     assert.doesNotMatch(build(scope), /TARGET DIALOGUE ONLY — KIM HONG-JIN/);

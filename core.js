@@ -1708,12 +1708,12 @@ function deepSeekMadKoreanFinalGate(settings = {}, scope = 'mixed') {
     return `
 
 <final_mad_korean_gate>
-FINAL KOREAN CHECK — do this immediately before JSON output
-- Read the Korean by itself. Rewrite any line that sounds translated, copies source-language clause order, uses an unnatural collocation, drops a particle/syllable, or contains a physically impossible predicate.
-- In particular reject “공기가 얇다”, bare-name forms such as “담은 손/홍진 목소리/담은 눈”, false possessives such as “담은이 몸집”, and accidental word substitutions such as “손을 물다”.
-- Preserve every scene fact, actor/action/target, ownership, direction, negation, relationship, consent, emotional direction, speaker and target of aggression. Add no event or bodily reaction.
+FINAL BLANK-PAGE TEST — immediately before JSON output
+- Forget the foreign wording completely and read only the Korean. If its syntax, sentence boundaries, imagery or rhythm reveal a translation path, discard the faulty sentence and write it again from blank instead of correcting individual words.
+- The Korean must feel originally authored in Korean. Merge, split, reorder, compress, expand and replace rhetoric freely. Do not create a new scene event or remove an existing scene event; this is the only content boundary.
+- Reject every damaged syllable, missing particle, malformed name attachment and physically impossible predicate by regenerating the whole affected row.
 ${scopeReminder}
-- Preserve names, numbers, tokens, tags, code, quotation roles, ellipses and layout. Return only the requested JSON.
+- Preserve only names, numbers, tokens, tags/code, quotation roles, ellipses, layout and the required JSON shell.
 </final_mad_korean_gate>`;
 
     return `
@@ -2235,18 +2235,24 @@ function flashOptimizedMadKoreanExclusiveRules(settings = {}, scope = 'mixed', n
 DEEPSEEK V4.1 FLASH — KOREAN RECOMPOSITION
 ${hongjinExecutionGate}
 
-JOB
-Translate each target as if this scene had originally been written in contemporary Korean. Understand the full source first, then write fresh Korean. Do not make or preserve a literal draft.
+MANDATORY BLANK-PAGE REWRITING
+This is not a literal translation task. Destroy and discard every source word choice, expression, clause structure, sentence boundary, information order, metaphor, rhythm and rhetorical shape. Never use the source wording as the skeleton of the Korean output, and never create a neutral literal draft first.
 
-NON-NEGOTIABLE
-1. Preserve who did what to whom, ownership, speaker/listener, facts, negation, chronology, direction, physical action, relationship, consent, emotional direction, POV and seriousness. Add no event or motive.
-   surface verbal intensity is flexible only when an active character-voice setting authorizes it; facts, consent, relationship and target of aggression never change.
-2. Rebuild paragraph focus, sentence order, sentence boundaries, rhythm and collocations for Korean. Never copy source-language clause order with Korean words.
-3. Use complete, ordinary Korean sentences. Every written name needs the particle or possessive marker required by its role. Never output broken forms such as “담은 손”, “홍진 목소리”, “담은 눈”, “담은이 몸집”, or an impossible predicate such as “손을 물다” when the source means pulling a hand back.
-4. Reject source-shaped phrases. “the air turns thin and cool” means the night air becomes cooler/lighter, never “공기가 얇다”. “a hitch in her breathing” is 숨이 한번씩 걸리거나 고르지 않은 상태, never “작은 숨 헐떡임”. Express bodily condition directly instead of “몸이 판단한 데서 나오는 창백함”.
-5. Resolve words from the scene. Road/overpass “ramp” is 경사로/진입로, never a lighting 램프. Preserve physical attachment and direction.
-6. Dialogue must sound spoken by that speaker, not like translated prose. Preserve the configured register. Narration must not inherit dialogue slang or profanity.
-7. Preserve tags, code, macros, protected tokens, names, numbers, quotation roles, ellipses and layout. Translate visible natural-language metadata only.
+Understand what happens in the scene, mentally discard the foreign-language text, and write the passage again from a blank page as if a Korean author had originally created it in Korean. The Korean does not need the same sentence count, length or boundaries. Freely merge, split, reorder, compress, expand, replace metaphors and rebuild paragraph flow.
+
+You may explicitly verbalize an action, intention, command, concession, concern or speech function that is already unmistakably established by the immediate context. Such completion is Korean voice realization, not invention.
+
+ONLY CONTENT BOUNDARY
+Do not create a new scene event or remove an existing scene event. Do not treat wording, sentence length, literal propositions or source rhetoric as protected content.
+
+KOREAN-ORIGINAL TEST
+- If a Korean reader could reconstruct the source wording, syntax or translation path, the result has failed. Throw the sentence away and write it again; never polish a literal draft.
+- Narration must read like clear, vivid contemporary Korean web fiction. Preserve the scene image and reader effect rather than the foreign metaphor.
+- Dialogue must sound like words the actual speaker would naturally say aloud. A fragment may become a complete Korean utterance when context makes its purpose clear.
+- Use intact Korean words, natural particles and complete predicates. Read the finished Korean alone once and rewrite any damaged or impossible phrase.
+
+OUTPUT SHELL ONLY
+Preserve the required JSON schema, ids, names, protected tokens, tags/code, quotation roles, numbers, ellipses and paragraph layout. These are containers, not restrictions on Korean expression.
 
 IDENTITY
 TARGET=${JSON.stringify(characterName)}; USER=${JSON.stringify(userName)}; gender=${JSON.stringify(characterGender)}
@@ -2257,12 +2263,13 @@ ${koreanIdentityGrammarBlock(speakerIdentity)}
 
 ${hongjinEnabled ? `TARGET DIALOGUE ONLY — KIM HONG-JIN
 MANDATORY AUTHORIZED VOICE OVERRIDE
-Write confirmed ${JSON.stringify(characterName)} dialogue with sly confidence, shameless teasing, rough contemporary diction, playful deflection and tsundere-like reluctant care. Build it through verbs, particles, endings, timing and rhetorical turns—not by attaching one curse to a neutral sentence. Serious or tactical lines stay short and usable; they are not profanity quotas. Controls: reauthoring=${transcreation}; profanity=${profanity}; teasing=${teasing}; vulgarity=${vulgarity}; playfulness=${playfulness}; age=${age}; 오빠=${oppa}.
+Do not translate confirmed ${JSON.stringify(characterName)} dialogue. Understand only what the line is doing in the scene, then write from scratch what Kim Hong-jin would actually say in Korean. Discard the source length, wording, sentence shape and endings. Short fragments may become complete spoken lines when their command, concession, concern or next action is clear from context.
+Kim Hong-jin is sly, shameless, playful, tsundere-like, rough, vulgar and casually profane. Hide concern or sincerity behind nagging, showing off, brusque commands, mock annoyance, complaints or dry teasing. Build him through verbs, particles, endings, timing, information order and the final afterbeat—not by attaching one curse to a neutral sentence. Across the dialogue set, distribute coarse verbs, impatient urging, grudging concessions, brazen asides, rhetorical needling, fake courtesy, situation-directed profanity and curse-free rawness; do not force every device into every line. Controls: reauthoring=${transcreation}; profanity=${profanity}; teasing=${teasing}; vulgarity=${vulgarity}; playfulness=${playfulness}; age=${age}; 오빠=${oppa}.
 USER-DIRECTED PROFANITY GUARD: never curse at USER as a person. USER may hear profanity aimed at the situation, urgency, pain, self, obstacle, enemy, NPC/third party, or a free expletive. Keep anger toward USER as a rough non-profane rebuke. Never use misogynistic or gender-degrading abuse.
-Profanity diversity is mandatory: vary intensifiers, 개-/좆-/지랄/처-, rough verbs, crude idioms and curse-free rawness instead of repeating one detachable curse. The active setting may add compatible surface profanity while facts and emotional direction remain fixed. Never leak this voice into narration or another speaker.` : ''}
+If the full set remains clean, neutral, terse in the same places as the source, or interchangeable with any generic serious man, rewrite it. Never leak this voice into narration or another speaker.` : ''}
 
 FINAL SILENT CHECK
-- Read the Korean alone. If it sounds translated, contains a missing particle/syllable, or cannot be pictured physically, rewrite it now.
+- Forget the source wording and read only the Korean. If it sounds translated, follows the same sentence skeleton, contains a missing particle/syllable, or cannot be pictured physically, discard that sentence and write it again from blank.
 - Return each supplied id exactly once as strict JSON only.
 
 ${nameTokenInstruction(nameTokens, speakerIdentity)}
@@ -4767,37 +4774,40 @@ export function buildHongjinVoiceRewritePrompt({
         current_translation: String(translations.get(segment.id) || ''),
     }));
 
-    return `KIM HONG-JIN — DEDICATED SECOND-PASS VOICE REWRITE
-Rewrite every supplied current_translation as final Korean dialogue spoken by ${JSON.stringify(characterName)}. The first pass already handled ordinary translation; this pass exists only to make the character voice unmistakable without changing the source proposition.
+    return `KIM HONG-JIN — BLANK-PAGE DIALOGUE REWRITING
+Do not translate the supplied source lines and do not edit current_translation. Treat current_translation as disposable formatting reference only. Understand what each line accomplishes in the scene, throw away every source and draft word, and write from blank what ${JSON.stringify(characterName)} would actually say in Korean.
 
-VOICE FINGERPRINT
-- Core attitude: relaxed nerve, shameless confidence, sly amusement, playful needling, tsundere-like deflection, rough and deliberately vulgar contemporary speech.
-- Do not state care, embarrassment or concern too cleanly when a natural grumble, feigned annoyance, smug aside or reluctant-helping turn can express the same established intent.
-- Build identity through verb choice, particles, endings, contractions, pause placement, information order and the final rhetorical turn. A neutral sentence with one detachable curse fails.
-- This is not a generic shouting tough guy, survival-thriller guard, archaic macho man or constant rage voice. Quiet banter, dry mockery, fake courtesy, brazen reassurance and annoyed care must remain available.
-- Seriousness suppresses forced jokes and decorative swearing, not the character's bluntness or rough cadence. A terse tactical line may carry Kim's voice through control, timing and an irritated afterbeat without any curse. Never trivialize danger, fear, grief, refusal, consent or sincerity.
+The source length, wording, clause order, sentence count and endings have no authority. A one-word fragment may become a complete spoken command, concession, complaint or invitation when its purpose is unmistakable from SCENE CONTEXT. Making an already-established speech function explicit is voice realization, not a new event.
+
+VOICE
+- Sly, shameless, teasing, tsundere-like, rough, vulgar, brazen and conversationally alive.
+- Concern and sincerity hide behind nagging, showing off, mock annoyance, complaints, brusque commands or dry needling.
+- Character must live in verbs, particles, endings, contractions, timing, information order and the final afterbeat. A neutral line plus a curse is an automatic failure.
+- This is not a generic angry tough guy. Use quiet audacity, fake courtesy, grudging help, vulgar little reactions and shameless self-justification where the scene permits them.
 
 ACTIVE CONTROLS
 ${JSON.stringify(controls)}
 
-BOUNDARIES
-- Preserve meaning, speech act, speaker/listener, facts, negation, evaluation, relationship, consent/refusal, emotional direction, seriousness and target of aggression. Add no event, threat, accusation, nickname, grievance, action or relationship development.
-- Profanity may color delivery but may not replace the predicate. Apply profanity only to compatible emotional beats; quiet tactical instructions and restrained concern are not profanity quotas. At natural strength, use a concrete rough device when the scene naturally gives one; at high, use it in most COMPATIBLE lines, never in every line mechanically. Use “씨발” at most once unless the source meaningfully repeats it, and never repeat terminal “, 씨발” as a template.
-- USER ${JSON.stringify(userName)} may hear situation-, self-, obstacle-, enemy- or free-expletive profanity, but profanity must never target USER as a person. Never use misogynistic or gender-degrading abuse.
-- ABSOLUTE USER CHECK: before returning every line addressed to USER, inspect vocatives and predicates. “새끼야/병신아/미친놈아”, “너 병신…”, “이 새끼…” and equivalent person-directed curses are automatic failures even at HIGH. Remove the insult and retain force through clipped commands, impatience, dry mockery or situation-directed roughness.
-- Self-reference “오빠” follows control=${JSON.stringify(controls.selfReferenceOppa)} and is allowed only when the clearly male TARGET speaks directly and exclusively to USER. It replaces first person only; never second person and never toward an NPC, group or ambiguous listener.
-- Preserve configured 반말/존댓말, quotation marks, ellipses, protected tokens, names and layout. Do not touch narration or any non-TARGET dialogue; none is supplied here.
+ACROSS THE FULL DIALOGUE SET
+Distribute different mechanisms instead of forcing all of them into every line: coarse everyday verbs, impatient urging, grudging concessions, tsundere care, brazen asides, rhetorical needling, fake courtesy, situation-directed profanity, vulgar intensifiers and curse-free rawness. Adjacent lines must not all retain the source brevity or use the same mechanism.
 
-VOICE SHAPES — mechanisms, not fixed substitutions
-- Quoted retort: understand what is being echoed before translating. “Drop dead,” he repeated. “You'd like that.” is a repetition plus a dry comeback, not two literal wishes; a fitting shape is “뒤지라고?” … “내가 그러면 퍽이나 좋겠네.”
-- Tactical refusal: “Not here.” may remain short, but use decisive control and the immediately established action; do not bolt on a random curse.
-- Reluctant care: check or accommodate the person through an irritated concession, not a clean sentimental confession.
-- Fake courtesy: use conversationally pointed 존댓말 when the established register permits it; never pseudo-old speech.
-- Deflection: hide embarrassment or kindness behind a clipped excuse, complaint or brazen aside while preserving the same intent.
-- Serious beat: stay terse and usable. If a longer flourish would require a new fact, keep the line short instead of inventing personality theater.
+ONLY CONTENT BOUNDARY
+Do not create a new scene event. Everything else about phrasing is free. Do not protect literal propositions, source rhetoric or draft wording when Korean would realize the same scene function more vividly.
 
-OUTPUT CHECK
-Read each line aloud once. Rewrite if it sounds translated, clean and generic, curse-stickered, repetitively profane, theatrically macho or interchangeable with any rough male character. Then run a separate listener/curse-target check; any USER-directed insult must be corrected before output. Return every id exactly once as strict JSON only.
+HARD FIREWALLS
+- Apply this voice only to confirmed ${JSON.stringify(characterName)} dialogue supplied here.
+- Never aim a person-directed curse at USER ${JSON.stringify(userName)}. Situation-, urgency-, pain-, self-, obstacle-, enemy-, NPC- and free-expletive profanity remain allowed. Never use misogynistic or gender-degrading abuse.
+- Self-reference “오빠” follows control=${JSON.stringify(controls.selfReferenceOppa)} and is allowed only as the clearly male TARGET's first-person self-reference while speaking directly and exclusively to USER.
+- Preserve configured 반말/존댓말, quotation marks, ellipses, protected tokens, names and layout.
+
+FAIL AND WRITE AGAIN FROM BLANK IF
+- the set is clean, neutral, terse in exactly the same places as the source, or interchangeable with any generic serious man;
+- a line merely swaps synonyms, shortens the source, or attaches profanity;
+- established concern, concession, command or next action remains unnaturally implicit in Korean;
+- every line uses the same curse, ending, taunt or rhythm;
+- the voice leaks into a new event or targets USER with abuse.
+
+Return every id exactly once as strict JSON only.
 
 ${nameTokenInstruction(nameTokens, speakerIdentity)}
 
@@ -4853,24 +4863,21 @@ export function buildMadKoreanTargetedAuditPrompt({
         };
     });
 
-    return `MAD KOREAN — FINAL REWRITE PASS
-The first translation is only a draft. Compare source with current_translation and return a polished complete Korean version for EVERY row. This is an active rewrite, not a conservative proofread. Keep good wording, but do not leave a known defect unchanged.
+    return `MAD KOREAN — FINAL BLANK-PAGE REWRITE
+Do not proofread current_translation and do not preserve any of its wording. For EVERY row, use source only to understand what happens, discard both source phrasing and the draft completely, and write the finished Korean again from a blank page as if originally authored in Korean.
 
-ORDER OF WORK
-1. Lock facts: actor, action, target, ownership, speaker/listener, negation, chronology, direction, relationship, consent, emotional direction and seriousness.
-2. Rewrite into natural contemporary Korean using Korean information order, sentence boundaries, collocations and rhythm. Do not preserve English syntax merely because the draft is understandable.
-3. Repair every missing particle/syllable and every malformed predicate. Bare-name constructions such as “담은 손”, “홍진 목소리”, “담은 눈”, false possessives such as “담은이 몸집”, and nonsense such as “손을 물다” must not survive.
-4. Remove calques: never “공기가 얇다”; never literal noun piles such as “작은 숨 헐떡임”; never explanatory translationese such as “몸이 판단한 데서 나오는 창백함”. State the same established perception naturally in Korean without adding facts.
-5. Resolve scene senses: road/overpass ramp=경사로/진입로, not 램프. Verify physical attachment and direction.
-6. Preserve tags, tokens, names, numbers, quotation roles, ellipses and layout.
+Destroy word choices, clause order, sentence boundaries, metaphors, information order and rhythm. Merge, split, reorder, compress or expand freely. Preserve the scene by not creating a new event and not removing an existing event; this is the only content boundary.
 
-VOICE
+Narration must read as clear, vivid contemporary Korean web fiction. Dialogue must sound actually spoken. If the output reveals a translation path, follows the draft skeleton, contains damaged syllables/particles, or uses an impossible predicate, throw the entire row away and write it again rather than patching the faulty span.
+
 ${hongjinEnabled
-        ? `Confirmed ${JSON.stringify(characterName)} dialogue has already received its dedicated voice pass. Preserve and, when clearly generic, strengthen its sly, shameless, teasing, rough, playful-deflecting cadence through verbs, particles, endings and timing. Serious tactical lines may stay short and curse-free. Never target USER ${JSON.stringify(userName)} with a person-directed curse; never leak this voice into narration or other speakers.`
-        : 'No Kim Hong-jin voice is active. Preserve each established speaker without importing that character’s roughness or profanity.'}
+        ? `Confirmed ${JSON.stringify(characterName)} dialogue must keep the blank-page Hong-jin voice: sly, shameless, teasing, tsundere-like, rough and vulgar. Make established command, concern, concession or next action naturally explicit when Korean speech needs it. Use verbs, particles, endings, timing and afterbeats rather than curse stickers. Never target USER ${JSON.stringify(userName)} with a person-directed curse or leak this voice into narration/other speakers.`
+        : 'No Kim Hong-jin voice is active. Keep narration and each speaker distinct without importing that character’s roughness.'}
+
+Preserve only JSON ids, names, protected tokens, tags/code, quotation roles, numbers, ellipses and layout.
 
 LOCAL FLAGS
-Honor every local_flags item. VERIFY_USER_DIRECTED_PROFANITY, ROAD_RAMP_MISTRANSLATED_AS_LAMP and POSSIBLE_NAME_PARTICLE_OR_POSSESSIVE_DAMAGE must be corrected when applicable. Never return an unchanged flagged USER-directed insult.
+Honor every local_flags item as a reason to discard and regenerate that row. Never return an unchanged flagged USER-directed insult.
 
 Return strict JSON only, with EVERY input id exactly once:
 {"repairs":[{"id":"seg_0000","translation":"완성된 전체 한국어 구간"}]}

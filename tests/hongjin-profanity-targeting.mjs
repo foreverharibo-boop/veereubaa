@@ -28,10 +28,9 @@ assert.match(prompt, /USER may hear profanity aimed at the situation, urgency, p
 assert.match(prompt, /rough non-profane rebuke/);
 assert.match(prompt, /Never use misogynistic or gender-degrading abuse/);
 assert.match(prompt, /most eligible TARGET lines/);
-assert.match(prompt, /Profanity diversity is mandatory/);
-assert.match(prompt, /free expletive/);
-assert.match(prompt, /intensifiers/);
-assert.match(prompt, /개-\/좆-\/지랄\/처-/);
+assert.match(prompt, /Across the dialogue set, distribute/);
+assert.match(prompt, /situation-directed profanity/);
+assert.match(prompt, /coarse verbs/);
 assert.match(prompt, /curse-free rawness/);
 
 const low = build('low');

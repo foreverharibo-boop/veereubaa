@@ -32,18 +32,16 @@ let checks = 0;
 for (const [name, build] of Object.entries(builders)) {
     const prompt = build();
     assert.equal(prompt.split('DEEPSEEK V4.1 FLASH — KOREAN RECOMPOSITION').length - 1, 1, `${name}: one contract`);
-    assert.match(prompt, /originally been written in contemporary Korean/);
-    assert.match(prompt, /Preserve who did what to whom/);
-    assert.match(prompt, /Never copy source-language clause order/);
-    assert.match(prompt, /missing particle\/syllable/);
-    assert.match(prompt, /physical attachment and direction/);
-    assert.match(prompt, /Dialogue must sound spoken/);
-    assert.match(prompt, /공기가 얇다/);
-    assert.match(prompt, /작은 숨 헐떡임/);
-    assert.match(prompt, /담은이 몸집/);
-    assert.match(prompt, /Road\/overpass “ramp” is 경사로\/진입로/);
+    assert.match(prompt, /MANDATORY BLANK-PAGE REWRITING/);
+    assert.match(prompt, /Destroy and discard every source word choice/);
+    assert.match(prompt, /write the passage again from a blank page/);
+    assert.match(prompt, /Do not create a new scene event or remove an existing scene event/);
+    assert.match(prompt, /KOREAN-ORIGINAL TEST/);
+    assert.match(prompt, /Dialogue must sound (?:like words the actual speaker would naturally say aloud|spoken)/);
+    assert.match(prompt, /intact Korean words/);
+    assert.match(prompt, /OUTPUT SHELL ONLY/);
     assert.match(prompt, /BANNED KOREAN WORDS/);
-    checks += 11;
+    checks += 9;
 }
 
 const narration = builders.narration();
@@ -52,8 +50,8 @@ const other = builders.otherDialogue();
 assert.doesNotMatch(narration, /DIVERSE VOICE MODELS/);
 assert.match(target, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
 assert.doesNotMatch(other, /TARGET DIALOGUE ONLY — KIM HONG-JIN/);
-assert.match(target, /sly confidence/);
-assert.match(target, /Serious or tactical lines stay short/);
+assert.match(target, /sly, shameless, playful/);
+assert.match(target, /Short fragments may become complete spoken lines/);
 
 const off = core.buildOutputPrompt(segmented, { ...settings, developerMadKoreanOutputEnabled: false }, '', identity);
 assert.doesNotMatch(off, /SHORT MANDATORY KOREAN REAUTHORING CONTRACT/);
