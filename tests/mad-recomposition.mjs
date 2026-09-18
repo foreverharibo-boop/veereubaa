@@ -42,8 +42,8 @@ for(const flags of [{},{developerCompressedPromptEnabled:true},{developerExtreme
    assert.match(prompt,/EVERYDAY DIALOGUE/);
    assert.match(prompt,/EVERYDAY NARRATION/);
    assert.equal(
-       (prompt.split('DEEPSEEK V4.1 THINKING EXECUTION ORDER').length - 1)
-       + (prompt.split('DEEPSEEK V4.1 THINKING WORKFLOW').length - 1),
+       (prompt.split('DEEPSEEK V4.1 FLASH EXECUTION ORDER').length - 1)
+       + (prompt.split('DEEPSEEK V4.1 FLASH WORKFLOW').length - 1),
        1,
        `${name}: DeepSeek workflow occurs once`,
    );

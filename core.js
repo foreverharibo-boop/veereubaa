@@ -1234,6 +1234,11 @@ const DEVELOPER_HONGJIN_OPPA_FREQUENCY_RULES = {
 function hongjinRawVoiceMandate(compact = false) {
     return compact
         ? `KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION
+MANDATORY TRANSLATION CONTRACT
+- The rules in this block are non-optional acceptance conditions, not style suggestions, optional flavor, or background description. They must be visibly realized in the final TARGET dialogue whenever the selected controls authorize them; merely understanding them is not compliance.
+- REQUIRED OUTPUT ELEMENTS: unmistakably Kim Hong-jin-specific raw spoken Korean; whole-utterance reconstruction through blunt verbs, rough particles/endings and shameless cadence; active configured profanity/vulgar emphasis without sanitization; serious emotion that stays serious without becoming clean or generic.
+- Before returning, verify that these required elements are present in the actual Korean wording. If the line is neutral, polite, textbook-like, generic, or only gains personality from one detachable curse, reject and rewrite it.
+
 - The final TARGET dialogue must sound unmistakably like Kim Hong-jin, not like a generally natural translation. When active settings authorize roughness, a clean, polite, neutral, textbook-like or merely accurate line is a FAILURE.
 - Do not translate neutrally and decorate the result with one curse. Rebuild the whole utterance through blunt vocabulary, shameless street-level cadence, rough particles/endings, brazen reactions, cheeky pressure and vulgar emphasis. The voice must remain recognizable even if every explicit curse is removed.
 - “Preserve meaning” preserves facts, intent, relationship, consent, emotional direction and the target of aggression—not source wording, restraint, politeness, clause shape or rhetorical packaging. Rewrite as boldly as the selected controls allow.
@@ -1241,6 +1246,18 @@ function hongjinRawVoiceMandate(compact = false) {
 - Reject and rewrite a line that could belong to any generic Korean male character, relies on only “젠장/빌어먹을/망할”, or adds a detachable swear word to otherwise neutral prose. Seriousness blocks forced jokes, not rawness.
 END KIM HONG-JIN RAW VOICE`
         : `KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION
+MANDATORY TRANSLATION CONTRACT
+- Everything in this block is a non-optional acceptance condition for the final TARGET dialogue. It is not a preference, suggestion, optional embellishment, character note, or permission that may be ignored. The translation is incomplete unless the required qualities are visibly present in the actual Korean output at the strength selected below.
+
+REQUIRED OUTPUT ELEMENTS
+1. DISTINCTIVE RAW VOICE: the result must immediately sound like Kim Hong-jin—sly, shameless, rough, brazen, vulgar where authorized, and conversationally alive—not like a competent generic Korean male translation.
+2. WHOLE-UTTERANCE RECONSTRUCTION: build the personality into the verbs, particles, endings, contractions, cadence, reactions, rhetorical turns, and information order. A neutral sentence with one detachable curse does not satisfy this requirement.
+3. ACTIVE CONFIGURED FORCE: apply the selected profanity, vulgarity, teasing, playfulness, age voice, and transcreation strength positively wherever compatible. Do not treat the absence of literal source profanity as a reason to default to clean speech.
+4. NO SANITIZATION: never weaken source profanity, coarse intent, hostility, urgency, pain, frustration, or crude inner force into polite, elegant, textbook-like, or emotionally flattened Korean. The USER-directed profanity and misogyny bans limit only forbidden targets and expressions; they do not clean the rest of the line.
+5. SERIOUS BUT STILL RAW: danger, grief, fear, pain, concern, urgency, or sincerity blocks forced comedy and flippancy, not blunt verbs, rough cadence, vulgar intensifiers, free expletives, or situation-directed profanity.
+6. FACTUAL BOUNDARY: all force remains surface voice. Preserve facts, speaker/addressee, relationship, consent/refusal, emotional direction, scene stakes, and the target of aggression; invent no event, threat, accusation, sexual act, or new target.
+- Before returning, inspect the finished Korean for all six elements. If an applicable element is absent, or the line could pass as neutral/general translation, reject it and rewrite before output. Merely reading, analyzing, or remembering these rules is not compliance.
+
 - The final Korean dialogue MUST sound unmistakably like Kim Hong-jin, not like a generally natural Korean translation.
 - A clean, polite, neutral, textbook-like, restrained, elegant, or merely accurate translation is a FAILURE whenever the selected voice settings authorize roughness, profanity, vulgarity, teasing, or shamelessness.
 - Do not first produce a neutral translation and then decorate it with an isolated curse. Rebuild the entire utterance around Kim Hong-jin's vocabulary, cadence, particles, sentence endings, rhetorical turns, vulgar emphasis, brazen reactions, and shameless conversational attitude.
@@ -1314,7 +1331,7 @@ DEEPSEEK HONGJIN VOICE PASS — hidden, TARGET dialogue only
 END DEEPSEEK HONGJIN VOICE PASS`
         : `${hongjinRawVoiceMandate(false)}
 
-DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS
+DEEPSEEK V4.1 FLASH — KIM HONG-JIN DIALOGUE VOICE PASS
 Run this hidden pass only on direct dialogue confidently attributed to TARGET CHARACTER. Do not apply it to narration, inner thought, metadata, USER/NPC/OTHER dialogue, quoted speech by someone else, or an ambiguous speaker.
 
 1. MAP THE LINE: silently identify the actual addressee, speech act, literal proposition, subtext, emotional temperature, seriousness, urgency, hostility/affection direction, and the selected transcreation, profanity, teasing, vulgarity, playfulness, age and self-reference strengths. Decide what the line must accomplish before choosing Korean words.
@@ -1368,7 +1385,10 @@ function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
 - An explicitly named or titled NPC addressee, an NPC reply, a group audience, or an ambiguous listener means ZERO added uses of “오빠” in that line. Use ordinary first-person Korean such as “나/내가” when needed.
 - If TARGET CHARACTER is clearly not male, or if the addressee or speaker is ambiguous, do not use the added “오빠” self-reference. It is a playful/affectionate speech device authorized by this setting, not evidence of literal sibling kinship and not permission to alter age, gender, hierarchy, relationship, consent, or scene facts.`;
 
-    return `${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule() + '\n'}DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
+    return `DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
+${deepSeekHongjinVoicePass()}
+
+${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule() + '\n'}
 - EXPERIMENTAL E→K voice transcreation layer.
 - Fixed personality premise sent with this translation:
   "이 캐릭터는 능글맞고 장난기가 많은 성격이며 츤데레식, 능글맞은, 천박한 말투를 사용한다."
@@ -1380,8 +1400,6 @@ function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
 ${noDirectUserProfanityRule()}
 ${madKoreanExclusiveEnabled(settings) ? '' : `${dialogueSubjectVocativeRule()}\n${naturalInsultReferenceRule()}`}
 - Never apply this block to narration, USER/NPC/OTHER-speaker dialogue, quoted speech spoken by someone else, tagged content outside TARGET CHARACTER dialogue, or K→E input.
-
-${deepSeekHongjinVoicePass()}
 
 ${DEVELOPER_HONGJIN_AGE_RULES[ageKey]}
 
@@ -1475,13 +1493,13 @@ function madKoreanMetricUnitsRule() {
 
 function deepSeekThinkingWorkflow(compact = false) {
     return compact
-        ? `DEEPSEEK V4.1 THINKING WORKFLOW — hidden reasoning, final JSON only
+        ? `DEEPSEEK V4.1 FLASH WORKFLOW — silent pre-output planning, final JSON only
 - Read the complete request and all segments before writing. Silently resolve a scene ledger for actor→action→target, owner→object, speaker→listener, referents, spatial direction, chronology, body mechanics, sensory channel, force, negation, uncertainty, numbers, register and stable terms.
 - Compose from that ledger as original Korean, never by translating clause by clause or making a literal draft. Resolve polysemy, phrasal motion and figurative language by scene function. Every sentence must be complete and physically intelligible in Korean.
 - Before returning, compare every id against the source ledger, then reject translationese, dangling modifiers, vague continuations, dictionary-sense calques and voice drift. Fix the Korean wording without changing facts. In QA/repair tasks, obey the requested minimal correction scope instead of broadly rewriting.
 - Never expose analysis, a ledger, alternatives or commentary. Return only the required final schema.
-END DEEPSEEK THINKING WORKFLOW`
-        : `DEEPSEEK V4.1 THINKING EXECUTION ORDER — USE INTERNAL REASONING, RETURN ONLY FINAL JSON
+END DEEPSEEK FLASH WORKFLOW`
+        : `DEEPSEEK V4.1 FLASH EXECUTION ORDER — SILENT PRE-OUTPUT PLANNING, RETURN ONLY FINAL JSON
 1. READ THE WHOLE REQUEST: inspect every supplied segment plus permitted context before writing any Korean. Do not begin translating from the first clause while later context remains unread.
 2. BUILD A SILENT SCENE LEDGER: resolve each actor→action→target, owner→object, speaker→listener, pronoun/referent, spatial position and movement direction, chronology and causality, body mechanic, sensory channel, emotional direction, force, negation, uncertainty, number, speech level and stable term. Resolve polysemous words, phrasal motion, idioms and figurative language by their function in this scene, not by the first dictionary gloss.
 3. COMPOSE FROM THE LEDGER: write the passage afresh as original contemporary Korean fiction. Never create or mentally preserve a literal draft, source clause skeleton or word-by-word alignment. Decide natural Korean information order, subjects, verbs, sentence boundaries and rhythm from the scene ledger. Every sentence must be semantically complete and physically visualizable; reject vague continuations, dangling actions and modifiers whose Korean head or experiencer is unclear.
@@ -1492,7 +1510,7 @@ PRIORITY WHEN RULES APPEAR TO COMPETE
 - The detailed rules below are the ledger and audit standard. They are not a request to translate each source modifier separately or to keep source sentence boundaries.
 - For QA or repair requests containing an existing translation, use the same ledger and audit but obey that task's minimal-correction boundary instead of rewriting correct text for variety.
 - Keep all reasoning, the ledger, checks and rejected drafts hidden. Output no analysis, explanation, alternatives, labels or commentary outside the required final schema.
-END DEEPSEEK THINKING EXECUTION ORDER`;
+END DEEPSEEK FLASH EXECUTION ORDER`;
 }
 
 function madKoreanNativeWritingRules(compact = false) {
@@ -1539,7 +1557,7 @@ function developerMadKoreanOutputBlock(settings = {}, scope = 'mixed') {
 
 SCENE FACTS AND OUTPUT CONTRACT
 - Preserve who does/says/feels what to whom, ownership, referents, chronology, causality, negation, quantity, tense/aspect, point of view, setting, names, numbers, relationship, dialogue intent, emotional direction, consent/refusal, intensity and explicitness. These are facts; sentence structure and vocabulary are not.
-- Follow the Korean web-novel author role, DEEPSEEK THINKING EXECUTION ORDER and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Return only the final Korean in the required schema, without exposing internal analysis, commentary or an extra response.
+- Follow the Korean web-novel author role, DEEPSEEK FLASH EXECUTION ORDER and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Return only the final Korean in the required schema, without exposing internal analysis, commentary or an extra response.
 - Translate all visible natural language, including information panels. Preserve protected structure and required output format. Resolve Korean particles grammatically; never leave “(이)는/이(가)/은(는)” editing notation.
 
 FACT, REFERENT, AND FORCE LOCK
@@ -2666,11 +2684,12 @@ function extremeHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
         natural: 'usually 1–2 separated fitting uses', often: 'frequent but non-repetitive',
     }, settings.developerHongjinOppaFrequency, 'do not add');
 
-    return `${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule(true) + '\n'}KIM HONG-JIN VOICE — ULTRA
+    return `KIM HONG-JIN VOICE — ULTRA
+${deepSeekHongjinVoicePass(true)}
+${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule(true) + '\n'}
 - Apply only to direct dialogue actually spoken by TARGET CHARACTER ${JSON.stringify(characterName)}; never narration, quoted speech, USER/NPC/OTHER dialogue, or ambiguous speakers. Voice: sly, playful, tsundere-like, shameless, rough and deliberately vulgar Korean. Rewording=${transcreation}; profanity=${profanity}; teasing=${teasing}; vulgarity=${vulgarity}; playfulness=${playfulness}; age=${age}.
 - Voice may add compatible surface profanity/teasing/interjections, but never change events, facts, actor/target, relationship, consent, sexual meaning, emotional direction, threats, accusations, or target of abuse; never invent dialect or pseudo-old endings.
 - ${noDirectUserProfanityRule(true)}
-${deepSeekHongjinVoicePass(true)}
 - Self-reference 오빠: ${oppa}. It may replace first-person 나/내가 only when ${JSON.stringify(characterName)} (male only) speaks directly and exclusively to USER ${JSON.stringify(userName)}; never for second-person you or toward/from NPCs, groups, friends, guards, managers, executives, strangers, or ambiguous listeners.`;
 }
 
@@ -2722,10 +2741,11 @@ function compactHongjinFlavorBlock(settings = {}, scope = 'mixed', speakerIdenti
         often: 'frequent but non-repetitive 오빠 self-reference',
     }[settings.developerHongjinOppaFrequency] || 'never add 오빠 self-reference';
 
-    return `${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule(true) + '\n'}KIM HONG-JIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
+    return `KIM HONG-JIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
+${deepSeekHongjinVoicePass(true)}
+${madKoreanExclusiveEnabled(settings) ? '' : noMisogynyRule(true) + '\n'}
 - TARGET CHARACTER ${JSON.stringify(characterName)}: sly, playful, tsundere-like, shameless and deliberately vulgar Korean voice.
 ${madKoreanExclusiveEnabled(settings) ? madKoreanHongjinVoiceRule(settings) : `- Transcreation: ${transcreation}.`}
-${deepSeekHongjinVoicePass(true)}
 - Profanity: ${profanity}. Teasing: ${teasing}. Vulgarity: ${vulgarity}. Playfulness: ${playfulness}. Age voice: ${age}.
 - Self-reference: ${oppa}; “오빠” is allowed ONLY when ${JSON.stringify(characterName)} speaks directly and exclusively to USER ${JSON.stringify(userName)}. Never use it toward NPCs, groups, guards, managers, executives, friends, or strangers; use 나/내가 or omit naturally.
 - TARGET CHARACTER gender=${JSON.stringify(speakerIdentity.characterGender || 'unknown')}; if the character is clearly not male, never add 오빠 self-reference. It replaces first-person 나/내가 only, never second-person you or USER/NPC wording, and establishes no sibling, age, or relationship fact.

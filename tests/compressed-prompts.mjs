@@ -84,7 +84,7 @@ for (const flags of [{}, { developerMadKoreanOutputEnabled: true }, { developerM
                 equal(count(prompt, writingStart), 1, 'shared writing standard once: ' + name);
                 equal(count(prompt, writingEnd), 1, 'complete writing standard: ' + name);
                 const block = prompt.slice(prompt.indexOf(writingStart), prompt.indexOf(writingEnd) + writingEnd.length);
-                const shared = block.replace(/DEEPSEEK V4\.1 THINKING[\s\S]*?END DEEPSEEK THINKING (?:WORKFLOW|EXECUTION ORDER)/u, 'DEEPSEEK_THINKING_WORKFLOW')
+                const shared = block.replace(/DEEPSEEK V4\.1 FLASH[\s\S]*?END DEEPSEEK FLASH (?:WORKFLOW|EXECUTION ORDER)/u, 'DEEPSEEK_FLASH_WORKFLOW')
                     .replace(/NATURAL COLLOCATIONS AND SOURCE IMAGERY:[\s\S]*?END IDIOMATIC EXPRESSION/u, 'IDIOM_POLICY')
                     .replace(/DIALOGUE TIME AND GROUP REFERENCES —[\s\S]*?END DIALOGUE TIME AND GROUP REFERENCES/u, 'TIME_GROUP_POLICY');
                 sharedWritingBlock ??= shared;
@@ -246,7 +246,7 @@ for (const strength of ['light', 'strong', 'maximum']) {
             const label = `${name}/${strength}/${compressed}`;
             equal(count(prompt, 'MAD KOREAN + HONGJIN — VOICE-ONLY PRIORITY'), voiceActive ? 1 : 0, 'voice priority scoped once: ' + label);
             if (voiceActive) {
-                equal(count(prompt, 'DEEPSEEK V4.1 THINKING — KIM HONG-JIN DIALOGUE VOICE PASS')
+                equal(count(prompt, 'DEEPSEEK V4.1 FLASH — KIM HONG-JIN DIALOGUE VOICE PASS')
                     + count(prompt, 'DEEPSEEK HONGJIN VOICE PASS — hidden'), 1, 'DeepSeek Hongjin voice pass once: ' + label);
                 contains(prompt, 'speech act', label);
                 contains(prompt, 'read', label);

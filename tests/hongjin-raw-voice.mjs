@@ -37,13 +37,19 @@ for (const mode of [
         const prompt = build(settings);
         assert.equal(prompt.split('KIM HONG-JIN RAW VOICE — MANDATORY EXECUTION').length - 1, 1);
         assert.equal(prompt.split('END KIM HONG-JIN RAW VOICE').length - 1, 1);
+        assert.equal(prompt.split('MANDATORY TRANSLATION CONTRACT').length - 1, 1);
+        assert.match(prompt, /non-optional acceptance condition/i);
+        assert.match(prompt, /REQUIRED OUTPUT ELEMENTS/);
+        assert.match(prompt, /Merely .*not compliance/i);
         assert.match(prompt, /clean, polite, neutral, textbook-like/i);
         assert.match(prompt, /Do not (?:first )?produce a neutral translation|Do not translate neutrally/);
         assert.match(prompt, /voice must remain recognizable|personality disappears after removing one detachable swear word/i);
         assert.match(prompt, /USER-directed profanity(?: bans)? restrict only|bans on misogyny and USER-directed profanity restrict only|Misogyny and USER-directed profanity bans restrict only/i);
         assert.match(prompt, /Seriousness (?:suppresses|blocks) forced (?:comedy|jokes), not raw(?:ness| diction)/i);
         assert.match(prompt, /most eligible lines/);
+        assert.ok(prompt.indexOf('MANDATORY TRANSLATION CONTRACT') < prompt.indexOf('USER-DIRECTED PROFANITY GUARD'));
         if (!mode.developerCompressedPromptEnabled && !mode.developerExtremeCompressedPromptEnabled) {
+            assert.ok(prompt.indexOf('MANDATORY TRANSLATION CONTRACT') < prompt.indexOf('Fixed personality premise'));
             assert.match(prompt, /VOICE TRANSFORMATION MODELS/);
             assert.match(prompt, /WEAK FAILURE: “움직여\. 지금\.”/);
             assert.match(prompt, /KIM HONG-JIN: “씨발, 당장 움직여\.”/);
@@ -52,7 +58,7 @@ for (const mode of [
         }
         assert.ok(!build(settings, 'narration').includes('KIM HONG-JIN RAW VOICE'));
         assert.ok(!build(settings, 'other_dialogue').includes('KIM HONG-JIN RAW VOICE'));
-        checks += 14;
+        checks += 20;
     }
 }
 
