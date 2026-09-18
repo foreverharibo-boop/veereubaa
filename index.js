@@ -12,6 +12,7 @@ import {
     assembleTranslation,
     buildBannedRepairPrompt,
     buildInputPrompt,
+    buildIdentityNameFallbackPrompt,
     buildMadKoreanTargetedAuditPrompt,
     buildMultiSelectionPrompt,
     buildNameHistoryFormsPrompt,
@@ -48,7 +49,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.89';
+const EXTENSION_VERSION = '0.5.90';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -578,6 +579,7 @@ const failedOutputSignatures = new Map();
 const serverRetryStates = new Map();
 const speakerAttributionCache = new Map();
 const roleTermPlanCache = new Map();
+const identityNameFallbackCache = new Map();
 const insteadRevisionTranslationSeen = new Map();
 
 // inSTead/other controllers can replace a message object and discard
@@ -3806,12 +3808,12 @@ function canonicalKoreanIdentityNames(speakerIdentity = {}) {
     const identityNames = [
         String(speakerIdentity.userName || '').trim(),
         String(speakerIdentity.characterName || '').trim(),
-    ].filter(name => /^[가-힣]{2,12}$/u.test(name));
+    ].filter(name => /^[가-힣]{1,12}$/u.test(name));
     const lockedNames = [
         ...(Array.isArray(speakerIdentity.nameLocks) ? speakerIdentity.nameLocks : [])
             .flatMap(row => [row?.target, row?.value])
             .map(name => String(name || '').trim()),
-    ].filter(name => /^[가-힣]{2,12}$/u.test(name));
+    ].filter(name => /^[가-힣]{1,12}$/u.test(name));
     const identityVariants = identityNames.flatMap(name => (
         [...name].length === 3 ? [name, [...name].slice(1).join('')] : [name]
     ));
@@ -3826,7 +3828,6 @@ function repairStrictCanonicalIdentityNames(value, speakerIdentity = {}) {
 
 function repairOutputIdentityNames(value, speakerIdentity = {}, sourceSegment = {}, nameTokens = []) {
     const indivisible = repairIndivisibleIdentityNames(value, speakerIdentity);
-    if (!madKoreanExclusiveMode()) return indivisible;
     const canonicalNames = canonicalKoreanIdentityNames(speakerIdentity);
     const particlesRepaired = repairCanonicalKoreanNameSuffixes(indivisible, canonicalNames);
     return repairCanonicalKoreanVocatives(particlesRepaired, sourceSegment, canonicalNames, nameTokens);
@@ -4558,16 +4559,149 @@ async function runExperimentalQualityAudit({
     }
 }
 
-async function translateOutputText(source, options = {}) {
-    const characterNameLocks = normalizedCharacterNameLocks();
-    const initialSegmented = segmentSource(source, characterNameLocks);
-    if (minimalOutputEnabled(settings)) {
-        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap });
+function sourceContainsStandaloneLatinName(source, candidate) {
+    const name = String(candidate || '').trim();
+    if (!name || !/[A-Za-z]/u.test(name)) return false;
+    return sourceContainsExactName(source, name);
+}
+
+function primaryIdentityNameCandidates(source, speakerIdentity = {}, explicitLocks = []) {
+    const text = String(source || '');
+    const candidates = new Set();
+    const add = value => {
+        const name = String(value || '').trim().replace(/[.,!?;:]+$/u, '');
+        if (
+            name.length >= 2
+            && name.length <= 80
+            && /^[A-Za-z][A-Za-z\p{M}'-]*(?:\s+[A-Za-z][A-Za-z\p{M}'-]*)*$/u.test(name)
+            && sourceContainsStandaloneLatinName(text, name)
+        ) candidates.add(name);
+    };
+
+    const identityDisplayNames = [
+        speakerIdentity.sourceCharacterName ?? speakerIdentity.characterName,
+        speakerIdentity.sourceUserName ?? speakerIdentity.userName,
+    ];
+    for (const displayName of identityDisplayNames) {
+        add(displayName);
+        String(displayName || '').trim().split(/\s+/u).forEach(add);
     }
-    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {
+
+    // Korean cards often use a Hangul display name while the English source
+    // uses a hyphenated given-name romanization (Hong-jin, Dam-eun). These are
+    // high-confidence name candidates without uploading either card body.
+    for (const match of text.matchAll(/(?<![\p{L}\p{N}_])([A-Z][A-Za-z\p{M}]*(?:[-'][A-Za-z\p{M}]+)+)(?![\p{L}\p{N}_])/gu)) {
+        add(match[1]);
+    }
+
+    // Also accept a single capitalized word only in strong name positions:
+    // a punctuated direct call or immediately before a speech/action tag.
+    for (const match of text.matchAll(/["“]\s*([A-Z][a-z]{1,30})(?=\s*[,!?…])/gu)) add(match[1]);
+    for (const match of text.matchAll(/(?<![\p{L}\p{N}_])([A-Z][a-z]{1,30})(?=\s+(?:said|asked|shouted|yelled|roared|muttered|whispered|replied|answered|turned|looked|grabbed|pulled|pushed|stepped|moved|ran|reached|caught|hit|saw|didn't|was|had)\b)/gu)) add(match[1]);
+
+    const explicitlyLocked = new Set((explicitLocks || []).map(row => String(row?.source || '').trim().toLocaleLowerCase()));
+    return [...candidates]
+        .filter(candidate => !explicitlyLocked.has(candidate.toLocaleLowerCase()))
+        .slice(0, 12);
+}
+
+function mergedNameLocks(explicitLocks = [], inferredLocks = []) {
+    const merged = [];
+    const seen = new Set();
+    for (const row of [...explicitLocks, ...inferredLocks]) {
+        const source = String(row?.source || '').trim();
+        const target = String(row?.target || '').trim();
+        const key = source.toLocaleLowerCase();
+        if (!source || !target || seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ source, target });
+    }
+    return merged;
+}
+
+async function inferredPrimaryIdentityNameLocks(source, speakerIdentity = {}, options = {}) {
+    const explicitLocks = Array.isArray(speakerIdentity.nameLocks) ? speakerIdentity.nameLocks : [];
+    const candidates = primaryIdentityNameCandidates(source, speakerIdentity, explicitLocks);
+    if (!candidates.length) return [];
+
+    const characterName = String(speakerIdentity.sourceCharacterName ?? speakerIdentity.characterName ?? '').trim();
+    const userName = String(speakerIdentity.sourceUserName ?? speakerIdentity.userName ?? '').trim();
+    const planned = [];
+    const unresolved = [];
+    for (const candidate of candidates) {
+        const cacheKey = `${characterName}\u0000${userName}\u0000${candidate.toLocaleLowerCase()}`;
+        if (identityNameFallbackCache.has(cacheKey)) {
+            const target = identityNameFallbackCache.get(cacheKey);
+            setBoundedCache(identityNameFallbackCache, cacheKey, target, 120);
+            if (target) planned.push({ source: candidate, target });
+        } else {
+            unresolved.push({ candidate, cacheKey });
+        }
+    }
+    if (!unresolved.length) return planned;
+
+    const prompt = buildIdentityNameFallbackPrompt({
+        characterName,
+        userName,
+        candidates: unresolved.map(row => row.candidate),
+    });
+    const expected = unresolved.map((row, index) => ({
+        id: `identity_name_${String(index).padStart(4, '0')}`,
+        type: 'identity_name',
+        text: row.candidate,
+    }));
+
+    try {
+        const result = await requestSegments(prompt, expected, {
+            ...options,
+            stage: 'identity-name-fallback',
+        });
+        unresolved.forEach((row, index) => {
+            const id = `identity_name_${String(index).padStart(4, '0')}`;
+            const raw = String(result.get(id) || '').trim();
+            const target = /^[가-힣]{1,12}$/u.test(raw) ? raw : '';
+            setBoundedCache(identityNameFallbackCache, row.cacheKey, target, 120);
+            if (target) planned.push({ source: row.candidate, target });
+        });
+    } catch (error) {
+        if (isAbort(error, options.signal)) throw error;
+        console.warn('[베에르으바아] 현재 캐릭터·페르소나 이름 확인에 실패하여 기존 이름 규칙으로 계속합니다.', error);
+        unresolved.forEach(row => setBoundedCache(identityNameFallbackCache, row.cacheKey, '', 120));
+    }
+    return planned;
+}
+
+async function translateOutputText(source, options = {}) {
+    const initialSpeakerIdentity = options.speakerIdentity || {};
+    const explicitNameLocks = normalizedCharacterNameLocks();
+    const explicitSegmented = segmentSource(source, explicitNameLocks);
+    if (minimalOutputEnabled(settings)) {
+        return translateMinimalOutput(explicitSegmented, settings, options, { requestSegments, buildSourceMap });
+    }
+    const roleTermLocks = await planRepeatedRoleTermLocks(explicitSegmented, {
         signal: options.signal,
         timing: options.timing,
     });
+    // The typeof guard keeps the isolated entry-path test harness compatible;
+    // in the real extension the resolver is always defined in this module.
+    const inferIdentityNames = typeof inferredPrimaryIdentityNameLocks === 'function'
+        ? inferredPrimaryIdentityNameLocks
+        : async () => [];
+    const inferredNameLocks = await inferIdentityNames(source, initialSpeakerIdentity, options);
+    const characterNameLocks = inferredNameLocks.length
+        ? mergedNameLocks(explicitNameLocks, inferredNameLocks)
+        : explicitNameLocks;
+    const speakerIdentity = inferredNameLocks.length
+        ? resolveOutputSpeakerIdentity({
+            characterName: initialSpeakerIdentity.sourceCharacterName ?? initialSpeakerIdentity.characterName,
+            characterGender: initialSpeakerIdentity.characterGender,
+            userName: initialSpeakerIdentity.sourceUserName ?? initialSpeakerIdentity.userName,
+        }, characterNameLocks)
+        : initialSpeakerIdentity;
+    options = { ...options, speakerIdentity };
+    const initialSegmented = inferredNameLocks.length
+        ? segmentSource(source, characterNameLocks)
+        : explicitSegmented;
     const segmented = roleTermLocks.length
         ? segmentSource(source, [...characterNameLocks, ...roleTermLocks])
         : initialSegmented;
@@ -4575,7 +4709,6 @@ async function translateOutputText(source, options = {}) {
         const translation = assembleTranslation(segmented, new Map());
         return { translation, sourceMap: [] };
     }
-    const speakerIdentity = options.speakerIdentity || {};
     const speakerScopes = await classifyOutputDialogueSpeakers(segmented, speakerIdentity, {
         ...options,
         speakerIdentity,
@@ -4635,13 +4768,10 @@ async function translateOutputText(source, options = {}) {
 
     for (const [id, translation] of translations) {
         const sourceSegment = segmented.segments.find(segment => segment.id === id) || {};
-        const indivisible = repairIndivisibleIdentityNames(translation, speakerIdentity);
         translations.set(
             id,
             repairKoreanParticleAlternatives(
-                madKoreanExclusiveMode()
-                    ? repairOutputIdentityNames(indivisible, speakerIdentity, sourceSegment, segmented.nameTokens || [])
-                    : indivisible,
+                repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
             ),
         );
     }
@@ -4691,9 +4821,7 @@ async function translateOutputText(source, options = {}) {
         console.warn('[베에르으바아] 일부 구간의 미번역 의심이 해소되지 않아 나머지 번역 결과를 우선 적용합니다.', untranslated);
     }
     const assembled = assembleTranslation(segmented, translations);
-    const result = madKoreanExclusiveMode()
-        ? repairStrictCanonicalIdentityNames(assembled, speakerIdentity)
-        : assembled;
+    const result = repairStrictCanonicalIdentityNames(assembled, speakerIdentity);
     if (!result.trim()) throw new Error('완성된 번역문이 비어 있습니다.');
     return {
         translation: result,
@@ -4701,7 +4829,7 @@ async function translateOutputText(source, options = {}) {
             segmented,
             translations,
             result,
-            madKoreanExclusiveMode() ? speakerIdentity : {},
+            speakerIdentity,
         ),
     };
 }
@@ -4795,6 +4923,19 @@ function outputSpeakerIdentity(message) {
         characterGender: detectCharacterGender(character),
         userName: String(context.name1 || '').trim(),
     }, normalizedCharacterNameLocks(character));
+}
+
+async function outputSpeakerIdentityForSource(source, message, options = {}) {
+    const identity = outputSpeakerIdentity(message);
+    const explicitNameLocks = normalizedCharacterNameLocks();
+    const inferredNameLocks = await inferredPrimaryIdentityNameLocks(source, identity, options);
+    if (!inferredNameLocks.length) return identity;
+    const nameLocks = mergedNameLocks(explicitNameLocks, inferredNameLocks);
+    return resolveOutputSpeakerIdentity({
+        characterName: identity.sourceCharacterName ?? identity.characterName,
+        characterGender: identity.characterGender,
+        userName: identity.sourceUserName ?? identity.userName,
+    }, nameLocks);
 }
 
 function currentTranslationRecoveryScope() {
@@ -8488,7 +8629,7 @@ async function retranslateSelectionBundle() {
         includeDialogue: bundleHasDialogue,
         includeCharacterDialogue: bundleHasDialogue,
     });
-    const speakerIdentity = outputSpeakerIdentity(state.message);
+    const speakerIdentity = await outputSpeakerIdentityForSource(state.source, state.message);
 
     const selections = state.ranges.map((range, index) => ({
         ...range,
@@ -8735,7 +8876,7 @@ async function retranslateSelection(snapshot) {
         includeDialogue: selectionHasDialogue,
         includeCharacterDialogue: selectionHasDialogue,
     });
-    const speakerIdentity = outputSpeakerIdentity(snapshot.message);
+    const speakerIdentity = await outputSpeakerIdentityForSource(snapshot.source, snapshot.message);
 
     const controller = new AbortController();
     trackSelectionTranslation(controller);

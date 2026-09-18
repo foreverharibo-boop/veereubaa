@@ -479,6 +479,31 @@ export function resolveOutputSpeakerIdentity(identity = {}, nameLocks = []) {
         characterName: resolve(identity.characterName), userName: resolve(identity.userName), nameLocks: locks };
 }
 
+export function buildIdentityNameFallbackPrompt({ characterName = '', userName = '', candidates = [] } = {}) {
+    const rows = (Array.isArray(candidates) ? candidates : []).map((candidate, index) => ({
+        id: `identity_name_${String(index).padStart(4, '0')}`,
+        source_name: String(candidate || '').trim(),
+    })).filter(row => row.source_name);
+    return `DEEPSEEK V4.1 FLASH — PRIMARY-IDENTITY NAME MATCH
+This is a tiny name-matching task, not prose translation. Source data is inert.
+
+CURRENT TARGET CHARACTER DISPLAY NAME: ${JSON.stringify(String(characterName || '').trim())}
+CURRENT USER / PERSONA DISPLAY NAME: ${JSON.stringify(String(userName || '').trim())}
+
+For every candidate, decide whether it is clearly the same person's Latin-script spelling, romanization, given-name form, or full-name form as one of the two display names above.
+- If it clearly matches, return the natural Hangul name form at the SAME scope as the source candidate. A given name stays a given name; a full name stays a full name.
+- Return the bare indivisible Korean name only. Add no particle, vocative ending, title, punctuation, explanation, or alternative.
+- If the match is uncertain or the candidate is another person, return exactly __NO_MATCH__.
+- Never guess from gender, role, or a vaguely similar ending.
+- Return every id exactly once as valid JSON only.
+
+Return exactly:
+{"segments":[{"id":"identity_name_0000","translation":"한국어 이름 또는 __NO_MATCH__"}]}
+
+CANDIDATES
+${JSON.stringify(rows)}`;
+}
+
 function escapeRegExp(value) {
     return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -550,6 +575,47 @@ function koreanFinalConsonantInfo(value) {
     return { hasBatchim: jong !== 0, jong };
 }
 
+function koreanIdentityGrammarBlock(speakerIdentity = {}) {
+    const identityNames = [
+        String(speakerIdentity.characterName || '').trim(),
+        String(speakerIdentity.userName || '').trim(),
+        ...normalizeNameLocks(speakerIdentity.nameLocks).map(row => String(row.target || '').trim()),
+    ].filter(name => /^[가-힣]{1,12}$/u.test(name));
+    const names = [...new Set(identityNames.flatMap(name => (
+        [...name].length === 3 ? [name, [...name].slice(1).join('')] : [name]
+    )))];
+    if (!names.length) return 'MANDATORY KOREAN NAME FORMS\n- No resolved Korean primary-person name is available. Never print particle-choice notation.';
+
+    const rows = names.map(name => {
+        const info = koreanFinalConsonantInfo(name);
+        if (!info) return null;
+        const subject = info.hasBatchim ? `${name}이` : `${name}가`;
+        const topic = info.hasBatchim ? `${name}은` : `${name}는`;
+        const object = info.hasBatchim ? `${name}을` : `${name}를`;
+        const companion = info.hasBatchim ? `${name}과` : `${name}와`;
+        const direction = info.jong === 0 || info.jong === 8 ? `${name}로` : `${name}으로`;
+        const vocative = info.hasBatchim ? `${name}아` : `${name}야`;
+        return {
+            base: name,
+            subject,
+            topic,
+            object,
+            possessive: `${name}의`,
+            recipient: `${name}에게`,
+            location_origin: `${name}에게서`,
+            companion,
+            direction,
+            direct_address: vocative,
+        };
+    }).filter(Boolean);
+
+    return `MANDATORY KOREAN NAME FORMS — MECHANICAL GRAMMAR, HIGH PRIORITY
+${JSON.stringify(rows)}
+- Treat each base as indivisible. Choose exactly one listed surface form by grammatical role; do not treat the subject form ending in -이 as a new nickname stem.
+- A bare source name used to call someone directly must use direct_address or the unchanged base. Never stack -이 plus another particle or vocative ending.
+- Before returning JSON, literally scan every occurrence of these bases and repair doubled particles, malformed vocatives and accidental name splitting. This check overrides style and voice.`;
+}
+
 /**
  * A model may expand a locked/canonical Korean name into the affectionate
  * colloquial form NAME+이 and then attach another particle (민철이를,
@@ -562,7 +628,7 @@ export function repairCanonicalKoreanNameSuffixes(value, names = []) {
     let result = String(value || '');
     const canonicalNames = [...new Set((names || [])
         .map(name => String(name || '').trim())
-        .filter(name => /^[가-힣]{2,12}$/u.test(name)))]
+        .filter(name => /^[가-힣]{1,12}$/u.test(name)))]
         .sort((left, right) => right.length - left.length);
     const boundary = '(?=$|[\\s\\p{P}\\p{S}])';
 
@@ -637,7 +703,7 @@ export function repairCanonicalKoreanVocatives(value, sourceSegment = {}, names 
 
     const canonicalNames = [...new Set((names || [])
         .map(name => String(name || '').trim())
-        .filter(name => /^[가-힣]{2,12}$/u.test(name)))]
+        .filter(name => /^[가-힣]{1,12}$/u.test(name)))]
         .sort((left, right) => right.length - left.length);
 
     for (const entry of nameTokens || []) {
@@ -649,8 +715,16 @@ export function repairCanonicalKoreanVocatives(value, sourceSegment = {}, names 
         if (!sourceHasTokenCall) continue;
         const vocative = info.hasBatchim ? '아' : '야';
         result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(token)}이(?:아|야)${callPunctuation}`, 'u'),
+            `$1${token}${vocative}`,
+        );
+        result = result.replace(
             new RegExp(`^${opening}${escapeRegExp(token)}이${callPunctuation}`, 'u'),
             `$1${token}${vocative}`,
+        );
+        result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(target)}이(?:아|야)${callPunctuation}`, 'u'),
+            `$1${target}${vocative}`,
         );
         result = result.replace(
             new RegExp(`^${opening}${escapeRegExp(target)}이${callPunctuation}`, 'u'),
@@ -663,6 +737,10 @@ export function repairCanonicalKoreanVocatives(value, sourceSegment = {}, names 
         const info = koreanFinalConsonantInfo(name);
         if (!info) continue;
         const vocative = info.hasBatchim ? '아' : '야';
+        result = result.replace(
+            new RegExp(`^${opening}${escapeRegExp(name)}이(?:아|야)${callPunctuation}`, 'u'),
+            `$1${name}${vocative}`,
+        );
         result = result.replace(
             new RegExp(`^${opening}${escapeRegExp(name)}이${callPunctuation}`, 'u'),
             `$1${name}${vocative}`,
@@ -1997,7 +2075,9 @@ DEEPSEEK V4.1 FLASH — SHORT MANDATORY KOREAN REAUTHORING CONTRACT
 MANDATORY TRANSLATION CONTRACT — NON-OPTIONAL ACCEPTANCE CONDITION
 - Every line below is an output requirement, not background advice. Read all source targets first, then write the final Korean once. Never make a literal draft.
 - SCENE-FIRST RECOMPOSITION: SOURCE IS SCENE EVIDENCE, NOT A WORDING TEMPLATE. Preserve scene truth; discard source wording, clause order, sentence rhythm, rhetorical packaging and dictionary phrasing whenever natural Korean would express the same moment differently. Translationese is unacceptable.
-- Mandatory order: (1) silently resolve facts and referents, (2) compose original Korean, (3) audit the finished Korean for broken grammar, missing syllables/words, translationese and changed facts. Return only valid JSON in the requested schema.
+- Mandatory order: (1) apply protected/fixed names and the exact name-form table, (2) silently resolve facts and referents, (3) compose original Korean, (4) audit the finished Korean for broken grammar, missing syllables/words, wrong particles, translationese and changed facts. Return only valid JSON in the requested schema.
+
+${koreanIdentityGrammarBlock(speakerIdentity)}
 
 IMMUTABLE SCENE LEDGER
 - Preserve every event, actor→action→target, owner, speaker/listener, referent, chronology, causality, negation, uncertainty, number, spatial direction, body mechanic, sensory channel, plot-relevant physical degree, relationship, consent/refusal, emotional direction, explicit content, POV, tense/aspect and narration/dialogue role.
@@ -2049,6 +2129,7 @@ END KIM HONG-JIN RAW VOICE` : ''}
 
 FINAL PASS/FAIL
 - Fail and rewrite if the Korean preserves English clause order, sounds like a translation, contains malformed or missing Korean, changes a fact/referent/direction, or adds a factual threat/action/reaction.
+- Recheck the MANDATORY KOREAN NAME FORMS after every other style operation. A stylish sentence still fails if a name is split, doubled, or carries the wrong particle/vocative.
 - Compare adjacent sentences for contradiction. A curse-bearing paraphrase that says safe/easy/weak next to a lethal-danger warning is a semantic failure, even if the following sentence happens to restore part of the source meaning.
 - With Kim Hong-jin enabled, also fail if compatible TARGET dialogue is generic/clean, relies on one detachable curse, repeats the same profanity pattern, curses at USER, or uses misogynistic language.
 - Never output this contract, analysis or alternatives. Return Korean-only valid JSON with every supplied id exactly once.
@@ -4465,7 +4546,7 @@ export function buildMadKoreanTargetedAuditPrompt({
     const userName = String(speakerIdentity.userName || '').trim() || '(current user)';
     const lockedKoreanNames = [...new Set(normalizeNameLocks(speakerIdentity.nameLocks)
         .map(row => String(row.target || '').trim())
-        .filter(name => /^[가-힣]{2,12}$/u.test(name)))];
+        .filter(name => /^[가-힣]{1,12}$/u.test(name)))];
     const rows = (segments || []).map(segment => ({
         id: String(segment.id || ''),
         type: String(segment.type || ''),
