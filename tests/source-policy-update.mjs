@@ -54,7 +54,7 @@ for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtr
  }
 }
 const expression=index.match(/\.map\(candidate => (repairSourceEllipses\([^\n]+)\);/)[1];
-const clean=Function('candidate','repairUnexpectedProseBreaks','repairKoreanParticleAlternatives','repairIndivisibleIdentityNames','speakerIdentity','expected','repairSourceEllipses','return '+expression);
+const clean=Function('candidate','repairUnexpectedProseBreaks','repairKoreanParticleAlternatives','repairOutputIdentityNames','speakerIdentity','expected','repairSourceEllipses','return '+expression);
 const candidates=['첫째.\n다음.','둘째.<br>다음.','셋째.\n\n다음.'];
 for (const source of ['one line','two\nlines','<div>protected</div>',String.fromCharCode(96,99,111,100,101,96)]) {
  const target=[{id:'seg_0000',type:'selection',text:source}];

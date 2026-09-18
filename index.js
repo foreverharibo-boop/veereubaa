@@ -12,6 +12,7 @@ import {
     assembleTranslation,
     buildBannedRepairPrompt,
     buildInputPrompt,
+    buildMadKoreanTargetedAuditPrompt,
     buildMultiSelectionPrompt,
     buildNameHistoryFormsPrompt,
     buildNameMatchPrompt,
@@ -38,6 +39,7 @@ import {
     parseSegmentResponse,
     parseSelectionCandidateResponse,
     replaceOutsideProtected,
+    repairCanonicalKoreanNameSuffixes,
     restoreProtected,
     resolveOutputSpeakerIdentity,
     segmentSource,
@@ -45,7 +47,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.87';
+const EXTENSION_VERSION = '0.5.88';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3205,6 +3207,71 @@ Do not add markdown fences, commentary, explanations, or extra ids.`
     finishSegmentRecovery(recoveryDiagnostic, '재시도 종료·미복구');
     throw finalError;
 }
+
+function parseSparseMadRepairResponse(raw, expectedSegments = []) {
+    const cleaned = String(raw || '')
+        .trim()
+        .replace(/^```(?:json)?\s*/iu, '')
+        .replace(/\s*```$/u, '');
+    const candidates = [cleaned];
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start >= 0 && end > start && (start !== 0 || end !== cleaned.length - 1)) {
+        candidates.push(cleaned.slice(start, end + 1));
+    }
+
+    let parsed;
+    let parseError;
+    for (const candidate of candidates) {
+        try {
+            parsed = JSON.parse(candidate);
+            break;
+        } catch (error) {
+            parseError = error;
+        }
+    }
+    if (!parsed || !Array.isArray(parsed.repairs)) {
+        throw new Error('부분 검수 응답의 repairs 배열을 찾지 못했습니다.', { cause: parseError });
+    }
+
+    const allowed = new Set((expectedSegments || []).map(segment => String(segment.id || '')));
+    const repairs = new Map();
+    for (const row of parsed.repairs) {
+        const id = String(row?.id || '');
+        const translation = typeof row?.translation === 'string' ? row.translation : '';
+        if (!allowed.has(id) || !translation.trim()) continue;
+        if (repairs.has(id) && repairs.get(id) !== translation) {
+            throw new Error(`부분 검수 응답에 서로 다른 중복 수정이 있습니다: ${id}`);
+        }
+        repairs.set(id, translation);
+    }
+    return repairs;
+}
+
+async function requestSparseMadRepairs(prompt, expectedSegments, options = {}) {
+    const maxParseRetries = 2;
+    let lastError;
+    for (let attempt = 0; attempt <= maxParseRetries; attempt += 1) {
+        const reminder = attempt ? `
+
+Your previous sparse repair response was invalid. Return strict JSON only in this shape:
+{"repairs":[{"id":"seg_0000","translation":"complete corrected segment"}]}
+Use {"repairs":[]} when no correction is needed. Do not return explanations, markdown, unchanged rows or unknown ids.` : '';
+        try {
+            const response = await sendWithRetry(prompt + reminder, {
+                ...options,
+                repairAttempt: attempt,
+            });
+            return parseSparseMadRepairResponse(extractResponseText(response), expectedSegments);
+        } catch (error) {
+            if (isAbort(error, options.signal)) throw error;
+            lastError = error;
+        }
+    }
+    throw new Error(`미친 한출 부분 검수 응답을 해석하지 못했습니다: ${errorText(lastError)}`, {
+        cause: lastError,
+    });
+}
 async function requestSelectionCandidates(prompt, options = {}) {
     const maxRetries = 5;
     const parseRetryDelays = [500, 700, 1000, 1400, 2000];
@@ -3249,21 +3316,27 @@ Do not add markdown fences, commentary, or explanations.`
     );
 }
 
-function restoredSegmentText(value, segmented, useSourceNames = false) {
+function restoredSegmentText(value, segmented, useSourceNames = false, speakerIdentity = {}) {
     const nameTokens = (segmented.nameTokens || []).map(entry => ({
         token: entry.token,
         value: useSourceNames ? entry.source : entry.value,
     }));
     const namesRestored = restoreProtected(value, nameTokens, { strict: false });
     const fullyRestored = restoreProtected(namesRestored, segmented.tokens, { strict: false });
-    return useSourceNames ? fullyRestored : repairKoreanParticleAlternatives(fullyRestored);
+    if (useSourceNames) return fullyRestored;
+    // Keep this helper usable by the minimal-output module and its isolated
+    // tests, which intentionally load it without the full identity pipeline.
+    const identityRepaired = typeof repairOutputIdentityNames === 'function'
+        ? repairOutputIdentityNames(fullyRestored, speakerIdentity)
+        : fullyRestored;
+    return repairKoreanParticleAlternatives(identityRepaired);
 }
 
-function buildSourceMap(segmented, translations, completeTranslation) {
+function buildSourceMap(segmented, translations, completeTranslation, speakerIdentity = {}) {
     const entries = [];
     let cursor = 0;
     for (const segment of segmented.segments || []) {
-        const translated = restoredSegmentText(String(translations.get(segment.id) || ''), segmented, false);
+        const translated = restoredSegmentText(String(translations.get(segment.id) || ''), segmented, false, speakerIdentity);
         const source = restoredSegmentText(segment.text, segmented, true);
         if (!translated.trim() || !source.trim()) continue;
         let start = completeTranslation.indexOf(translated, cursor);
@@ -3726,6 +3799,24 @@ function repairIndivisibleIdentityNames(value, speakerIdentity = {}) {
         result = result.split(token).join(name);
     });
     return result;
+}
+
+function repairStrictCanonicalIdentityNames(value, speakerIdentity = {}) {
+    const canonicalNames = [
+        String(speakerIdentity.userName || '').trim(),
+        String(speakerIdentity.characterName || '').trim(),
+        ...(Array.isArray(speakerIdentity.nameLocks) ? speakerIdentity.nameLocks : [])
+            .flatMap(row => [row?.target, row?.value])
+            .map(name => String(name || '').trim()),
+    ].filter(Boolean);
+    return repairCanonicalKoreanNameSuffixes(value, canonicalNames);
+}
+
+function repairOutputIdentityNames(value, speakerIdentity = {}) {
+    const indivisible = repairIndivisibleIdentityNames(value, speakerIdentity);
+    return madKoreanExclusiveMode()
+        ? repairStrictCanonicalIdentityNames(indivisible, speakerIdentity)
+        : indivisible;
 }
 
 function hasKoreanFinalConsonant(value) {
@@ -4235,6 +4326,105 @@ function localQualityAuditCandidates(segmented, translations, speakerScopes) {
     return suspects;
 }
 
+async function runMadKoreanTargetedAudit({
+    segmented,
+    translations,
+    speakerScopes,
+    speakerIdentity,
+    options,
+}) {
+    if (!madKoreanExclusiveMode() || settings.developerHongjinFlavorEnabled !== true) {
+        return { checked: 0, changed: 0 };
+    }
+
+    const candidates = (segmented.segments || []).map(segment => ({
+        ...segment,
+        outputScope: outputScopeForSegment(segment, speakerScopes),
+    }));
+    if (!candidates.length) return { checked: 0, changed: 0 };
+    const originalTranslations = new Map(translations);
+
+    try {
+        const prompt = buildMadKoreanTargetedAuditPrompt({
+            segments: candidates,
+            currentTranslations: translations,
+            sourceContext: segmented.protectedText,
+            speakerIdentity,
+        });
+        const reviewed = await requestSparseMadRepairs(prompt, candidates, {
+            ...options,
+            stage: 'mad-targeted-audit',
+        });
+        if (!reviewed.size) {
+            console.info(`[베에르으바아] 미친 한출 부분 검수 완료: ${candidates.length}구간 확인 · 수정 없음`);
+            return { checked: candidates.length, changed: 0 };
+        }
+
+        const changed = [];
+        for (const segment of candidates) {
+            if (!reviewed.has(segment.id)) continue;
+            const before = String(translations.get(segment.id) || '');
+            const after = String(reviewed.get(segment.id) || '');
+            if (!after.trim() || after === before) continue;
+            translations.set(
+                segment.id,
+                repairKoreanParticleAlternatives(
+                    repairStrictCanonicalIdentityNames(
+                        repairIndivisibleIdentityNames(after, speakerIdentity),
+                        speakerIdentity,
+                    ),
+                ),
+            );
+            changed.push(segment);
+        }
+
+        if (changed.length) {
+            const banned = changed.filter(segment =>
+                findBannedWords(translations.get(segment.id), settings).length,
+            );
+            if (banned.length) {
+                await repairSegmentsByOutputScope({
+                    invalid: banned,
+                    segmented,
+                    translations,
+                    speakerScopes,
+                    options: { ...options, speakerIdentity },
+                    buildPrompt: buildBannedRepairPrompt,
+                    stage: 'mad-targeted-audit-banned-repair',
+                });
+            }
+
+            const untranslated = findUntranslatedSegments(changed, translations, settings, speakerScopes);
+            if (untranslated.length) {
+                await repairSegmentsByOutputScope({
+                    invalid: untranslated,
+                    segmented,
+                    translations,
+                    speakerScopes,
+                    options: { ...options, speakerIdentity },
+                    buildPrompt: buildUntranslatedRepairPrompt,
+                    stage: 'mad-targeted-audit-untranslated-repair',
+                });
+            }
+
+            await repairProtectedTokenIntegrity(segmented, translations, {
+                ...options,
+                speakerIdentity,
+                speakerScopes,
+            });
+        }
+
+        console.info(`[베에르으바아] 미친 한출 부분 검수 완료: ${candidates.length}구간 확인 · ${changed.length}구간 수정`);
+        return { checked: candidates.length, changed: changed.length };
+    } catch (error) {
+        if (isAbort(error, options.signal)) throw error;
+        translations.clear();
+        for (const [id, translation] of originalTranslations) translations.set(id, translation);
+        console.warn('[베에르으바아] 미친 한출 부분 검수 실패 — 1차 번역을 유지합니다.', error);
+        return { checked: candidates.length, changed: 0, error };
+    }
+}
+
 async function runExperimentalQualityAudit({
     segmented,
     translations,
@@ -4426,8 +4616,24 @@ async function translateOutputText(source, options = {}) {
     });
 
     for (const [id, translation] of translations) {
-        translations.set(id, repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(translation, speakerIdentity)));
+        const indivisible = repairIndivisibleIdentityNames(translation, speakerIdentity);
+        translations.set(
+            id,
+            repairKoreanParticleAlternatives(
+                madKoreanExclusiveMode()
+                    ? repairStrictCanonicalIdentityNames(indivisible, speakerIdentity)
+                    : indivisible,
+            ),
+        );
     }
+
+    await runMadKoreanTargetedAudit({
+        segmented,
+        translations,
+        speakerScopes,
+        speakerIdentity,
+        options,
+    });
 
     await runExperimentalQualityAudit({
         segmented,
@@ -4450,11 +4656,19 @@ async function translateOutputText(source, options = {}) {
         }
         console.warn('[베에르으바아] 일부 구간의 미번역 의심이 해소되지 않아 나머지 번역 결과를 우선 적용합니다.', untranslated);
     }
-    const result = assembleTranslation(segmented, translations);
+    const assembled = assembleTranslation(segmented, translations);
+    const result = madKoreanExclusiveMode()
+        ? repairStrictCanonicalIdentityNames(assembled, speakerIdentity)
+        : assembled;
     if (!result.trim()) throw new Error('완성된 번역문이 비어 있습니다.');
     return {
         translation: result,
-        sourceMap: buildSourceMap(segmented, translations, result),
+        sourceMap: buildSourceMap(
+            segmented,
+            translations,
+            result,
+            madKoreanExclusiveMode() ? speakerIdentity : {},
+        ),
     };
 }
 
@@ -8269,7 +8483,7 @@ async function retranslateSelectionBundle() {
         for (const row of selections) {
             result.set(
                 row.id,
-                repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(result.get(row.id), speakerIdentity)),
+                repairKoreanParticleAlternatives(repairOutputIdentityNames(result.get(row.id), speakerIdentity)),
             );
         }
         const unchangedIds = selections
@@ -8289,7 +8503,7 @@ Your previous response echoed the existing Korean wording for these ids: ${JSON.
             });
             unchangedIds.forEach(id => result.set(
                 id,
-                repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(retryResult.get(id), speakerIdentity)),
+                repairKoreanParticleAlternatives(repairOutputIdentityNames(retryResult.get(id), speakerIdentity)),
             ));
         }
         const replacements = selections.map(row => {
@@ -8514,7 +8728,7 @@ async function retranslateSelection(snapshot) {
         let replacement = '';
         if (candidateMode) {
             const received = (await requestSelectionCandidates(prompt, { signal: controller.signal, stage: 'selection-candidates' }))
-                .map(candidate => repairSourceEllipses(repairUnexpectedProseBreaks(repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(candidate, speakerIdentity)), expected[0]), expected[0]));
+                .map(candidate => repairSourceEllipses(repairUnexpectedProseBreaks(repairKoreanParticleAlternatives(repairOutputIdentityNames(candidate, speakerIdentity)), expected[0]), expected[0]));
             const candidates = received.filter(candidate => {
                 const text = String(candidate || '').trim();
                 if (!text || sameRetranslationWording(text, snapshot.selected)) return false;
@@ -8532,7 +8746,7 @@ async function retranslateSelection(snapshot) {
             if (replacement === null) return;
         } else {
             let result = await requestSegments(prompt, expected, { signal: controller.signal, stage: 'selection-retranslation' });
-            replacement = repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();
+            replacement = repairKoreanParticleAlternatives(repairOutputIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();
             if (!replacement || sameRetranslationWording(replacement, snapshot.selected)) {
                 const changedPrompt = `${prompt}\n\nMANDATORY RETRANSLATION CORRECTION
 Your previous replacement was empty or unchanged. Return a genuinely different Korean wording for the selected fragment now.
@@ -8544,7 +8758,7 @@ Your previous replacement was empty or unchanged. Return a genuinely different K
                     signal: controller.signal,
                     stage: 'selection-retranslation-unchanged-retry',
                 });
-                replacement = repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();
+                replacement = repairKoreanParticleAlternatives(repairOutputIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();
             }
             if (sameRetranslationWording(replacement, snapshot.selected)) {
                 throw new Error('AI가 두 번 모두 기존 번역과 같은 문장을 반환하여 변경하지 않았습니다. 요구사항을 더 구체적으로 적어 다시 시도해 주세요.');
