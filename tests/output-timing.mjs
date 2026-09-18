@@ -193,6 +193,9 @@ let applied = true;
 let seenTrace;
 const lifecycleEnv = {
     minimalOutputEnabled, outputSplitCount,
+    EXTENSION_KEY: 'verba-deep',
+    isTranslationExtensionActive: () => true,
+    activateTranslationExtension: () => 'verba-deep',
     settings: env.settings, outputTiming: recorder, performance: env.performance, AbortController,
     liveContext: () => context, isNameReplacementMessage: () => true, messageSource: m => m?.mes || '',
     isPredominantlyKorean: () => false, hasForeignText: () => true, currentRecord: () => null,

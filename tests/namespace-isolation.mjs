@@ -18,10 +18,11 @@ const sources = [
     read('response-parser.js'),
     read('timing.js'),
 ].join('\n');
+const namespaceSources = sources.replace("const PEER_STATE_KEY = 'verba_current_translation';", '');
 
 assert.equal(manifest.name, 'verba-deep');
 assert.equal(manifest.display_name, '베에르으바아');
-assert.equal(manifest.version, '0.5.76');
+assert.equal(manifest.version, '0.5.77');
 assert.ok(index.includes("const EXTENSION_KEY = 'verba-deep';"));
 assert.ok(index.includes("const STATE_KEY = 'verba_deep_current_translation';"));
 assert.ok(index.includes("const SOURCE_VIEW_KEY = 'verba_deep_source_view';"));
@@ -30,11 +31,11 @@ assert.ok(index.includes("name: 'verba-deep'"));
 assert.ok(index.includes("name: 'verba-deep-profile'"));
 assert.ok(index.includes('globalThis.__verbaDeepTranslatorVersion'));
 
-assert.doesNotMatch(sources, new RegExp('(?:#|\\.|--)' + 'verba-' + '(?!deep-)'));
-assert.doesNotMatch(sources, new RegExp('data-' + 'verba-' + '(?!deep-)'));
-assert.doesNotMatch(sources, new RegExp('VERBA' + '_(?!DEEP_)'));
-assert.doesNotMatch(sources, new RegExp('\\bverba' + '_(?!deep_)'));
-assert.doesNotMatch(sources, new RegExp('__verba' + '(?:Cleanup|TranslatorVersion)'));
-assert.doesNotMatch(sources, new RegExp('베' + '르바'));
+assert.doesNotMatch(namespaceSources, new RegExp('(?:#|\\.|--)' + 'verba-' + '(?!deep-)'));
+assert.doesNotMatch(namespaceSources, new RegExp('data-' + 'verba-' + '(?!deep-)'));
+assert.doesNotMatch(namespaceSources, new RegExp('VERBA' + '_(?!DEEP_)'));
+assert.doesNotMatch(namespaceSources, new RegExp('\\bverba' + '_(?!deep_)'));
+assert.doesNotMatch(namespaceSources, new RegExp('__verba' + '(?:Cleanup|TranslatorVersion)'));
+assert.doesNotMatch(namespaceSources, new RegExp('베' + '르바'));
 
 console.log('PASS: 베에르으바아 uses isolated verba-deep extension, DOM, storage, command, token, and global namespaces.');

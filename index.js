@@ -7,6 +7,7 @@ import { bindPromptExpandEditors } from './prompt-editor.js';
 import { collectSegmentResponse, repairUnexpectedProseBreaks, repairSourceEllipses, selectionEllipsisReference } from './response-parser.js';
 import { minimalOutputEnabled, translateMinimalOutput } from './minimal-output.js';
 import { outputSplitCount, runOutputBatches, createSplitRequestQueue } from './output-splitting.js';
+import { activateTranslationExtension, isTranslationExtensionActive, registerTranslationExtension } from './pair-coordinator.js';
 import {
     assembleTranslation,
     buildBannedRepairPrompt,
@@ -44,11 +45,12 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.76';
+const EXTENSION_VERSION = '0.5.77';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
 const STATE_KEY = 'verba_deep_current_translation';
+const PEER_STATE_KEY = 'verba_current_translation';
 const SOURCE_VIEW_KEY = 'verba_deep_source_view';
 const CHARACTER_FIELD_KEY = 'verba-deep';
 const RELATION_TEMPERATURE_OPTIONS = [
@@ -4641,13 +4643,21 @@ function currentRecord(message, explicitId = null) {
     if (swipeRecord) return swipeRecord;
 
     const displayExtras = [...new Set([swipeExtra, message?.extra].filter(Boolean))];
+    const peerRecords = displayExtras
+        .map(extra => extra?.[PEER_STATE_KEY])
+        .filter(record => record && typeof record === 'object');
     for (const displayExtra of displayExtras) {
         const displayText = typeof displayExtra?.display_text === 'string' ? displayExtra.display_text : '';
         const displayRecord = displayExtra?.[STATE_KEY];
+        const peerOwnsDisplay = peerRecords.some(peerRecord => (
+            peerRecord.sourceHash === sourceHash
+            && peerRecord.translation === displayText
+        ));
         if (
             displayText.trim()
             && displayText !== source
             && !displayRecord
+            && !peerOwnsDisplay
         ) {
             // Legacy-only fallback. If a Verba Deep record exists but belongs to a
             // different source hash, display_text is stale state from another
@@ -4665,6 +4675,7 @@ function currentRecord(message, explicitId = null) {
 
 
 function currentSelectionRecord(message) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return null;
     const record = currentRecord(message);
     if (record) return record;
 
@@ -4767,7 +4778,7 @@ function syncOwnedTranslationToCurrentSwipe(message, record) {
         swipeExtra[STATE_KEY] = { ...record };
         changed = true;
     }
-    if (swipeExtra.display_text !== record.translation) {
+    if (isTranslationExtensionActive(EXTENSION_KEY) && swipeExtra.display_text !== record.translation) {
         swipeExtra.display_text = record.translation;
         changed = true;
     }
@@ -4971,6 +4982,10 @@ function clearOwnedDisplay(message) {
 }
 
 function applyTranslation(messageId, message, source, translation, chatReference, metadata = {}) {
+    if (metadata.claimPairOwner !== false) activateTranslationExtension(EXTENSION_KEY);
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) {
+        return { record: null, renderResult: { status: 'pair-inactive', rendered: false } };
+    }
     if (!message.extra || typeof message.extra !== 'object') message.extra = {};
     const previousRecord = currentRecord(message);
     const sourceMap = metadata.sourceMap !== undefined
@@ -5019,6 +5034,7 @@ function sourceViewRequested(message, record) {
 
 function showOriginalDisplay(messageId, message, record) {
     if (!message || !record) return;
+    activateTranslationExtension(EXTENSION_KEY);
     if (!message.extra || typeof message.extra !== 'object') message.extra = {};
     const signature = storedRecordSignature(record);
     let changed = false;
@@ -5056,6 +5072,7 @@ function showOriginalDisplay(messageId, message, record) {
 }
 
 function restoreCurrentDisplay(messageId, message, record) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (!message.extra || typeof message.extra !== 'object') message.extra = {};
     if (sourceViewRequested(message, record)) {
         showOriginalDisplay(messageId, message, record);
@@ -5075,6 +5092,7 @@ function restoreCurrentDisplay(messageId, message, record) {
 
 function showTranslationDisplay(messageId, message, record) {
     if (!message || !record) return;
+    activateTranslationExtension(EXTENSION_KEY);
     if (!message.extra || typeof message.extra !== 'object') message.extra = {};
     delete message.extra[SOURCE_VIEW_KEY];
     const swipeExtra = currentSwipeExtra(message, false);
@@ -5201,6 +5219,11 @@ function recentDialogueEndingRepeatHints(beforeMessageId) {
 }
 
 async function translateMessage(messageId, options = {}) {
+    if (options.automatic) {
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+    } else {
+        activateTranslationExtension(EXTENSION_KEY);
+    }
     const id = Number(messageId);
     if (!Number.isInteger(id)) return;
     const context = liveContext();
@@ -5317,6 +5340,13 @@ async function translateMessage(messageId, options = {}) {
                 translated,
                 snapshot.previousRecord?.lockedSegments,
             );
+            if (options.automatic && !isTranslationExtensionActive(EXTENSION_KEY)) {
+                throw outputAbortReason(
+                    'VERBA_DEEP_PAIR_INACTIVE',
+                    '다른 번역 확장이 화면 번역을 맡아 이 자동 번역 결과를 조용히 폐기했습니다.',
+                    true,
+                );
+            }
             const applied = applyTranslation(
                 id,
                 latest,
@@ -5326,6 +5356,7 @@ async function translateMessage(messageId, options = {}) {
                 {
                     sourceMap: finalTranslation.sourceMap,
                     lockedSegments: [],
+                    claimPairOwner: !options.automatic,
                 },
             );
             clearTransientTranslationSelections();
@@ -5354,6 +5385,7 @@ async function translateMessage(messageId, options = {}) {
                     'VERBA_DEEP_CHAT_CHANGED',
                     'VERBA_DEEP_OUTPUT_STALE',
                     'VERBA_DEEP_OUTPUT_USER_CANCELLED',
+                    'VERBA_DEEP_PAIR_INACTIVE',
                 ].includes(silentCode);
 
                 if (allowedSilentAbort) {
@@ -5736,6 +5768,13 @@ function storedTranslationView(extra, source) {
 
     const displayText = typeof extra.display_text === 'string' ? extra.display_text : '';
     if (!displayText.trim() || displayText === String(source || '')) return null;
+    const peerRecord = extra?.[PEER_STATE_KEY];
+    if (
+        peerRecord
+        && typeof peerRecord === 'object'
+        && peerRecord.sourceHash === hashText(source)
+        && peerRecord.translation === displayText
+    ) return null;
     return {
         record: null,
         translation: displayText,
@@ -6910,6 +6949,7 @@ function setTextareaValue(textarea, value) {
 }
 
 async function translateInputAndSend(textarea, sendButton, source) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (inputBusy) return;
     inputBusy = true;
     const controller = new AbortController();
@@ -6917,6 +6957,7 @@ async function translateInputAndSend(textarea, sendButton, source) {
     const toast = showInputProgress(controller);
     try {
         const translated = await translateInputText(source, { signal: controller.signal });
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (document.querySelector('#send_textarea') !== textarea || textarea.value !== source) {
             notify('번역 중 입력 내용이 바뀌어 전송하지 않았어요.', 'warning');
             return;
@@ -6949,6 +6990,7 @@ function blockGenerationAndRestore(textarea, source) {
 }
 
 async function translateInputBeforeGeneration(type, _options, dryRun) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (!settings.autoInput || dryRun || (type && type !== 'normal')) return;
     const textarea = document.querySelector('#send_textarea');
     const source = String(textarea?.value || '');
@@ -6963,6 +7005,7 @@ async function translateInputBeforeGeneration(type, _options, dryRun) {
     const toast = showInputProgress(controller);
     try {
         const translated = await translateInputText(source, { signal: controller.signal });
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (textarea.value !== source) {
             blockGenerationAndRestore(textarea, source);
             return;
@@ -6982,6 +7025,7 @@ async function translateInputBeforeGeneration(type, _options, dryRun) {
 }
 
 async function translateSentInputMessage(payload) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (!settings.autoInput) return;
     const id = normalizedMessageId(payload);
     const context = liveContext();
@@ -6996,6 +7040,7 @@ async function translateSentInputMessage(payload) {
     const work = (async () => {
         try {
             const translated = await translateInputText(source, { signal: controller.signal });
+            if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
             if (liveContext().chat !== context.chat || context.chat?.[id] !== message || message.mes !== source) return;
             message.mes = translated;
             updateMessageBlock(id, message);
@@ -7032,6 +7077,7 @@ function setupAutoInput() {
             bypassSendClick = false;
             return;
         }
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (!settings.autoInput) return;
         const textarea = document.querySelector('#send_textarea');
         const source = String(textarea?.value || '');
@@ -8713,6 +8759,7 @@ function setupSelection() {
 }
 
 function showMessageCopyMenu(messageId) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     const message = liveContext().chat?.[Number(messageId)];
     const record = message && currentRecord(message);
     if (!message || !record) {
@@ -8817,6 +8864,7 @@ function pointHitsRenderedText(container, x, y) {
 
 function setupMessageCopyHold() {
     document.addEventListener('pointerdown', event => {
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         const messageElement = event.target?.closest?.('.mes[mesid]');
         const messageText = event.target?.closest?.('.mes_text');
@@ -8841,6 +8889,7 @@ function setupMessageCopyHold() {
         messageCopyHoldShown = false;
         messageCopyHoldTimer = setTimeout(() => {
             messageCopyHoldTimer = null;
+            if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
             const latest = liveContext().chat?.[messageId];
             if (!messageElement.isConnected || latest !== message || !currentRecord(latest)) return;
             selectionSnapshot = null;
@@ -11160,11 +11209,13 @@ function cancelScheduledAutomaticTranslation(messageId) {
 }
 
 function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions = {}) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     const id = Number(messageId);
     if (!Number.isInteger(id) || id < 0) return;
     cancelScheduledAutomaticTranslation(id);
     const timer = setTimeout(() => {
         automaticTranslationTimers.delete(id);
+        if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
 
         // A regenerated/revised message can briefly overlap SillyTavern's swipe
         // settling job. Older Verba Deep builds simply returned here, which could
@@ -11190,6 +11241,7 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
 }
 
 function scheduleSwipeTranslation(messageId, previousSignature = '', hold = null) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     const id = Number(messageId);
     if (!Number.isInteger(id) || id < 0) return;
     cancelScheduledAutomaticTranslation(id);
@@ -11449,6 +11501,7 @@ function resetAssistantSourceObservation({ warmup = true } = {}) {
 }
 
 function scheduleFreshMountedAssistantTranslations(delay = 180) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (!assistantObservationReady) return;
 
     const context = liveContext();
@@ -11529,6 +11582,7 @@ function scheduleFreshMountedAssistantTranslations(delay = 180) {
 }
 
 function schedulePotentialAssistantRevision(payload = null, delay = 180, options = {}) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     let id = normalizedMessageId(payload);
     if (id < 0) id = latestAssistantMessage()?.id ?? -1;
     if (id < 0) return;
@@ -11562,6 +11616,7 @@ function schedulePotentialAssistantRevision(payload = null, delay = 180, options
 }
 
 function scheduleRecentInsteadRevisionTranslations(delay = 180) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     if (!assistantObservationReady) return;
 
     const context = liveContext();
@@ -11681,6 +11736,7 @@ function handleGenerationEnded() {
  * by MESSAGE_EDITED and translated again, never restored from a stale cache.
  */
 function restoreTranslationAfterMessageUpdate(payload) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     const id = normalizedMessageId(payload);
     if (id < 0) return;
 
@@ -11735,6 +11791,7 @@ function restoreTranslationAfterMessageUpdate(payload) {
  * after CHAT_CHANGED itself. Only the currently active swipe is restored.
  */
 function restoreSavedTranslationsAfterChatOpen() {
+    if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
     const context = liveContext();
     const chat = Array.isArray(context.chat) ? context.chat : [];
     let changed = false;
@@ -11914,6 +11971,7 @@ function setupObserver() {
 }
 
 function initialize() {
+    registerTranslationExtension(EXTENSION_KEY);
     clearTransientTranslationSelections();
     registerVerbaDeepSlashCommand();
     registerVerbaDeepProfileSlashCommand();
