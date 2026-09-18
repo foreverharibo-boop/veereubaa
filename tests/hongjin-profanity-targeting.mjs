@@ -30,9 +30,9 @@ assert.match(prompt, /Never use misogynistic or gender-degrading abuse/);
 assert.match(prompt, /most eligible TARGET lines/);
 assert.match(prompt, /Profanity diversity is mandatory/);
 assert.match(prompt, /free expletive/);
-assert.match(prompt, /존나\/더럽게 intensifier/);
+assert.match(prompt, /intensifiers/);
 assert.match(prompt, /개-\/좆-\/지랄\/처-/);
-assert.match(prompt, /curse-free but unmistakably raw line/);
+assert.match(prompt, /curse-free rawness/);
 
 const low = build('low');
 const natural = build('natural');

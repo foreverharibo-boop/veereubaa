@@ -33,10 +33,11 @@ assert.match(prompt, /voice remains recognizable after removing explicit curses/
 assert.match(prompt, /Serious danger.*blocks forced comedy, not blunt diction/);
 assert.match(prompt, /USER-DIRECTED PROFANITY GUARD/);
 assert.match(prompt, /Profanity diversity is mandatory/);
-assert.match(prompt, /Do not start nearby lines with the same curse/);
+assert.match(prompt, /use “씨발” at most once/i);
+assert.match(prompt, /Never use terminal “, 씨발” as a command template/);
 
 for (const example of [
-    '당장 발 놀려. 씨발.',
+    '당장 발 놀려. 꾸물대지 말고.',
     '하, 개같네. 어디 다친 데 없어?',
     '내 뒤에 처붙어. 떨어지지 마.',
     '말을 존나 안 들어요, 아주.',

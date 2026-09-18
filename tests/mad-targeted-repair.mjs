@@ -83,6 +83,10 @@ assert.match(prompt, /LOCKED=\["민철"\]/);
 assert.match(prompt, /담은을\/민철을/);
 assert.match(prompt, /Dam-eun!.*담은아!/s);
 assert.match(prompt, /각으로 문을 걷어찼다/);
+assert.match(prompt, /홍진 속도를 늦추지 않았다/);
+assert.match(prompt, /담은 발소리가 들렸다/);
+assert.match(prompt, /Every overt name and noun phrase/);
+assert.match(prompt, /“씨발” may appear at most once/);
 assert.match(prompt, /edit only the name and its directly attached suffix/);
 
 // Exercise the exact sparse parser/request loop extracted from index.js.
@@ -163,6 +167,8 @@ const auditEnv = {
         auditRequests += 1;
         return new Map([['seg_0000', '"정문으로 가면 뒤져!"']]);
     },
+    runWithConcurrency: async (items, _limit, worker) => Promise.all(items.map(worker)),
+    SCOPED_PARALLEL_REQUEST_LIMIT: 3,
     repairKoreanParticleAlternatives: value => value,
     repairStrictCanonicalIdentityNames: value => value,
     repairCanonicalKoreanVocatives: value => value,
@@ -203,6 +209,6 @@ auditResult = await runAudit(auditArgs);
 assert.equal(auditResult.changed, 0);
 assert.equal(auditTranslations.get('seg_0000'), '1차 번역');
 assert.equal(auditTranslations.get('seg_0001'), '민철이를 비상구로 밀었다.');
-assert.equal(auditRequests, 2);
+assert.equal(auditRequests, 4);
 
 console.log('PASS: generic canonical-name suffix/vocative repair, full-name given-name aliases, sparse Mad+Hongjin semantic audit prompt, parser and transactional rollback.');

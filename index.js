@@ -50,7 +50,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.92';
+const EXTENSION_VERSION = '0.5.93';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -605,7 +605,7 @@ const pendingFallbackAssistantIds = new Set();
 
 const pendingInputControllers = new Set();
 const transientLockedMessages = new Set();
-const SCOPED_PARALLEL_REQUEST_LIMIT = 2;
+const SCOPED_PARALLEL_REQUEST_LIMIT = 3;
 const scopedParallelRequestQueue = [];
 let scopedParallelRequestActive = 0;
 const enqueueSplitOutputRequest = createSplitRequestQueue(3);
@@ -4073,14 +4073,17 @@ async function requestScopedOutputTranslations(segmented, speakerScopes, options
     }
     const translations = new Map();
     const groups = segmentsGroupedByOutputScope(segmented.segments, speakerScopes);
-    const strictIsolationNeeded = madKoreanExclusiveMode()
-        ? false
-        : Boolean(
+    const madHongjinScopeIsolation = madKoreanExclusiveMode()
+        && settings.developerHongjinFlavorEnabled === true
+        && groups.has('target_dialogue');
+    const strictIsolationNeeded = madHongjinScopeIsolation || Boolean(
+        !madKoreanExclusiveMode() && (
         (settings.dialoguePromptEnabled !== false && String(settings.dialoguePrompt || '').trim())
         || (settings.otherDialoguePromptEnabled !== false && String(settings.otherDialoguePrompt || '').trim())
         || String(settings.dialogueEndingPreferred || '').trim()
         || String(settings.dialogueEndingAvoid || '').trim()
         || settings.dialogueEndingRepetitionReduction !== false
+        )
     );
 
     // A shared ALL-DIALOGUE prompt does not require separate API calls by
@@ -4367,17 +4370,39 @@ async function runMadKoreanTargetedAudit({
     const originalTranslations = new Map(translations);
 
     try {
-        const prompt = buildMadKoreanTargetedAuditPrompt({
-            segments: candidates,
-            currentTranslations: translations,
-            sourceContext: segmented.protectedText,
-            speakerIdentity,
-            settings,
-        });
-        const reviewed = await requestSparseMadRepairs(prompt, candidates, {
-            ...options,
-            stage: 'mad-targeted-audit',
-        });
+        // DeepSeek Flash loses Korean syllables/particles when narration,
+        // character voice and tagged content compete inside one long audit.
+        // Audit each output scope independently, but in parallel, so the
+        // second pass stays focused without adding serial wall-clock delay.
+        const auditGroups = [...candidates.reduce((groups, segment) => {
+            const scope = segment.outputScope || 'narration';
+            if (!groups.has(scope)) groups.set(scope, []);
+            groups.get(scope).push(segment);
+            return groups;
+        }, new Map()).entries()];
+        const reviewedGroups = await runWithConcurrency(
+            auditGroups,
+            SCOPED_PARALLEL_REQUEST_LIMIT,
+            async ([scope, scopedCandidates]) => {
+                const prompt = buildMadKoreanTargetedAuditPrompt({
+                    segments: scopedCandidates,
+                    currentTranslations: translations,
+                    sourceContext: scopedCandidates.map(segment => segment.text).join('\n'),
+                    speakerIdentity,
+                    settings,
+                });
+                const reviewed = await requestSparseMadRepairs(prompt, scopedCandidates, {
+                    ...options,
+                    parallelRequest: true,
+                    stage: `mad-targeted-audit:${scope}`,
+                });
+                return reviewed;
+            },
+        );
+        const reviewed = new Map();
+        for (const group of reviewedGroups) {
+            for (const [id, translation] of group) reviewed.set(id, translation);
+        }
         if (!reviewed.size) {
             console.info(`[베에르으바아] 미친 한출 부분 검수 완료: ${candidates.length}구간 확인 · 수정 없음`);
             return { checked: candidates.length, changed: 0 };

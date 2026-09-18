@@ -1,7 +1,7 @@
 {
   "name": "verba-deep",
   "display_name": "베에르으바아",
-  "version": "0.5.92",
+  "version": "0.5.93",
   "description": "DeepSeek V4.1 Flash에 맞춘 장문 프롬프트로 정밀한 한국어 번역을 제공하는 독립 확장",
   "author": "담은",
   "js": "index.js",
