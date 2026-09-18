@@ -91,6 +91,23 @@ assert.match(prompt, /edit only the name and its directly attached suffix/);
 
 // Exercise the exact sparse parser/request loop extracted from index.js.
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
+const quoteStart = index.indexOf('function repairDialogueQuotationEnvelope(');
+const quoteEnd = index.indexOf('function hasKoreanFinalConsonant(', quoteStart);
+const repairDialogueQuotationEnvelope = Function(
+    `${index.slice(quoteStart, quoteEnd)}\nreturn repairDialogueQuotationEnvelope;`,
+)();
+assert.equal(
+    repairDialogueQuotationEnvelope('운 좋으면 방송이라도 잡히겠지.', { type: 'dialogue_candidate', text: '"Might catch a broadcast."' }),
+    '"운 좋으면 방송이라도 잡히겠지."',
+);
+assert.equal(
+    repairDialogueQuotationEnvelope('“이미 따옴표가 있다.”', { type: 'dialogue_candidate', text: '"Already quoted."' }),
+    '“이미 따옴표가 있다.”',
+);
+assert.equal(
+    repairDialogueQuotationEnvelope('서술은 그대로다.', { type: 'narration', text: 'Narration.' }),
+    '서술은 그대로다.',
+);
 const start = index.indexOf('function parseSparseMadRepairResponse(');
 const end = index.indexOf('async function requestSelectionCandidates(', start);
 assert.ok(start >= 0 && end > start);
@@ -169,6 +186,7 @@ const auditEnv = {
     },
     runWithConcurrency: async (items, _limit, worker) => Promise.all(items.map(worker)),
     SCOPED_PARALLEL_REQUEST_LIMIT: 3,
+    splitMadFlashScopeSegments: (_scope, rows) => [rows],
     repairKoreanParticleAlternatives: value => value,
     repairStrictCanonicalIdentityNames: value => value,
     repairCanonicalKoreanVocatives: value => value,

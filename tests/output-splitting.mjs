@@ -36,6 +36,14 @@ const routingCode=between('function outputScopeForSegment(', 'function speakerAt
  +between('async function runWithConcurrency(', 'function setBoundedCache(')
  +between('async function requestScopedGroupTranslations(', 'function normalizeTaggedOutputTranslations(');
 const route=Function(...Object.keys(env),routingCode+'\nreturn requestScopedOutputTranslations;')(...Object.values(env));
+const flashHelpers=Function(...Object.keys(env),routingCode+'\nreturn {splitMadFlashScopeSegments,scopedSourceContext};')(...Object.values(env));
+const longNarration=Array.from({length:8},(_,i)=>({id:`long_${i}`,type:'narration',text:'가'.repeat(520)}));
+const flashChunks=flashHelpers.splitMadFlashScopeSegments('narration',longNarration);
+assert.ok(flashChunks.length>=4);
+assert.deepEqual(flashChunks.flat(),longNarration);
+assert.ok(flashChunks.every(chunk=>chunk.length<=3));
+const localContext=flashHelpers.scopedSourceContext({segments:longNarration},[longNarration[3]]);
+assert.equal(localContext.length,520*3+2);
 for(const count of [1,2,3])for(const mode of ['ordinary','compressed','extreme']){
  Object.assign(settings,{developerOutputSplitCount:count,developerCompressedPromptEnabled:mode==='compressed',developerExtremeCompressedPromptEnabled:mode==='extreme'});
  requests=[];const map=await route(segmented,{}, {speakerIdentity:identity,oneTimeInstruction:'ONE_TIME'});
@@ -93,7 +101,7 @@ const fullEnv={...env, ...core, minimalOutputEnabled,translateMinimalOutput,
  planRepeatedRoleTermLocks:async s=>{planned++;assert.equal(s.segments.length,segmented.segments.length);return [];},
  classifyOutputDialogueSpeakers:async()=>{classified++;return scopes;},requestScopedOutputTranslations:route,
  repairRepeatedRoleTermConsistency:async()=>{},repairProtectedTokenIntegrity:async()=>{},
- findBannedWords:()=>[],findUntranslatedSegments:()=>[],repairIndivisibleIdentityNames:t=>t,repairStrictCanonicalIdentityNames:t=>t,repairOutputIdentityNames:t=>t,repairKoreanParticleAlternatives:t=>t,
+ findBannedWords:()=>[],findUntranslatedSegments:()=>[],repairIndivisibleIdentityNames:t=>t,repairStrictCanonicalIdentityNames:t=>t,repairOutputIdentityNames:t=>t,repairKoreanParticleAlternatives:t=>t,repairDialogueQuotationEnvelope:t=>t,
  runMadKoreanTargetedAudit:async({segmented:s})=>{targetedAudited++;assert.equal(s.segments.length,segmented.segments.length);},
  runExperimentalQualityAudit:async({segmented:s})=>{audited++;assert.equal(s.segments.length,segmented.segments.length);},
  buildSourceMap:(_s,_t,result)=>[{start:0,end:result.length}],console};

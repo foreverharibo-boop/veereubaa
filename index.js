@@ -50,7 +50,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.93';
+const EXTENSION_VERSION = '0.5.94';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3834,6 +3834,26 @@ function repairOutputIdentityNames(value, speakerIdentity = {}, sourceSegment = 
     return repairCanonicalKoreanVocatives(particlesRepaired, sourceSegment, canonicalNames, nameTokens);
 }
 
+function repairDialogueQuotationEnvelope(value, sourceSegment = {}) {
+    const result = String(value || '');
+    if (sourceSegment?.type !== 'dialogue_candidate' || !result.trim()) return result;
+    const source = String(sourceSegment?.text || '').trim();
+    const pairs = [
+        ['“', '”'], ['"', '"'], ['「', '」'], ['『', '』'], ['‘', '’'],
+    ];
+    const pair = pairs.find(([open, close]) => source.startsWith(open) && source.endsWith(close));
+    if (!pair) return result;
+    const [open, close] = pair;
+    const leading = result.match(/^\s*/u)?.[0] || '';
+    const trailing = result.match(/\s*$/u)?.[0] || '';
+    let body = result.slice(leading.length, result.length - trailing.length || undefined).trim();
+    const anyOpen = /^[“"「『‘]/u.test(body);
+    const anyClose = /[”"」』’]$/u.test(body);
+    if (!anyOpen) body = `${open}${body}`;
+    if (!anyClose) body = `${body}${close}`;
+    return `${leading}${body}${trailing}`;
+}
+
 function hasKoreanFinalConsonant(value) {
     const chars = [...String(value || '').trim()];
     const last = chars.at(-1) || '';
@@ -4006,9 +4026,16 @@ async function requestScopedGroupTranslations({
     segments,
     options,
 }) {
+    const madFlashChunks = (
+        madKoreanExclusiveMode()
+        && settings.developerHongjinFlavorEnabled === true
+    ) ? splitMadFlashScopeSegments(scope, segments) : [segments];
+
     const buildPrompt = targetSegments => buildScopedOutputPrompt({
         segments: targetSegments,
-        sourceContext: segmented.protectedText,
+        sourceContext: madFlashChunks.length > 1
+            ? scopedSourceContext(segmented, targetSegments)
+            : segmented.protectedText,
         settings,
         oneTimeInstruction: options.oneTimeInstruction || '',
         nameTokens: nameTokensForSegments(segmented, targetSegments),
@@ -4017,47 +4044,93 @@ async function requestScopedGroupTranslations({
         speakerIdentity: options.speakerIdentity || {},
     });
 
-    try {
-        return await requestSegments(buildPrompt(segments), segments, {
-            ...options,
-            parallelRequest: true,
-            stage: `${options.stage || 'output-translation'}:${scope}`,
-        });
-    } catch (error) {
-        if (isAbort(error, options.signal)) throw error;
+    const requestChunk = async (chunk, chunkIndex = 0) => {
+        try {
+            return await requestSegments(buildPrompt(chunk), chunk, {
+                ...options,
+                parallelRequest: true,
+                stage: `${options.stage || 'output-translation'}:${scope}${madFlashChunks.length > 1 ? `:chunk-${chunkIndex + 1}` : ''}`,
+            });
+        } catch (error) {
+            if (isAbort(error, options.signal)) throw error;
 
-        const recovered = error.partialTranslations instanceof Map
-            ? new Map(error.partialTranslations)
-            : new Map();
-        const missing = Array.isArray(error.missingSegments) && error.missingSegments.length
-            ? error.missingSegments
-            : segments.filter(segment => !recovered.has(segment.id));
+            const recovered = error.partialTranslations instanceof Map
+                ? new Map(error.partialTranslations)
+                : new Map();
+            const missing = Array.isArray(error.missingSegments) && error.missingSegments.length
+                ? error.missingSegments
+                : chunk.filter(segment => !recovered.has(segment.id));
 
-        if (!missing.length) return recovered;
+            if (!missing.length) return recovered;
 
-        console.warn(
-            `[베에르으바아] ${scope} 범위에서 ${recovered.size}개 성공 구간은 유지하고, 실패한 ${missing.length}개 구간만 개별 복구합니다.`,
-            error,
-        );
+            console.warn(
+                `[베에르으바아] ${scope} 범위에서 ${recovered.size}개 성공 구간은 유지하고, 실패한 ${missing.length}개 구간만 개별 복구합니다.`,
+                error,
+            );
 
-        const rows = await runWithConcurrency(
-            missing,
-            SCOPED_PARALLEL_REQUEST_LIMIT,
-            async segment => {
-                // Full message context is deliberately retained. No context
-                // shrinking or prompt compression is used by this optimization.
-                const single = await requestSegments(buildPrompt([segment]), [segment], {
-                    ...options,
-                    parallelRequest: true,
-                    stage: `${options.stage || 'output-translation'}:${scope}:single`,
-                });
-                return [segment.id, single.get(segment.id)];
-            },
-        );
+            const rows = await runWithConcurrency(
+                missing,
+                SCOPED_PARALLEL_REQUEST_LIMIT,
+                async segment => {
+                    const single = await requestSegments(buildPrompt([segment]), [segment], {
+                        ...options,
+                        parallelRequest: true,
+                        stage: `${options.stage || 'output-translation'}:${scope}:single`,
+                    });
+                    return [segment.id, single.get(segment.id)];
+                },
+            );
 
-        for (const [id, value] of rows) recovered.set(id, value);
-        return recovered;
+            for (const [id, value] of rows) recovered.set(id, value);
+            return recovered;
+        }
+    };
+
+    if (madFlashChunks.length === 1) return requestChunk(segments);
+    const chunkResults = await runWithConcurrency(
+        madFlashChunks,
+        SCOPED_PARALLEL_REQUEST_LIMIT,
+        requestChunk,
+    );
+    return new Map(chunkResults.flatMap(result => [...result]));
+}
+
+function splitMadFlashScopeSegments(scope, segments) {
+    const rows = Array.from(segments || []);
+    if (!rows.length) return [];
+    const limits = scope === 'narration'
+        ? { count: 3, chars: 1400 }
+        : scope === 'target_dialogue'
+            ? { count: 6, chars: 1200 }
+            : scope === 'tagged_content'
+                ? { count: 2, chars: 1200 }
+                : { count: 5, chars: 1200 };
+    const chunks = [];
+    let chunk = [];
+    let chars = 0;
+    for (const segment of rows) {
+        const weight = String(segment?.text || '').length + 40;
+        if (chunk.length && (chunk.length >= limits.count || chars + weight > limits.chars)) {
+            chunks.push(chunk);
+            chunk = [];
+            chars = 0;
+        }
+        chunk.push(segment);
+        chars += weight;
     }
+    if (chunk.length) chunks.push(chunk);
+    return chunks;
+}
+
+function scopedSourceContext(segmented, targetSegments) {
+    const all = Array.from(segmented?.segments || []);
+    const indexes = targetSegments
+        .map(segment => all.findIndex(row => row.id === segment.id))
+        .filter(index => index >= 0);
+    if (!indexes.length) return targetSegments.map(segment => segment.text).join('\n');
+    const start = Math.max(0, Math.min(...indexes) - 1);
+    const end = Math.min(all.length, Math.max(...indexes) + 2);
+    return all.slice(start, end).map(segment => segment.text).join('\n');
 }
 async function requestScopedOutputTranslations(segmented, speakerScopes, options = {}) {
     // Split only the initial translation request. Existing speaker isolation,
@@ -4379,7 +4452,9 @@ async function runMadKoreanTargetedAudit({
             if (!groups.has(scope)) groups.set(scope, []);
             groups.get(scope).push(segment);
             return groups;
-        }, new Map()).entries()];
+        }, new Map()).entries()].flatMap(([scope, scopedCandidates]) =>
+            splitMadFlashScopeSegments(scope, scopedCandidates)
+                .map(chunk => [scope, chunk]));
         const reviewedGroups = await runWithConcurrency(
             auditGroups,
             SCOPED_PARALLEL_REQUEST_LIMIT,
@@ -4804,8 +4879,11 @@ async function translateOutputText(source, options = {}) {
         const sourceSegment = segmented.segments.find(segment => segment.id === id) || {};
         translations.set(
             id,
-            repairKoreanParticleAlternatives(
-                repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
+            repairDialogueQuotationEnvelope(
+                repairKoreanParticleAlternatives(
+                    repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
+                ),
+                sourceSegment,
             ),
         );
     }
@@ -4834,8 +4912,11 @@ async function translateOutputText(source, options = {}) {
             const sourceSegment = segmented.segments.find(segment => segment.id === id) || {};
             translations.set(
                 id,
-                repairKoreanParticleAlternatives(
-                    repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
+                repairDialogueQuotationEnvelope(
+                    repairKoreanParticleAlternatives(
+                        repairOutputIdentityNames(translation, speakerIdentity, sourceSegment, segmented.nameTokens || []),
+                    ),
+                    sourceSegment,
                 ),
             );
         }
