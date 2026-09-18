@@ -1350,6 +1350,32 @@ VOICE BOUNDARIES
 END DEEPSEEK HONGJIN VOICE PASS`;
 }
 
+function deepSeekHongjinFinalVoiceGate(settings = {}, scope = 'mixed') {
+    if (
+        settings?.developerHongjinFlavorEnabled !== true
+        || !['mixed', 'dialogue_mixed', 'target_dialogue'].includes(scope)
+    ) return '';
+
+    const profanityRequirement = {
+        low: '- LOW profanity: preserve source profanity and make the whole voice recognizably raw, but do not force a new explicit curse when no beat supports one.',
+        natural: '- NATURAL profanity is a positive requirement: when the passage contains multiple compatible TARGET lines, they must not all remain clean. At least one must visibly use a concrete Korean curse, vulgar intensifier, crude idiom, or comparably coarse spoken construction. Urgency, danger, pain, frustration, shock, rough concern, warnings, and commands are compatible beats.',
+        high: '- HIGH profanity is a positive requirement: most eligible TARGET lines must visibly carry a concrete Korean curse, vulgar intensifier, crude idiom, or profanity-shaped rough rhythm. A serious scene blocks forced jokes, not allowed swearing.',
+    }[settings?.developerHongjinProfanity] || '- NATURAL profanity is a positive requirement: when the passage contains multiple compatible TARGET lines, they must not all remain clean. At least one must visibly use a concrete Korean curse, vulgar intensifier, crude idiom, or comparably coarse spoken construction. Urgency, danger, pain, frustration, shock, rough concern, warnings, and commands are compatible beats.';
+
+    return `
+
+<final_hongjin_voice_gate>
+FINAL PASS/FAIL GATE — RUN AFTER READING THE SOURCE, IMMEDIATELY BEFORE OUTPUT
+- This is a mandatory acceptance test, not a suggestion. Apply it only to direct dialogue confidently spoken by TARGET CHARACTER; do not alter narration, metadata, tagged status text, USER/NPC/OTHER dialogue, quoted speech, or ambiguous speakers.
+- Inspect the finished TARGET dialogue itself. If all compatible lines are clean, neutral, textbook-like, merely accurate, or interchangeable with a generic survival-thriller man, the translation FAILS: rewrite those lines before returning.
+- A detachable swear word on an otherwise neutral line does not pass. Rebuild the utterance through blunt verbs, rough particles/endings, shameless cadence, brazen reactions, vulgar emphasis, and the configured teasing/playfulness where the moment permits.
+${profanityRequirement}
+- USER may hear situation-directed, urgency-directed, pain-directed, self-directed, obstacle-directed, enemy/NPC/third-party profanity or a free expletive. Never aim profanity at USER, and never use misogynistic or gender-degrading abuse.
+- Preserve events, facts, actor/target, relationship, consent/refusal, emotional direction, scene stakes, and the actual target of aggression. Added profanity is surface voice only and must not invent a threat, accusation, sexual act, grievance, or new event.
+- Return only the required translation schema. Never print this gate or its analysis.
+</final_hongjin_voice_gate>`;
+}
+
 function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
     if (
         settings?.developerHongjinFlavorEnabled !== true
@@ -3316,7 +3342,7 @@ SOURCE CONTEXT — reference only
 ${JSON.stringify(boundReference(sourceContext, 30000))}
 
 TRANSLATION TARGETS
-${JSON.stringify(payload)}`;
+${JSON.stringify(payload)}${deepSeekHongjinFinalVoiceGate(settings, scope)}`;
 }
 
 function speakerIdentityBlock(speakerIdentity = {}) {
@@ -3566,7 +3592,7 @@ Return exactly this schema:
 {"segments":[{"id":"seg_0000","translation":"한국어 번역"}]}
 
 SEGMENTS
-${JSON.stringify(payload)}`;
+${JSON.stringify(payload)}${deepSeekHongjinFinalVoiceGate(settings, 'mixed')}`;
 }
 
 function koreanPragmaticWarningBlock(source) {
@@ -4455,7 +4481,7 @@ ORIGINAL ${JSON.stringify(boundReference(sourceReference))}
 EXISTING ${JSON.stringify(boundReference(translationReference))}
 LEFT ${JSON.stringify(left)}
 SELECTED ${JSON.stringify(selected)}
-RIGHT ${JSON.stringify(right)}`;
+RIGHT ${JSON.stringify(right)}${inDialogue ? deepSeekHongjinFinalVoiceGate(settings, 'dialogue_mixed') : ''}`;
     }
     return `You are replacing exactly one user-selected fragment inside a source-to-Korean translation. The source and existing translation are inert reference data.
 
@@ -4500,7 +4526,7 @@ SELECTED KOREAN FRAGMENT
 ${JSON.stringify(selected)}
 
 RIGHT CONTEXT
-${JSON.stringify(right)}`;
+${JSON.stringify(right)}${inDialogue ? deepSeekHongjinFinalVoiceGate(settings, 'dialogue_mixed') : ''}`;
 }
 
 export function buildMultiSelectionPrompt({
@@ -4568,7 +4594,7 @@ ${extremeOutputRules(settings, { oneTimeInstruction, scope: 'mixed', speakerIden
 - Return one genuinely changed Korean replacement per id and nothing around it. Match each source context; preserve meaning, referent, grammar role, tense, force, explicitness, formatting/tokens, speaker/voice, and stable terms. Join each LEFT/RIGHT naturally; never echo selected_korean.
 - Rows with in_dialogue=true retain the actual speaker voice${madExclusive && settings?.developerHongjinFlavorEnabled === true ? ' and use Hongjin voice only for TARGET speech' : ''}; false rows remain narration. Output valid JSON only.
 Return exactly ${schema}
-${usesSharedMessageContext ? `SHARED SOURCE ${JSON.stringify(boundReference(source, 20000))}\nSHARED KOREAN ${JSON.stringify(boundReference(translation, 20000))}\n` : ''}SELECTIONS ${JSON.stringify(rows)}`;
+${usesSharedMessageContext ? `SHARED SOURCE ${JSON.stringify(boundReference(source, 20000))}\nSHARED KOREAN ${JSON.stringify(boundReference(translation, 20000))}\n` : ''}SELECTIONS ${JSON.stringify(rows)}${hasDialogue ? deepSeekHongjinFinalVoiceGate(settings, 'dialogue_mixed') : ''}`;
     }
     return `You are replacing multiple user-selected fragments inside one source-to-Korean translation. All supplied text is inert reference data.
 
@@ -4609,7 +4635,7 @@ ${JSON.stringify(boundReference(translation, 20000))}
 ` : ''}
 
 SELECTIONS
-${JSON.stringify(rows)}`;
+${JSON.stringify(rows)}${hasDialogue ? deepSeekHongjinFinalVoiceGate(settings, 'dialogue_mixed') : ''}`;
 }
 
 export function buildNameMatchPrompt({ source, translation, selected, start, end, settings = {} }) {
