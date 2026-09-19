@@ -98,10 +98,26 @@ assert.equal(extra.state.translation, '나이엔은 기다렸다. 니옌은 따�
 assert.equal(extra.state.lockedSegments[0].translation, '나이엔은 기다렸다.');
 assert.equal(extra.state.lockedSegments[1].translation, '니옌은 따라왔다.');
 
+const rawStart = index.indexOf('function replaceNameInKoreanRawSource');
+const rawEnd = index.indexOf('function replaceNameAcrossChatTranslations', rawStart);
+const replaceNameInKoreanRawSource = Function(
+    'isPredominantlyKorean',
+    'replaceOutsideProtected',
+    `${index.slice(rawStart, rawEnd)}\nreturn replaceNameInKoreanRawSource;`,
+)(() => true, core.replaceOutsideProtected);
+assert.deepEqual(
+    replaceNameInKoreanRawSource('니옌과 니욘이 만났다.', ['니옌'], '나이엔'),
+    { changed: true, value: '나이엔과 니욘이 만났다.' },
+);
+const historyFlowStart = index.indexOf('function replaceNameAcrossChatTranslations');
+const historyFlow = index.slice(historyFlowStart, index.indexOf('function requestSelectionCandidateChoice', historyFlowStart));
+assert.ok(historyFlow.includes('replaceNameInKoreanRawSource(rawSource, candidates, targetName)'));
+assert.ok(historyFlow.includes('replaceNameInKoreanRawSource(message.mes, candidates, targetName)'));
+
 const lockFlowStart = index.indexOf('async function lockSelectionName');
 const lockFlow = index.slice(lockFlowStart, index.indexOf('async function retranslateSelection', lockFlowStart));
 assert.ok(!lockFlow.includes('detectHistoricalNameForms('));
 assert.match(lockFlow, /snapshot\.translation\.slice\(0,\s*snapshot\.start\)/);
 assert.ok(lockFlow.includes('skipMessageId: snapshot.messageId'));
 
-console.log('PASS: Nyen/Nyon selection and history replacement remain source-spelling scoped.');
+console.log('PASS: Nyen/Nyon stay source-scoped while Korean raw chat/swipe global updates remain enabled.');

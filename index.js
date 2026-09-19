@@ -45,7 +45,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.84';
+const EXTENSION_VERSION = '0.5.85';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -5993,6 +5993,10 @@ function replaceNameAcrossChatTranslations(sourceName, oldNames, targetName, opt
         if (!isNameReplacementMessage(message)) return;
         let messageChanged = false;
         let currentSwipeWasCounted = false;
+        let currentRawSwipeWasCounted = false;
+        const originalActiveSource = messageSource(message);
+        const activeStoredTranslation = storedTranslationView(message.extra, originalActiveSource)
+            || storedTranslationView(currentSwipeExtra(message, false), originalActiveSource);
         if (Array.isArray(message.swipes)) {
             message.swipes.forEach((rawSource, swipeId) => {
                 if (messageId === options.skipMessageId && swipeId === options.skipSwipeId) return;
@@ -6005,6 +6009,47 @@ function replaceNameAcrossChatTranslations(sourceName, oldNames, targetName, opt
                 messageChanged = true;
                 if (swipeId === currentSwipeId(message)) currentSwipeWasCounted = true;
             });
+        }
+
+        // Preserve the original Korean-source and raw-swipe global update.
+        // Collision safety comes from exact known spellings, not disabling it.
+        if (Array.isArray(message.swipes)) {
+            message.swipes.forEach((rawSource, swipeId) => {
+                const source = typeof rawSource === 'string'
+                    ? rawSource
+                    : String(rawSource?.mes ?? rawSource?.text ?? rawSource?.content ?? rawSource?.message ?? '');
+                const swipeStoredTranslation = storedTranslationView(message.swipe_info?.[swipeId]?.extra, source)
+                    || (swipeId === currentSwipeId(message)
+                        ? storedTranslationView(message.extra, source)
+                        : null);
+                if (swipeStoredTranslation) return;
+                const replaced = replaceNameInKoreanRawSource(rawSource, candidates, targetName);
+                if (!replaced.changed) return;
+                message.swipes[swipeId] = replaced.value;
+                changedRecords += 1;
+                messageChanged = true;
+                if (swipeId === currentSwipeId(message)) {
+                    message.mes = typeof replaced.value === 'string'
+                        ? replaced.value
+                        : String(
+                            replaced.value?.mes
+                            ?? replaced.value?.text
+                            ?? replaced.value?.content
+                            ?? replaced.value?.message
+                            ?? '',
+                        );
+                    currentRawSwipeWasCounted = true;
+                }
+            });
+        }
+
+        if (!activeStoredTranslation) {
+            const activeRawChanged = replaceNameInKoreanRawSource(message.mes, candidates, targetName);
+            if (activeRawChanged.changed) {
+                message.mes = activeRawChanged.value;
+                if (!currentRawSwipeWasCounted) changedRecords += 1;
+                messageChanged = true;
+            }
         }
 
         const activeSource = messageSource(message);
