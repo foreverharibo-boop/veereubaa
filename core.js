@@ -208,6 +208,11 @@ export function findBannedWords(text, configuredWordsOrSettings) {
 const BILINGUAL_PROMPT_PATTERN = /bilingual|dual[-\s]?language|both\s+(?:english|korean)\s+and\s+(?:english|korean)|(?:retain|preserve|include|show|keep)[^\n]{0,50}(?:english|original)|(?:english|original)[^\n]{0,50}(?:retain|preserve|include|show|keep)|(?:english|original)[^\n]{0,80}(?:first|followed|then|alongside|together|parenthes)|(?:first|followed|then|alongside|together|parenthes)[^\n]{0,80}(?:english|original)|한\s*영\s*병기|영\s*한\s*병기|(?:영어|영문|원문)[^\n]{0,30}병기|병기[^\n]{0,30}(?:영어|영문|원문)|영어와\s*한국어|한국어와\s*영어|(?:영어|영문|원문)[^\n]{0,50}(?:먼저|뒤에|괄호|함께)|(?:먼저|뒤에|괄호|함께)[^\n]{0,50}(?:영어|영문|원문)/i;
 const NO_BILINGUAL_PROMPT_PATTERN = /(?:do\s+not|don't|never|without|avoid)[^\n]{0,35}(?:bilingual|english|original)|(?:bilingual|english|original)[^\n]{0,35}(?:forbidden|prohibited)|(?:병기|영어|영문|원문)[^\n]{0,25}(?:금지|하지\s*마|하지\s*않|쓰지\s*마|제외)|(?:금지|하지\s*마|하지\s*않|쓰지\s*마|제외)[^\n]{0,25}(?:병기|영어|영문|원문)/i;
 const REQUIRED_BILINGUAL_PROMPT_PATTERN = /(?:always|must|required|without\s+exception|all\s+spoken\s+dialogue)[^\n]{0,180}(?:bilingual|both\s+(?:the\s+)?(?:original\s+)?english[^\n]{0,80}korean|english[^\n]{0,80}(?:translation|korean|parenthes))|(?:반드시|항상|예외\s*없이|모든\s+대사)[^\n]{0,120}(?:한\s*영\s*병기|영\s*한\s*병기|영어[^\n]{0,50}한국어|원문[^\n]{0,50}(?:번역|괄호))/i;
+// Users often express the same mandatory rule as an exact-format command
+// without the words always/must. Treat an affirmative direct-dialogue command
+// as authoritative, so a separate "do not apply to narration" boundary does
+// not accidentally cancel bilingual dialogue detection.
+const EXPLICIT_DIALOGUE_BILINGUAL_PROMPT_PATTERN = /(?:for\s+(?:direct|spoken)\s+dialogue(?:\s+only)?\s*,?\s*(?:always\s+)?(?:output|show|include|keep|preserve)[^\n]{0,180}(?:both[^\n]{0,120})?(?:english|original)[^\n]{0,120}(?:korean|translation)|(?:직접\s*대사|모든\s*대사)(?:에만|만)?[^\n]{0,80}(?:출력|병기|표기)[^\n]{0,100}(?:영어|영문|원문)[^\n]{0,100}(?:한국어|한글|번역))/i;
 
 function validationText(value) {
     return String(value || '')
@@ -221,7 +226,10 @@ function promptRequestsBilingual(value) {
     if (!BILINGUAL_PROMPT_PATTERN.test(prompt)) return false;
     // A dialogue-only instruction often excludes narration explicitly. That
     // scope boundary must not cancel the positive dialogue requirement.
-    if (REQUIRED_BILINGUAL_PROMPT_PATTERN.test(prompt)) return true;
+    if (
+        REQUIRED_BILINGUAL_PROMPT_PATTERN.test(prompt)
+        || EXPLICIT_DIALOGUE_BILINGUAL_PROMPT_PATTERN.test(prompt)
+    ) return true;
     return !NO_BILINGUAL_PROMPT_PATTERN.test(prompt);
 }
 

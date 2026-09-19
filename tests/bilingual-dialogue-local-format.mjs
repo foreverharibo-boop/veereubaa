@@ -27,6 +27,49 @@ const settings = {
 assert.equal(bilingualDialogueRequested(settings), true);
 assert.deepEqual(bilingualDialogueBracketPair(settings), ['(', ')']);
 
+// Regression: an exact direct-dialogue format is mandatory even when it does
+// not literally say always/must and separately excludes narration.
+const exactFormatInstruction = `[BILINGUAL DIALOGUE FORMAT]
+For direct dialogue only, output both the original English dialogue and its Korean translation in this exact format:
+"English dialogue. [한국어 번역.]"
+Apply this format only to direct dialogue inside quotation marks.
+Keep narration in Korean only.
+Preserve the original English dialogue exactly in the first part.
+Put the Korean translation immediately after it inside parentheses.
+Keep both the English and Korean inside the same quotation marks.
+Do not create bilingual narration.`;
+const exactFormatSettings = {
+    ...settings,
+    allDialoguePrompt: exactFormatInstruction,
+};
+assert.equal(bilingualDialogueRequested(exactFormatSettings), true);
+assert.deepEqual(bilingualDialogueBracketPair(exactFormatSettings), ['[', ']']);
+
+const shortNamed = segmentSource('"Dana—"\n\n"Nyon."', [
+    { source: 'Dana', target: '다나' },
+    { source: 'Nyon', target: '니욘' },
+]);
+const shortDialogues = shortNamed.segments.filter(segment => segment.type === 'dialogue_candidate');
+assert.equal(shortDialogues.length, 2);
+const shortTranslations = new Map([
+    [shortDialogues[0].id, '"다나—"'],
+    [shortDialogues[1].id, '"니욘."'],
+]);
+normalizeLocallyRecoverableProtectedTokens(shortNamed, shortTranslations, exactFormatSettings, {});
+assert.equal(shortTranslations.get(shortDialogues[0].id), `"Dana— [${shortNamed.nameTokens[0].token}—]"`);
+assert.equal(shortTranslations.get(shortDialogues[1].id), `"Nyon. [${shortNamed.nameTokens[1].token}.]"`);
+assert.equal(
+    assembleTranslation(shortNamed, shortTranslations),
+    '"Dana— [다나—]"\n\n"Nyon. [니욘.]"',
+);
+
+const shortPlain = segmentSource('"Yes."');
+const shortPlainSegment = shortPlain.segments[0];
+assert.equal(
+    ensureBilingualDialogueFormat(shortPlainSegment, '"응."', exactFormatSettings),
+    '"Yes. [응.]"',
+);
+
 const segmented = segmentSource('Alex said, "I did not say that."', [{ source: 'Alex', target: '알렉스' }]);
 const narration = segmented.segments.find(segment => segment.type === 'narration');
 const dialogue = segmented.segments.find(segment => segment.type === 'dialogue_candidate');
