@@ -17,7 +17,8 @@ const many = protectedRecoverySnapshot(Array(20).fill({...invalid[0], text: 'x'.
 assert.equal(many.omittedSegments, 8);
 assert.match(many.segments[0].sourceWithMarkers, /생략/);
 const moved = {segments: [{id:'a',text:a}, {id:'b',text:'none'}],nameTokens:segmented.nameTokens};
-assert.equal(protectedRecoverySnapshot(findProtectedTokenIntegrityProblems(moved.segments, new Map([['a','none'],['b',a]])),moved,new Map([['a','none'],['b',a]])).problemSegmentCount,2);
+assert.equal(protectedRecoverySnapshot(findProtectedTokenIntegrityProblems(moved.segments, new Map([['a','none'],['b',a]])),moved,new Map([['a','none'],['b',a]])).problemSegmentCount,1,
+    'a missing NAME token is valid Korean omission; the moved excess token is still invalid');
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const slice = (a,b) => index.slice(index.indexOf(a),index.indexOf(b,index.indexOf(a)));
 const settings = {debugMode:true}; const button = {disabled:true}; let now=0;

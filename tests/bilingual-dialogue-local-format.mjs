@@ -195,6 +195,32 @@ assert.equal(
     '"Nyon lies down and thinks about Nyen before Dana arrives. (니욘은 니옌을 생각하다 다나를 만난다.)"',
 );
 
+// Regression: four source mentions may become two natural Korean mentions.
+// The local bilingual formatter must never insert the omitted names back.
+const repeated = segmentSource(
+    '"If Nyen finds out Nyon slept in Dana\'s room, Nyen will talk. Nyen will complain. Nyen will keep going."',
+    [
+        { source: 'Nyen', target: '니옌' },
+        { source: 'Nyon', target: '니욘' },
+        { source: 'Dana', target: '다나' },
+    ],
+);
+const repeatedDialogue = repeated.segments.find(segment => segment.type === 'dialogue_candidate');
+const repeatedNyen = repeated.nameTokens.filter(entry => entry.source === 'Nyen');
+const repeatedNyon = repeated.nameTokens.find(entry => entry.source === 'Nyon');
+const repeatedDana = repeated.nameTokens.find(entry => entry.source === 'Dana');
+const repeatedKorean = `"${repeatedNyon.token}이 ${repeatedDana.token} 방에서 잤다는 걸 ${repeatedNyen[0].token}이 알면, ${repeatedNyen[2].token}은 계속 말할 거야."`;
+const repeatedFixed = ensureBilingualDialogueFormat(
+    repeatedDialogue, repeatedKorean, settings, null, repeated.nameTokens, repeated.tokens,
+);
+const repeatedTranslations = new Map([[repeatedDialogue.id, repeatedFixed]]);
+assert.equal(findProtectedTokenIntegrityProblems(repeated.segments, repeatedTranslations).length, 0);
+const repeatedAssembled = assembleTranslation(repeated, repeatedTranslations);
+assert.equal((repeatedAssembled.match(/니옌/g) || []).length, 2);
+assert.equal((repeatedAssembled.match(/니욘/g) || []).length, 1);
+assert.equal((repeatedAssembled.match(/다나/g) || []).length, 1);
+assert.doesNotMatch(repeatedAssembled, /니옌니옌/);
+
 const prompt = buildOutputPrompt(segmented, settings, '', {}, null, { [dialogue.id]: 'other_dialogue' });
 assert.match(prompt, /BILINGUAL DIALOGUE IS REQUIRED/);
 assert.match(prompt, /Korean-only dialogue is invalid/);

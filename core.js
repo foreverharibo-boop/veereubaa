@@ -472,10 +472,10 @@ function bindBilingualKoreanNameTokens(segment, korean, nameTokens = []) {
             next = replaceLiteralRanges(next, chosen, Array(chosen.length).fill(token));
             missing -= chosen.length;
         }
-        while (missing > 0) {
-            next = insertMissingProtectedTokenBySourcePosition(segment?.text || '', next, token);
-            missing -= 1;
-        }
+        // Korean may naturally omit repeated subjects and names. Leave any
+        // remaining NAME tokens omitted instead of guessing an insertion point;
+        // forced insertion can place a restored name beside an existing one and
+        // create output such as `니옌니옌`.
     }
     return next;
 }
@@ -798,11 +798,12 @@ export function protectSource(value, configuredNameLocks = []) {
     return { protectedText, tokens, nameTokens };
 }
 
-export function restoreProtected(value, tokens, { strict = true } = {}) {
+export function restoreProtected(value, tokens, { strict = true, allowMissing = false } = {}) {
     let result = String(value || '');
     for (const entry of tokens || []) {
         const occurrences = result.split(entry.token).length - 1;
-        if (strict && occurrences !== 1) {
+        const damaged = allowMissing ? occurrences > 1 : occurrences !== 1;
+        if (strict && damaged) {
             throw new Error(`보호 요소가 손상되었습니다: ${entry.token}`);
         }
         result = result.split(entry.token).join(entry.value);
@@ -1084,7 +1085,12 @@ export function assembleTranslation(segmented, translations) {
         return repaired;
     }).join('');
     const particlesRepaired = repairLockedTokenParticles(joined, segmented.nameTokens);
-    const namesRestored = restoreProtected(particlesRepaired, segmented.nameTokens, { strict: true });
+    // A missing NAME token can be a natural Korean subject omission. Restore
+    // only markers that survived translation; duplicated markers still fail.
+    const namesRestored = restoreProtected(particlesRepaired, segmented.nameTokens, {
+        strict: true,
+        allowMissing: true,
+    });
     const fullyRestored = restoreProtected(namesRestored, segmented.tokens, { strict: true });
 
     // Critical final surface pass: malformed alternatives can become visible
@@ -1243,53 +1249,6 @@ function replaceLiteralRanges(value, ranges, replacements) {
     return result + text.slice(cursor);
 }
 
-function nearestProtectedInsertionIndex(value, approximateIndex) {
-    const text = String(value || '');
-    const protectedRanges = [...text.matchAll(/@@VERBA_DEEP_(?:NAME_)?\d{4}@@/g)]
-        .map(match => ({ start: match.index, end: match.index + match[0].length }));
-    const outsideProtectedToken = index => !protectedRanges.some(range => index > range.start && index < range.end);
-    const rawTarget = Math.max(0, Math.min(text.length, Number(approximateIndex) || 0));
-    const containingRange = protectedRanges.find(range => rawTarget > range.start && rawTarget < range.end);
-    const target = containingRange
-        ? (rawTarget - containingRange.start <= containingRange.end - rawTarget ? containingRange.start : containingRange.end)
-        : rawTarget;
-    if (target === 0 || target === text.length) return target;
-    const boundary = index => outsideProtectedToken(index) && (
-        index <= 0 || index >= text.length
-        || /[\s\p{P}\p{S}]/u.test(text[index - 1] || '')
-        || /[\s\p{P}\p{S}]/u.test(text[index] || '')
-    );
-    if (boundary(target)) return target;
-    for (let distance = 1; distance <= Math.min(120, text.length); distance += 1) {
-        const right = target + distance;
-        const left = target - distance;
-        if (right <= text.length && boundary(right)) return right;
-        if (left >= 0 && boundary(left)) return left;
-    }
-    return target;
-}
-
-function insertMissingProtectedTokenBySourcePosition(source, translation, token) {
-    const sourceText = String(source || '');
-    const output = String(translation || '');
-    const sourceIndex = Math.max(0, sourceText.indexOf(String(token || '')));
-    const stripMarkers = value => String(value || '').replace(/@@VERBA_DEEP_(?:NAME_)?\d{4}@@/g, '');
-    const visibleSource = stripMarkers(sourceText);
-    const visibleBeforeToken = stripMarkers(sourceText.slice(0, sourceIndex));
-    const ratio = visibleSource.length ? visibleBeforeToken.length / visibleSource.length
-        : (sourceText.length ? sourceIndex / sourceText.length : 1);
-    const insertionIndex = nearestProtectedInsertionIndex(output, Math.round(output.length * ratio));
-    const needsLeadingSpace = insertionIndex > 0
-        && /[\p{L}\p{N}]/u.test(output[insertionIndex - 1] || '')
-        && /[\p{L}\p{N}]/u.test(String(token || '')[0] || '');
-    const needsTrailingSpace = insertionIndex < output.length
-        && /[\p{L}\p{N}]/u.test(output[insertionIndex] || '')
-        && /[\p{L}\p{N}]/u.test(String(token || '').slice(-1) || '');
-    return output.slice(0, insertionIndex)
-        + (needsLeadingSpace ? ' ' : '') + String(token || '')
-        + (needsTrailingSpace ? ' ' : '') + output.slice(insertionIndex);
-}
-
 export function findProtectedTokenIntegrityProblems(segments, translations) {
     const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
     const invalid = [];
@@ -1297,7 +1256,14 @@ export function findProtectedTokenIntegrityProblems(segments, translations) {
         const expected = protectedTokenCounts(segment?.text);
         const actual = protectedTokenCounts(map.get(segment?.id));
         const tokens = new Set([...expected.keys(), ...actual.keys()]);
-        const damaged = [...tokens].filter(token => (expected.get(token) || 0) !== (actual.get(token) || 0));
+        const damaged = [...tokens].filter(token => {
+            const wanted = expected.get(token) || 0;
+            const received = actual.get(token) || 0;
+            // Fewer NAME tokens are valid because Korean can omit repeated
+            // subjects. Extra, moved, or unknown NAME tokens are still damage.
+            if (/^@@VERBA_DEEP_NAME_\d{4}@@$/.test(token)) return received > wanted;
+            return received !== wanted;
+        });
         if (!damaged.length) continue;
         invalid.push({
             ...segment,
