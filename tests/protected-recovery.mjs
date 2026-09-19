@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { protectedRecoverySnapshot, sanitizeDebugValue } from '../diagnostics.js';
-import { findProtectedTokenIntegrityProblems } from '../core.js';
+import { findProtectedTokenIntegrityProblems, normalizeLocallyRecoverableProtectedTokens } from '../core.js';
 const a = '@@VERBA_DEEP_NAME_0000@@', b = '@@VERBA_DEEP_0000@@';
 const segmented = { segments: [{ id: 's1', type: 'narration', text: `${a} opened ${b}` }],
     nameTokens: [{ token: a, source: 'Alex', value: '알렉스' }], tokens: [{ token: b, value: '<tag>' }] };
@@ -27,7 +27,7 @@ const env={settings, document:{querySelector:()=>button}, sanitizeDebugValue, pr
 };
 const logs=Function(...Object.keys(env),'let lastDebugDiagnostic=null;\n'+slice('function storeDebugDiagnostic(', 'function createDebugDiagnostic(')+ '\nreturn {recordProtectedRecovery,finishProtectedRecovery,clear:()=>{lastDebugDiagnostic=null;},latest:()=>lastDebugDiagnostic,replace:storeDebugDiagnostic};')(...Object.values(env));
 let calls=0, action=()=>{translations.set('s1',`${a} opened ${b}`);now+=4900;};
-const deps={...env,...logs,findProtectedTokenIntegrityProblems,buildProtectedTokenRepairPrompt:()=>{},isAbort:e=>e.name==='AbortError',
+const deps={...env,...logs,findProtectedTokenIntegrityProblems,normalizeLocallyRecoverableProtectedTokens,buildProtectedTokenRepairPrompt:()=>{},isAbort:e=>e.name==='AbortError',
     repairSegmentsByOutputScope:async opts=>{calls++;assert.equal(opts.stage,'protected-token-repair');await action();}};
 const repair=Function(...Object.keys(deps),slice('async function repairProtectedTokenIntegrity(', 'function normalizedNumberTokens(')+'\nreturn repairProtectedTokenIntegrity;')(...Object.values(deps));
 await repair(segmented,translations,{stage:'output-retranslation'});

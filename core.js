@@ -207,6 +207,7 @@ export function findBannedWords(text, configuredWordsOrSettings) {
 
 const BILINGUAL_PROMPT_PATTERN = /bilingual|dual[-\s]?language|both\s+(?:english|korean)\s+and\s+(?:english|korean)|(?:retain|preserve|include|show|keep)[^\n]{0,50}(?:english|original)|(?:english|original)[^\n]{0,50}(?:retain|preserve|include|show|keep)|(?:english|original)[^\n]{0,80}(?:first|followed|then|alongside|together|parenthes)|(?:first|followed|then|alongside|together|parenthes)[^\n]{0,80}(?:english|original)|한\s*영\s*병기|영\s*한\s*병기|(?:영어|영문|원문)[^\n]{0,30}병기|병기[^\n]{0,30}(?:영어|영문|원문)|영어와\s*한국어|한국어와\s*영어|(?:영어|영문|원문)[^\n]{0,50}(?:먼저|뒤에|괄호|함께)|(?:먼저|뒤에|괄호|함께)[^\n]{0,50}(?:영어|영문|원문)/i;
 const NO_BILINGUAL_PROMPT_PATTERN = /(?:do\s+not|don't|never|without|avoid)[^\n]{0,35}(?:bilingual|english|original)|(?:bilingual|english|original)[^\n]{0,35}(?:forbidden|prohibited)|(?:병기|영어|영문|원문)[^\n]{0,25}(?:금지|하지\s*마|하지\s*않|쓰지\s*마|제외)|(?:금지|하지\s*마|하지\s*않|쓰지\s*마|제외)[^\n]{0,25}(?:병기|영어|영문|원문)/i;
+const REQUIRED_BILINGUAL_PROMPT_PATTERN = /(?:always|must|required|without\s+exception|all\s+spoken\s+dialogue)[^\n]{0,180}(?:bilingual|both\s+(?:the\s+)?(?:original\s+)?english[^\n]{0,80}korean|english[^\n]{0,80}(?:translation|korean|parenthes))|(?:반드시|항상|예외\s*없이|모든\s+대사)[^\n]{0,120}(?:한\s*영\s*병기|영\s*한\s*병기|영어[^\n]{0,50}한국어|원문[^\n]{0,50}(?:번역|괄호))/i;
 
 function validationText(value) {
     return String(value || '')
@@ -215,24 +216,90 @@ function validationText(value) {
         .replace(/&(?:[a-z]+|#\d+|#x[a-f\d]+);/gi, ' ');
 }
 
+function promptRequestsBilingual(value) {
+    const prompt = String(value || '');
+    if (!BILINGUAL_PROMPT_PATTERN.test(prompt)) return false;
+    // A dialogue-only instruction often excludes narration explicitly. That
+    // scope boundary must not cancel the positive dialogue requirement.
+    if (REQUIRED_BILINGUAL_PROMPT_PATTERN.test(prompt)) return true;
+    return !NO_BILINGUAL_PROMPT_PATTERN.test(prompt);
+}
+
+export function bilingualDialogueRequested(settings = {}) {
+    return promptRequestsBilingual(enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'))
+        || promptRequestsBilingual(enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'));
+}
+
+const BILINGUAL_BRACKET_PAIRS = [
+    ['(', ')'],
+    ['[', ']'],
+    ['（', '）'],
+    ['【', '】'],
+];
+
+function bracketPairFromBilingualExample(prompt) {
+    const lines = String(prompt || '').split(/\r?\n/u);
+    for (const line of lines) {
+        for (const [open, close] of BILINGUAL_BRACKET_PAIRS) {
+            let cursor = 0;
+            while (cursor < line.length) {
+                const openAt = line.indexOf(open, cursor);
+                if (openAt < 0) break;
+                const closeAt = line.indexOf(close, openAt + open.length);
+                if (closeAt < 0) break;
+                const before = line.slice(0, openAt);
+                const inside = line.slice(openAt + open.length, closeAt);
+                if (
+                    /[A-Za-z]/u.test(before)
+                    && (/[가-힣]/u.test(inside) || /\b(?:korean|translation)\b/iu.test(inside))
+                ) return [open, close];
+                cursor = closeAt + close.length;
+            }
+        }
+    }
+    return null;
+}
+
+function bracketPairFromBilingualWording(prompt) {
+    const text = String(prompt || '');
+    if (/(?:square\s*brackets?|대괄호)|\[\s*(?:한국어|한글|번역|korean|translation)[^\]\n]{0,80}\]/iu.test(text)) return ['[', ']'];
+    if (/(?:fullwidth\s*parentheses?|전각\s*괄호)|（\s*(?:한국어|한글|번역|korean|translation)[^）\n]{0,80}）/iu.test(text)) return ['（', '）'];
+    if (/(?:lenticular\s*brackets?|겹낫표|검은\s*대괄호)|【\s*(?:한국어|한글|번역|korean|translation)[^】\n]{0,80}】/iu.test(text)) return ['【', '】'];
+    if (/(?:round\s*brackets?|parentheses?|소괄호)|\(\s*(?:한국어|한글|번역|korean|translation)[^)\n]{0,80}\)/iu.test(text)) return ['(', ')'];
+    return null;
+}
+
+export function bilingualDialogueBracketPair(settings = {}) {
+    // The more specific all-dialogue rule overrides the global rule.
+    const prompts = [
+        enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'),
+        enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'),
+    ].filter(prompt => promptRequestsBilingual(prompt));
+    for (const prompt of prompts) {
+        const pair = bracketPairFromBilingualExample(prompt);
+        if (pair) return pair;
+    }
+    for (const prompt of prompts) {
+        const pair = bracketPairFromBilingualWording(prompt);
+        if (pair) return pair;
+    }
+    return ['(', ')'];
+}
+
 function allowsIntentionalForeignText(segment, settings = {}, speakerScopes = null) {
     // Visible text inside any existing paired tag is always Korean-only.
     // A global bilingual-format prompt must not relax validation for this scope.
     if (segment?.type === 'tagged_content') return false;
 
-    const requestsBilingual = value => {
-        const prompt = String(value || '');
-        return !NO_BILINGUAL_PROMPT_PATTERN.test(prompt) && BILINGUAL_PROMPT_PATTERN.test(prompt);
-    };
-    if (requestsBilingual(enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'))) return true;
+    if (promptRequestsBilingual(enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'))) return true;
     if (segment?.type !== 'dialogue_candidate') return false;
-    if (requestsBilingual(enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'))) return true;
+    if (promptRequestsBilingual(enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'))) return true;
 
     const scoped = speakerScopes && typeof speakerScopes === 'object'
         ? speakerScopes[segment.id]
         : null;
-    if (scoped === 'target_dialogue') return requestsBilingual(enabledPromptValue(settings, 'dialoguePrompt', 'dialoguePromptEnabled'));
-    if (scoped === 'other_dialogue') return requestsBilingual(enabledPromptValue(settings, 'otherDialoguePrompt', 'otherDialoguePromptEnabled'));
+    if (scoped === 'target_dialogue') return promptRequestsBilingual(enabledPromptValue(settings, 'dialoguePrompt', 'dialoguePromptEnabled'));
+    if (scoped === 'other_dialogue') return promptRequestsBilingual(enabledPromptValue(settings, 'otherDialoguePrompt', 'otherDialoguePromptEnabled'));
 
     // Without attribution, do not let a speaker-specific prompt relax foreign-
     // text validation for every dialogue segment.
@@ -263,8 +330,77 @@ function unchangedLatinPhrase(source, translation) {
     return '';
 }
 
-function looksLikeBilingualDialogue(segment, translation) {
+function restoreBilingualDetectionTokens(value, nameTokens = [], protectedTokens = [], nameMode = 'source') {
+    let restored = String(value || '');
+    for (const entry of nameTokens || []) {
+        const replacement = nameMode === 'target'
+            ? String(entry?.value || entry?.source || '')
+            : String(entry?.source || entry?.value || '');
+        restored = restored.split(String(entry?.token || '')).join(replacement);
+    }
+    for (const entry of protectedTokens || []) {
+        restored = restored.split(String(entry?.token || '')).join(String(entry?.value || ''));
+    }
+    return restored;
+}
+
+function normalizedDialogueSurface(value) {
+    return String(value || '').normalize('NFKC').toLocaleLowerCase()
+        .replace(/…/gu, '...').replace(/[’‘]/gu, "'").replace(/\s+/gu, ' ').trim();
+}
+
+function trailingParentheticalParts(value) {
+    const text = String(value || '').trim();
+    for (const [open, close] of BILINGUAL_BRACKET_PAIRS) {
+        if (!text.endsWith(close)) continue;
+        const openAt = text.lastIndexOf(open);
+        if (openAt <= 0) continue;
+        const left = text.slice(0, openAt).trim();
+        const right = text.slice(openAt + open.length, text.length - close.length).trim();
+        if (left && right) return { left, right, open, close };
+    }
+    return null;
+}
+
+function dialogueEnvelope(value) {
+    const raw = String(value || '');
+    const leading = raw.match(/^\s*/u)?.[0] || '';
+    const trailing = raw.match(/\s*$/u)?.[0] || '';
+    const trimmed = raw.slice(leading.length, raw.length - trailing.length || undefined);
+    const pair = [['“', '”'], ['"', '"'], ['「', '」'], ['『', '』'], ['‘', '’']]
+        .find(([open, close]) => trimmed.startsWith(open) && trimmed.endsWith(close));
+    if (!pair) return { leading, trailing, open: '"', close: '"', body: trimmed };
+    const [open, close] = pair;
+    return { leading, trailing, open, close, body: trimmed.slice(open.length, trimmed.length - close.length) };
+}
+
+function canonicalizeExactBilingualDialogue(segment, translation, nameTokens = [], protectedTokens = []) {
+    if (segment?.type !== 'dialogue_candidate') return null;
+    const sourceEnvelope = dialogueEnvelope(segment.text);
+    const translationEnvelope = dialogueEnvelope(translation);
+    const parts = trailingParentheticalParts(translationEnvelope.body);
+    if (!parts) return null;
+    const expectedSource = restoreBilingualDetectionTokens(sourceEnvelope.body, nameTokens, protectedTokens, 'source');
+    // Models sometimes close the dialogue quote before the Korean wrapper:
+    //   "Nyon..." (니욘...)
+    // Treat the quote around the English half as display punctuation, not as
+    // part of the source text, so custom-prompt bilingual output is still
+    // recognized and rebuilt before NAME tokens are globally restored.
+    const actualSource = restoreBilingualDetectionTokens(
+        stripLooseDialogueQuotes(parts.left),
+        nameTokens,
+        protectedTokens,
+        'source',
+    );
+    const koreanHalf = restoreBilingualDetectionTokens(parts.right, nameTokens, protectedTokens, 'target');
+    if (normalizedDialogueSurface(actualSource) !== normalizedDialogueSurface(expectedSource)
+        || !/[가-힣]/u.test(validationText(koreanHalf))) return null;
+    return `${translationEnvelope.leading}${translationEnvelope.open}${actualSource} ${parts.open}${parts.right}${parts.close}${translationEnvelope.close}${translationEnvelope.trailing}`;
+}
+
+function looksLikeBilingualDialogue(segment, translation, nameTokens = [], protectedTokens = []) {
     if (segment?.type !== 'dialogue_candidate') return false;
+    if (canonicalizeExactBilingualDialogue(segment, translation, nameTokens, protectedTokens) !== null) return true;
     const sourceWords = normalizedLatinWords(segment.text);
     const targetWords = normalizedLatinWords(translation);
     if (sourceWords.length < 2 || targetWords.length < sourceWords.length) return false;
@@ -273,6 +409,139 @@ function looksLikeBilingualDialogue(segment, translation) {
     const preservesWholeEnglishDialogue = ` ${targetRun} `.includes(` ${sourceRun} `);
     const hasWrappedKorean = /[\(\[（【][\s\S]{0,2400}[가-힣]{2,}[\s\S]{0,2400}[\)\]）】]/u.test(String(translation || ''));
     return preservesWholeEnglishDialogue && hasWrappedKorean;
+}
+
+function stripLooseDialogueQuotes(value) {
+    let text = String(value || '').trim();
+    const opening = ['“', '"', '「', '『', '‘'];
+    const closing = ['”', '"', '」', '』', '’'];
+    while (opening.some(mark => text.startsWith(mark))) text = text.slice(1).trim();
+    while (closing.some(mark => text.endsWith(mark))) text = text.slice(0, -1).trim();
+    return text;
+}
+
+function stripSingleParentheticalEnvelope(value) {
+    const text = String(value || '').trim();
+    const pair = BILINGUAL_BRACKET_PAIRS.find(([open, close]) => text.startsWith(open) && text.endsWith(close));
+    return pair ? text.slice(pair[0].length, text.length - pair[1].length).trim() : text;
+}
+
+function extractKoreanDialogueHalf(segment, translation, nameTokens = [], protectedTokens = []) {
+    const sourceEnvelope = dialogueEnvelope(segment?.text || '');
+    const translatedEnvelope = dialogueEnvelope(translation);
+    const expectedSource = restoreBilingualDetectionTokens(sourceEnvelope.body, nameTokens, protectedTokens, 'source');
+    const body = String(translatedEnvelope.body || '').trim();
+    const trailing = trailingParentheticalParts(body);
+    if (trailing) {
+        const leftAsSource = restoreBilingualDetectionTokens(stripLooseDialogueQuotes(trailing.left), nameTokens, protectedTokens, 'source');
+        const misplacedQuote = /["”’」』]\s*$/u.test(trailing.left);
+        if (normalizedDialogueSurface(leftAsSource) === normalizedDialogueSurface(expectedSource) || misplacedQuote) {
+            return stripLooseDialogueQuotes(trailing.right);
+        }
+    }
+    for (let index = body.length - 1; index >= 0; index -= 1) {
+        if (!['(', '（', '[', '【'].includes(body[index])) continue;
+        const leftAsSource = restoreBilingualDetectionTokens(stripLooseDialogueQuotes(body.slice(0, index)), nameTokens, protectedTokens, 'source');
+        if (normalizedDialogueSurface(leftAsSource) !== normalizedDialogueSurface(expectedSource)) continue;
+        return stripLooseDialogueQuotes(body.slice(index + 1).replace(/[\)\]）】]+\s*$/gu, ''));
+    }
+    return stripLooseDialogueQuotes(stripSingleParentheticalEnvelope(body));
+}
+
+function bindBilingualKoreanNameTokens(segment, korean, nameTokens = []) {
+    let next = String(korean || '');
+    const expected = protectedTokenCounts(segment?.text || '');
+    for (const entry of nameTokens || []) {
+        const token = String(entry?.token || '');
+        const wanted = expected.get(token) || 0;
+        if (!token || !wanted) continue;
+        let got = protectedTokenOccurrences(next, token);
+        if (got > wanted) {
+            next = replaceExcessNameTokens(next, token, wanted, entry?.value);
+            got = wanted;
+        }
+        let missing = Math.max(0, wanted - got);
+        for (const visible of [entry?.value, entry?.source].map(value => String(value || '').trim()).filter(Boolean)) {
+            if (!missing) break;
+            const ranges = literalRangesOutsideProtectedTokens(next, visible, { koreanName: /^[가-힣]{1,20}$/u.test(visible) });
+            if (!ranges.length) continue;
+            const sourceIndex = Math.max(0, String(segment?.text || '').indexOf(token));
+            const expectedIndex = String(segment?.text || '').length ? next.length * sourceIndex / String(segment.text).length : 0;
+            const chosen = [...ranges].sort((a, b) => Math.abs(a.start - expectedIndex) - Math.abs(b.start - expectedIndex))
+                .slice(0, missing).sort((a, b) => a.start - b.start);
+            next = replaceLiteralRanges(next, chosen, Array(chosen.length).fill(token));
+            missing -= chosen.length;
+        }
+        while (missing > 0) {
+            next = insertMissingProtectedTokenBySourcePosition(segment?.text || '', next, token);
+            missing -= 1;
+        }
+    }
+    return next;
+}
+
+/** Locally rebuilds the configured bilingual dialogue display without an AI request. */
+export function ensureBilingualDialogueFormat(segment, translation, settings = {}, speakerScopes = null, nameTokens = [], protectedTokens = []) {
+    const result = String(translation || '');
+    if (segment?.type !== 'dialogue_candidate') return result;
+
+    // A fully custom prompt can request bilingual dialogue without placing the
+    // instruction in the legacy global/all-dialogue fields inspected by
+    // bilingualDialogueRequested(). In that case the model may already return
+    // Source (Korean), but both halves still contain the same opaque NAME token.
+    // If we skip this local rebuild, assembleTranslation() restores that token
+    // globally and turns the copied English name into its Korean locked spelling.
+    // Detect an already-bilingual result from its actual structure as well as
+    // from settings, so the English half is always rebuilt from the source.
+    const existingBilingual = looksLikeBilingualDialogue(segment, result, nameTokens, protectedTokens);
+    if (!bilingualDialogueRequested(settings) && !existingBilingual) return result;
+    const translatedEnvelope = dialogueEnvelope(result);
+    const existingParts = existingBilingual
+        ? trailingParentheticalParts(translatedEnvelope.body)
+        : null;
+    const korean = bindBilingualKoreanNameTokens(segment, extractKoreanDialogueHalf(segment, result, nameTokens, protectedTokens), nameTokens);
+    const koreanNameTokenPresent = (nameTokens || []).some(entry => korean.includes(String(entry?.token || '')) && /[가-힣]/u.test(String(entry?.value || '')));
+    if (!/[가-힣]/u.test(validationText(korean)) && !koreanNameTokenPresent) return result;
+
+    const sourceEnvelope = dialogueEnvelope(segment.text);
+    let source = sourceEnvelope.body;
+    for (const entry of nameTokens || []) source = source.split(String(entry?.token || '')).join(String(entry?.source || entry?.value || ''));
+    for (const entry of protectedTokens || []) source = source.split(String(entry?.token || '')).join(String(entry?.value || ''));
+    // An explicit GLOBAL/ALL-DIALOGUE prompt is authoritative. If it asks for
+    // square brackets but the model returns parentheses, normalize to the
+    // configured pair. Only preserve the model's detected pair when bilingual
+    // output came from a fully custom prompt that the legacy fields cannot see.
+    const configuredBilingual = bilingualDialogueRequested(settings);
+    const [open, close] = configuredBilingual
+        ? bilingualDialogueBracketPair(settings)
+        : existingParts
+            ? [existingParts.open, existingParts.close]
+            : bilingualDialogueBracketPair(settings);
+    return `${translatedEnvelope.leading}${sourceEnvelope.open}${source} ${open}${korean}${close}${sourceEnvelope.close}${translatedEnvelope.trailing}`;
+}
+
+/**
+ * Repairs deterministic NAME-marker duplication before strict integrity checks.
+ * This never changes non-name protected tokens and never sends an AI request.
+ */
+export function normalizeLocallyRecoverableProtectedTokens(segmented, translations, settings = {}, speakerScopes = {}) {
+    const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
+    for (const segment of segmented?.segments || []) {
+        if (segment.type !== 'dialogue_candidate' || !map.has(segment.id)) continue;
+        map.set(segment.id, ensureBilingualDialogueFormat(
+            segment,
+            String(map.get(segment.id) || ''),
+            settings,
+            speakerScopes,
+            segmented?.nameTokens || [],
+            segmented?.tokens || [],
+        ));
+    }
+    return normalizeExcessNameProtectedTokens(
+        segmented?.segments || [],
+        map,
+        segmented?.nameTokens || [],
+    );
 }
 
 /**
@@ -746,9 +1015,15 @@ export function segmentSource(value, nameLocks = []) {
         }
 
         const analysis = analyzeLanguage(content);
-        const passthrough = onlyProtectedTokens(content)
+        // 이름 고정 표식만 남은 짧은 직접 대사도 한영병기 로컬 조립 대상으로 유지한다.
+        const protectedNameOnlyDialogue = !insideTaggedContent
+            && piece.type === 'dialogue_candidate'
+            && /@@VERBA_DEEP_NAME_\d{4}@@/u.test(content);
+        const passthrough = !protectedNameOnlyDialogue && (
+            onlyProtectedTokens(content)
             || analysis.total === 0
-            || (analysis.korean > 0 && analysis.english + analysis.japanese + analysis.chinese === 0);
+            || (analysis.korean > 0 && analysis.english + analysis.japanese + analysis.chinese === 0)
+        );
 
         if (passthrough) {
             parts.push({ type: 'passthrough', text: content });
@@ -872,6 +1147,147 @@ function protectedTokenCounts(value) {
         counts.set(token, (counts.get(token) || 0) + 1);
     }
     return counts;
+}
+
+function protectedTokenOccurrences(value, token) {
+    return String(value || '').split(String(token || '')).length - 1;
+}
+
+function replaceExcessNameTokens(value, token, keepCount, replacement) {
+    let seen = 0;
+    return String(value || '').replaceAll(String(token || ''), match => {
+        seen += 1;
+        return seen <= keepCount ? match : String(replacement || '');
+    });
+}
+
+/**
+ * Converts only surplus NAME markers into their visible locked spelling.
+ * The wording is preserved, but strict assembly once again sees exactly the
+ * source marker count. Non-name protected tokens are never changed here.
+ */
+export function normalizeExcessNameProtectedTokens(segments, translations, nameTokens = []) {
+    const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
+    const knownNames = new Map((nameTokens || []).map(entry => [String(entry?.token || ''), entry]));
+    for (const segment of segments || []) {
+        if (!segment?.id || !map.has(segment.id)) continue;
+        const expected = protectedTokenCounts(segment.text);
+        let current = String(map.get(segment.id) || '');
+        const sourceWithMarkers = String(segment.text || '');
+        if (
+            sourceWithMarkers
+            && current !== sourceWithMarkers
+            && current.includes(sourceWithMarkers)
+            && /[가-힣]/u.test(current.split(sourceWithMarkers).join(''))
+        ) {
+            const literalSource = (nameTokens || []).reduce(
+                (value, entry) => value.split(String(entry?.token || '')).join(String(entry?.source || entry?.value || '')),
+                sourceWithMarkers,
+            );
+            current = current.split(sourceWithMarkers).join(literalSource);
+        }
+        for (const [token, entry] of knownNames) {
+            if (!token) continue;
+            const wanted = expected.get(token) || 0;
+            if (protectedTokenOccurrences(current, token) <= wanted) continue;
+            current = replaceExcessNameTokens(current, token, wanted, entry?.value);
+        }
+        map.set(segment.id, current);
+    }
+    return map;
+}
+
+function literalRangesOutsideProtectedTokens(value, literal, { koreanName = false } = {}) {
+    const text = String(value || '');
+    const needle = String(literal || '');
+    if (!needle) return [];
+    const protectedRanges = [...text.matchAll(new RegExp(PROTECTED_TOKEN_PATTERN.source, 'g'))]
+        .map(match => ({ start: match.index, end: match.index + match[0].length }));
+    const result = [];
+    let cursor = 0;
+    while (cursor <= text.length - needle.length) {
+        const start = text.indexOf(needle, cursor);
+        if (start < 0) break;
+        const end = start + needle.length;
+        cursor = Math.max(end, start + 1);
+        if (protectedRanges.some(range => start < range.end && end > range.start)) continue;
+        if (koreanName) {
+            const before = start > 0 ? text[start - 1] : '';
+            const tail = text.slice(end);
+            const beforeBoundary = !before || !/[가-힣]/u.test(before);
+            const afterBoundary = !tail
+                || !/^[가-힣]/u.test(tail)
+                || /^(?:에게서|에게|한테|께서|께|으로|이랑|랑|은|는|이|가|을|를|의|도|만|과|와|로|아|야)(?=$|[\s\p{P}\p{S}])/u.test(tail);
+            if (!beforeBoundary || !afterBoundary) continue;
+        } else {
+            const before = start > 0 ? text[start - 1] : '';
+            const after = text[end] || '';
+            if (before && /[\p{L}\p{N}_]/u.test(before)) continue;
+            if (after && /[\p{L}\p{N}_]/u.test(after)) continue;
+        }
+        result.push({ start, end });
+    }
+    return result;
+}
+
+function replaceLiteralRanges(value, ranges, replacements) {
+    const text = String(value || '');
+    let result = '';
+    let cursor = 0;
+    for (let index = 0; index < ranges.length; index += 1) {
+        const range = ranges[index];
+        result += text.slice(cursor, range.start);
+        result += String(replacements[index] || '');
+        cursor = range.end;
+    }
+    return result + text.slice(cursor);
+}
+
+function nearestProtectedInsertionIndex(value, approximateIndex) {
+    const text = String(value || '');
+    const protectedRanges = [...text.matchAll(/@@VERBA_DEEP_(?:NAME_)?\d{4}@@/g)]
+        .map(match => ({ start: match.index, end: match.index + match[0].length }));
+    const outsideProtectedToken = index => !protectedRanges.some(range => index > range.start && index < range.end);
+    const rawTarget = Math.max(0, Math.min(text.length, Number(approximateIndex) || 0));
+    const containingRange = protectedRanges.find(range => rawTarget > range.start && rawTarget < range.end);
+    const target = containingRange
+        ? (rawTarget - containingRange.start <= containingRange.end - rawTarget ? containingRange.start : containingRange.end)
+        : rawTarget;
+    if (target === 0 || target === text.length) return target;
+    const boundary = index => outsideProtectedToken(index) && (
+        index <= 0 || index >= text.length
+        || /[\s\p{P}\p{S}]/u.test(text[index - 1] || '')
+        || /[\s\p{P}\p{S}]/u.test(text[index] || '')
+    );
+    if (boundary(target)) return target;
+    for (let distance = 1; distance <= Math.min(120, text.length); distance += 1) {
+        const right = target + distance;
+        const left = target - distance;
+        if (right <= text.length && boundary(right)) return right;
+        if (left >= 0 && boundary(left)) return left;
+    }
+    return target;
+}
+
+function insertMissingProtectedTokenBySourcePosition(source, translation, token) {
+    const sourceText = String(source || '');
+    const output = String(translation || '');
+    const sourceIndex = Math.max(0, sourceText.indexOf(String(token || '')));
+    const stripMarkers = value => String(value || '').replace(/@@VERBA_DEEP_(?:NAME_)?\d{4}@@/g, '');
+    const visibleSource = stripMarkers(sourceText);
+    const visibleBeforeToken = stripMarkers(sourceText.slice(0, sourceIndex));
+    const ratio = visibleSource.length ? visibleBeforeToken.length / visibleSource.length
+        : (sourceText.length ? sourceIndex / sourceText.length : 1);
+    const insertionIndex = nearestProtectedInsertionIndex(output, Math.round(output.length * ratio));
+    const needsLeadingSpace = insertionIndex > 0
+        && /[\p{L}\p{N}]/u.test(output[insertionIndex - 1] || '')
+        && /[\p{L}\p{N}]/u.test(String(token || '')[0] || '');
+    const needsTrailingSpace = insertionIndex < output.length
+        && /[\p{L}\p{N}]/u.test(output[insertionIndex] || '')
+        && /[\p{L}\p{N}]/u.test(String(token || '').slice(-1) || '');
+    return output.slice(0, insertionIndex)
+        + (needsLeadingSpace ? ' ' : '') + String(token || '')
+        + (needsTrailingSpace ? ' ' : '') + output.slice(insertionIndex);
 }
 
 export function findProtectedTokenIntegrityProblems(segments, translations) {
@@ -3259,6 +3675,11 @@ export function buildScopedOutputPrompt({
     const targetDialogue = scope === 'target_dialogue';
     const madExclusive = madKoreanExclusiveEnabled(settings);
     const compressed = developerCompressedPromptEnabled(settings);
+    const bilingual = !madExclusive && dialogue && bilingualDialogueRequested(settings);
+    const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
+    const bilingualRule = bilingual
+        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
+        : '';
     let taskRules = '';
     if (compressed) {
         taskRules = `- Produce one result for every TRANSLATION TARGET under the declared scope. ${madExclusive ? 'Re-author directly as Korean-original writing.' : 'Translate into Korean; include source text only when an active GLOBAL/ALL-DIALOGUE rule authorizes it.'}
@@ -3308,6 +3729,7 @@ ${developerCompressedPromptEnabled(settings)
 
 TASK
 ${taskRules}
+${bilingualRule}
 
 Return exactly this schema:
 {"segments":[{"id":"seg_0000","translation":"한국어 번역"}]}
@@ -3533,6 +3955,11 @@ export function buildOutputPrompt(segmented, settings, oneTimeInstruction = '', 
     const payload = segmented.segments.map(({ id, type, text }) => ({ id, type, text }));
     const madExclusive = madKoreanExclusiveEnabled(settings);
     const compressed = developerCompressedPromptEnabled(settings);
+    const bilingual = !madExclusive && bilingualDialogueRequested(settings);
+    const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
+    const bilingualRule = bilingual
+        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
+        : '';
     const taskRules = compressed
         ? `- Produce one result for every segment id. Read all segments together for continuity and speaker attribution; preserve each narration/dialogue type and quotation marks.
 - ${madExclusive ? 'Re-author directly as Korean-original writing under MAD KOREAN EXCLUSIVE.' : 'Translate into Korean; include source text only where an active GLOBAL/ALL-DIALOGUE rule explicitly requires bilingual output.'}`
@@ -3560,6 +3987,7 @@ ${promptIdentityAliasBlock(speakerIdentity)}
 
 TASK
 ${taskRules}
+${bilingualRule}
 - Silently check that every segment id is returned exactly once.
 
 Return exactly this schema:

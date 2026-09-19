@@ -2494,6 +2494,26 @@
     opacity: 1;
 }
 
+.verba-deep-custom-translator-field {
+    margin: 7px 0;
+    padding: 9px;
+    border: 1px solid color-mix(in srgb, var(--verba-deep-border) 42%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--verba-deep-surface) 92%, var(--verba-deep-accent) 8%);
+}
+
+.verba-deep-custom-translator-field .verba-deep-prompt-slot-head {
+    margin-bottom: 2px;
+}
+
+.verba-deep-custom-translator-description {
+    margin: 0 0 7px !important;
+}
+
+#verba-deep-custom-translator-controls.verba-deep-control-disabled {
+    opacity: .56;
+}
+
 
 /* v0.4.11: recent prompt-preset backups */
 .verba-deep-prompt-preset-backups {
