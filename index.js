@@ -3359,7 +3359,8 @@ function restoredSegmentText(value, segmented, useSourceNames = false) {
         token: entry.token,
         value: useSourceNames ? entry.source : entry.value,
     }));
-    const namesRestored = restoreProtected(value, nameTokens, { strict: false });
+    const namesRestoredRaw = restoreProtected(value, nameTokens, { strict: false });
+    const namesRestored = useSourceNames ? namesRestoredRaw : namesRestoredRaw.replace(/@@VERBA_DEEP_NAME_\d{4}@@/g, '');
     const fullyRestored = restoreProtected(namesRestored, segmented.tokens, { strict: false });
     return useSourceNames ? fullyRestored : repairKoreanParticleAlternatives(fullyRestored);
 }
