@@ -130,6 +130,56 @@
     padding-bottom: 12px;
 }
 
+.verba-deep-settings-section-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.verba-deep-settings [data-verba-deep-ui-hidden="true"],
+.verba-deep-settings [hidden][data-verba-deep-ui-hidden] {
+    display: none !important;
+}
+
+.verba-deep-visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 8px;
+}
+
+.verba-deep-visibility-choice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0 !important;
+    font-weight: 500 !important;
+}
+
+.verba-deep-visibility-choice span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.verba-deep-visibility-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+}
+
+.verba-deep-visibility-actions > .menu_button {
+    width: 100%;
+    min-width: 0;
+    margin: 0 !important;
+}
+
+@media (max-width: 460px) {
+    .verba-deep-visibility-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .verba-deep-settings label {
     font-weight: 650;
     margin-top: 3px;

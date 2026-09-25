@@ -81,6 +81,7 @@ function taggedInnerRangesInProtectedText(protectedText, tokens = []) {
             stack.push({
                 tag: descriptor.tag,
                 contentStart: matcher.lastIndex,
+                ancestors: stack.map(entry => entry.tag),
             });
             continue;
         }
@@ -99,7 +100,11 @@ function taggedInnerRangesInProtectedText(protectedText, tokens = []) {
         const opening = stack[matchIndex];
         stack.splice(matchIndex);
         if (match.index >= opening.contentStart) {
-            ranges.push({ start: opening.contentStart, end: match.index });
+            ranges.push({
+                start: opening.contentStart,
+                end: match.index,
+                tags: [...new Set([...(opening.ancestors || []), opening.tag])],
+            });
         }
     }
 
@@ -113,8 +118,9 @@ function taggedInnerRangesInProtectedText(protectedText, tokens = []) {
         const previous = merged.at(-1);
         if (previous && range.start <= previous.end) {
             previous.end = Math.max(previous.end, range.end);
+            previous.tags = [...new Set([...(previous.tags || []), ...(range.tags || [])])];
         } else {
-            merged.push({ ...range });
+            merged.push({ ...range, tags: [...(range.tags || [])] });
         }
     }
     return merged;
@@ -131,7 +137,11 @@ function splitByTaggedRanges(value, ranges = []) {
         const start = Math.max(cursor, Math.min(text.length, Number(range.start) || 0));
         const end = Math.max(start, Math.min(text.length, Number(range.end) || start));
         if (start > cursor) chunks.push({ text: text.slice(cursor, start), insideTaggedContent: false });
-        if (end > start) chunks.push({ text: text.slice(start, end), insideTaggedContent: true });
+        if (end > start) chunks.push({
+            text: text.slice(start, end),
+            insideTaggedContent: true,
+            tagContext: [...(range.tags || [])],
+        });
         cursor = end;
     }
     if (cursor < text.length) chunks.push({ text: text.slice(cursor), insideTaggedContent: false });
@@ -295,6 +305,10 @@ export function bilingualDialogueBracketPair(settings = {}) {
 }
 
 function allowsIntentionalForeignText(segment, settings = {}, speakerScopes = null) {
+    // 갈봬체는 일반 프롬프트를 전송하지 않는 한국어 전용 모드다.
+    // 저장돼 있지만 비활성인 병기 지시가 이름 미번역 검사를 끄지 못하게 한다.
+    if (galbwaeTranslationActive(settings)) return false;
+
     // Visible text inside any existing paired tag is always Korean-only.
     // A global bilingual-format prompt must not relax validation for this scope.
     if (segment?.type === 'tagged_content') return false;
@@ -336,6 +350,54 @@ function unchangedLatinPhrase(source, translation) {
         }
     }
     return '';
+}
+
+const LATIN_NAME_FALSE_POSITIVES = new Set([
+    'a', 'an', 'the', 'i', 'he', 'she', 'it', 'we', 'you', 'they',
+    'his', 'her', 'its', 'our', 'your', 'their', 'this', 'that', 'these', 'those',
+    'and', 'but', 'or', 'if', 'as', 'at', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'to', 'with',
+    'after', 'before', 'inside', 'outside', 'then', 'when', 'while', 'where', 'somewhere',
+    'something', 'nothing', 'no', 'not', 'yes', 'maybe', 'now', 'here', 'there',
+    'oh', 'hey', 'hi', 'hello', 'okay', 'ok', 'fuck', 'damn', 'god',
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
+    'september', 'october', 'november', 'december',
+]);
+
+function galbwaeTranslationActive(settings = {}) {
+    return ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
+        || settings.chuseokGalbwaeEnabled === true;
+}
+
+function countExactLatinToken(value, token) {
+    const matches = String(value || '').match(new RegExp(`(?<![A-Za-z])${escapeRegExp(token)}(?![A-Za-z])`, 'gu'));
+    return matches?.length || 0;
+}
+
+/** 갈봬체 결과에 그대로 남은 짧은 라틴 문자 캐릭터 이름을 찾는다. */
+export function unchangedLatinCharacterNames(source, translation, settings = {}) {
+    if (!galbwaeTranslationActive(settings)) return [];
+    const sourceText = validationText(source);
+    const targetText = validationText(translation);
+    const candidates = [...sourceText.matchAll(/\b[A-Z][A-Za-z'’\-]{1,79}\b/g)]
+        // Atlas's 같은 소유격은 이름이 아니므로 잘라낸 뒤 Atlas 자체를 검사한다.
+        .map(match => match[0].replace(/(?:['’]s|['’])$/iu, ''))
+        .filter(Boolean)
+        .filter(token => !LATIN_NAME_FALSE_POSITIVES.has(token.toLocaleLowerCase()))
+        .filter(token => !/^[A-Z]{2,}$/u.test(token));
+    const unique = [...new Set(candidates)];
+    return unique.filter(token => {
+        if (!new RegExp(`(?<![A-Za-z])${escapeRegExp(token)}(?![A-Za-z])`, 'u').test(targetText)) return false;
+        const escaped = escapeRegExp(token);
+        const koreanParticle = new RegExp(`${escaped}(?=(?:은|는|이|가|을|를|의|에|에게|한테|께서|도|만|와|과|로|으로|랑|이랑|부터|까지))`, 'u').test(targetText);
+        const vocative = new RegExp(`(?:["“”'‘’]\\s*|(?:\\*\\*|__|~~)\\s*)?${escaped}\\s*[!?,:;](?:\\s*(?:\\*\\*|__|~~))?(?:["“”'‘’]|\\s|$)`, 'u').test(targetText);
+        const markdownWrapped = new RegExp(`(?:\\*\\*|__|~~)\\s*${escaped}\\s*(?:\\*\\*|__|~~)`, 'u').test(targetText);
+        const bareNameOnly = new RegExp(`^[\\s*_~"“”'‘’]*${escaped}[\\s*_~!?,:;"“”'‘’]*$`, 'u').test(sourceText)
+            && new RegExp(`^[\\s*_~"“”'‘’]*${escaped}[\\s*_~!?,:;"“”'‘’]*$`, 'u').test(targetText);
+        const koreanNeighbour = new RegExp(`(?:${escaped}[^A-Za-z]{0,6}[가-힣]|[가-힣][^A-Za-z]{0,6}${escaped})`, 'u').test(targetText);
+        const repeated = countExactLatinToken(sourceText, token) >= 2 || countExactLatinToken(targetText, token) >= 2;
+        return koreanParticle || vocative || markdownWrapped || bareNameOnly || koreanNeighbour || repeated;
+    });
 }
 
 function restoreBilingualDetectionTokens(value, nameTokens = [], protectedTokens = [], nameMode = 'source') {
@@ -653,6 +715,15 @@ export function findUntranslatedSegments(segments, translations, settings = {}, 
             || allowsIntentionalForeignText(segment, settings, speakerScopes)
             || looksLikeBilingualDialogue(segment, translation)
         ) continue;
+
+        const untranslatedNames = unchangedLatinCharacterNames(segment.text, translation, settings);
+        if (untranslatedNames.length) {
+            invalid.push({
+                ...segment,
+                untranslatedReason: `UNTRANSLATED_CHARACTER_NAME: ${untranslatedNames.join(', ')} — verify person/fictional-character context, then render those names in natural Hangul; fixed name mappings win`,
+            });
+            continue;
+        }
 
         const sourceStats = analyzeLanguage(validationText(segment.text));
         const targetStats = analyzeLanguage(validationText(translation));
@@ -1098,7 +1169,7 @@ function splitDialogueAndNarration(value) {
     return pieces.filter(piece => piece.text);
 }
 
-export function segmentSource(value, nameLocks = []) {
+export function segmentSource(value, nameLocks = [], { translateTaggedContent = true } = {}) {
     const source = String(value || '');
     const { protectedText, tokens, nameTokens } = protectSource(source, nameLocks);
     const taggedRanges = taggedInnerRangesInProtectedText(protectedText, tokens);
@@ -1106,7 +1177,7 @@ export function segmentSource(value, nameLocks = []) {
     const parts = [];
     let translatableIndex = 0;
 
-    const appendPiece = (piece, insideTaggedContent = false) => {
+    const appendPiece = (piece, insideTaggedContent = false, tagContext = []) => {
         const leading = piece.text.match(/^\s+/u)?.[0] || '';
         const afterLeading = piece.text.slice(leading.length);
         const trailing = afterLeading.match(/\s+$/u)?.[0] || '';
@@ -1134,6 +1205,7 @@ export function segmentSource(value, nameLocks = []) {
             parts.push({
                 id: `seg_${String(translatableIndex).padStart(4, '0')}`,
                 type: insideTaggedContent ? 'tagged_content' : piece.type,
+                ...(insideTaggedContent && tagContext.length ? { tagContext: [...tagContext] } : {}),
                 text: content,
             });
             translatableIndex += 1;
@@ -1150,10 +1222,15 @@ export function segmentSource(value, nameLocks = []) {
                 continue;
             }
 
+            if (region.insideTaggedContent && !translateTaggedContent) {
+                parts.push({ type: 'passthrough', text: block });
+                continue;
+            }
+
             if (region.insideTaggedContent) {
                 // Any paired-tag interior is structured visible text. Even if it
                 // contains quotation marks, do not route it through dialogue prompts.
-                appendPiece({ type: 'tagged_content', text: block }, true);
+                appendPiece({ type: 'tagged_content', text: block }, true, region.tagContext);
                 continue;
             }
 
@@ -1909,6 +1986,49 @@ FINAL REJECTION GATE — REWRITE SILENTLY IF ANY ANSWER IS YES
 
 function madKoreanExclusiveEnabled(settings = {}) {
     return settings?.developerMadKoreanOutputEnabled === true;
+}
+
+function galbwaeMode(settings = {}) {
+    return ['all', 'dialogueInner'].includes(settings?.chuseokGalbwaeScope)
+        ? settings.chuseokGalbwaeScope
+        : settings?.chuseokGalbwaeEnabled === true
+            ? 'dialogueInner'
+            : 'off';
+}
+
+function galbwaeExclusiveRules(settings = {}, scope = 'mixed', nameTokens = [], speakerIdentity = {}) {
+    const mode = galbwaeMode(settings);
+    const appliesToScope = mode === 'all'
+        || ['dialogue_mixed', 'target_dialogue', 'other_dialogue'].includes(scope);
+    const tagged = scope === 'tagged_content';
+    return `EXCLUSIVE TEMPORARY CHUSEOK GALBWAE TRANSLATION — ACTIVE MODE=${mode}; REQUEST SCOPE=${scope}
+- This is the ONLY style engine for this request. Ignore every saved/custom base instruction, one-time request, global/dialogue prompt, fine-tuning taste, character flavor and developer experiment. Their saved values remain untouched and their text is absent from this request.
+- Translate source-language natural text into Korean while preserving facts, speakers, intent, relationships, chronology, emotional direction, numbers, names and protected structure.
+- MODE=all applies 갈봬체 to narration, direct dialogue and eligible visible text enclosed by Markdown **...**.
+- MODE=dialogueInner applies 갈봬체 only to direct dialogue and eligible visible text enclosed by **...**; ordinary narration stays naturally and correctly spelled.
+- For this request, ${tagged ? 'PAIRED-TAG INTERIOR: never apply 갈봬체; translate visible text into normally spelled Korean.' : appliesToScope ? 'GALBWAE STYLE IS REQUIRED for eligible text.' : 'ordinary narration stays normally spelled, except eligible visible **...** text.'}
+
+GALBWAE STYLE — REQUIRED FOR ELIGIBLE TEXT
+- Understand the meaning first, then rewrite as chaotic 죠캎-style Korean internet-post language: strangely earnest, overexcited, clumsily typed and sometimes awkwardly polite.
+- Mix in a LIGHT, intermittent internet-grandpa flavor, as if a slightly confused old man is typing online. Do not turn everything into historical-drama speech or repeat ~느냐/~거라/~로다 mechanically.
+- Visibly wreck spelling and spacing using varied phonetic misspellings, swapped vowels/consonants, wrong-but-readable particles/endings, fused words, odd spaces and community-post punctuation.
+- Sprinkle ㄷㄷ, ;; and ㅠㅠ where emotion permits, but not on every sentence. Patterns: 나 알아?→나를 아늕랴!!; 알겠어요.→알갰어료 ㅠㅠ; 네, 그렇게 할게요.→례.. 그러캐할개료; 응, 알겠어.→례 알갯다내료;;.
+- REQUIRED PROFANITY MUTATION: whenever an eligible Korean rendering would naturally use 씨발, never output clean 씨발; choose and vary among 씨핤, 씨핧, 샤갈, 쌱앐, 쌰갈, 시핣 while preserving target/function/intensity. Do not add profanity where it is not licensed.
+- OCCASIONAL ENDING/REPLY MUTATION: irregularly change some sentence-final 요→료 and occasionally standalone 네/응→례, only for a minority of opportunities, unevenly. Never mutate these inside paired tags.
+- Do not merely corrupt one word or repeat one ending. Never invent actions, body parts, sexual content, incidents, objects, emotions or claims.
+
+NAME HANDLING ORDER — ABSOLUTE
+- First render every source-language human or fictional character name in natural Hangul, then exempt only that Korean rendering from GALBWAE corruption.
+- A supplied fixed name mapping wins; otherwise transliterate by established Korean pronunciation. Never leave a Latin-script character name unchanged merely because proper names are style-exempt. Examples: Aila→아일라, Calix→칼릭스, Atlas→아틀라스.
+- Attach Korean particles and vocatives grammatically after the complete Korean name. Never corrupt, split or partially decline a name. Brand names, codes, URLs, handles and product identifiers keep ordinary rules.
+
+FORMATTING AND EXEMPTIONS
+- MARKDOWN IS FORMATTING, NOT A TEXT EXEMPTION: preserve delimiters/nesting/placement, but eligible visible text inside **...** must receive GALBWAE. Example: **Do you know me?**→**나를 아늕랴!!**. Backtick and fenced code stays unchanged.
+- PAIRED TAGS ARE AN ABSOLUTE GALBWAE EXEMPTION: keep visible text between ANY paired tags normally spelled after translation; do not apply GALBWAE there, including Inner_Info, Info_panel, small, div and custom tags. There are no tag-name exceptions.
+- Never alter dates/weather/locations, Korean-rendered proper names or their particles, numbers, tokens, code, tags or facts. Ellipses stay exact; ? and ! may be exaggerated only when the speech act remains clear.
+- Preserve every @@VERBA_DEEP_0000@@ and @@VERBA_DEEP_NAME_0000@@ token exactly once. Return valid JSON only with every requested id exactly once; no commentary or code fence.
+
+${nameTokenInstruction(nameTokens, speakerIdentity)}`;
 }
 
 function madKoreanHongjinVoiceRule(settings = {}) {
@@ -3244,6 +3364,7 @@ function extremeIdentityBlock(speakerIdentity = {}, scope = 'mixed') {
 function extremeOutputRules(settings = {}, {
     oneTimeInstruction = '', nameTokens = [], tuning = null, scope = 'mixed', speakerIdentity = {},
 } = {}) {
+    if (galbwaeMode(settings) !== 'off') return galbwaeExclusiveRules(settings, scope, nameTokens, speakerIdentity);
     if (madKoreanExclusiveEnabled(settings)) return extremeMadKoreanExclusiveRules(settings, scope, nameTokens, speakerIdentity);
     const bannedWords = parseBannedWords(settings.bannedWords);
     const tagged = scope === 'tagged_content';
@@ -3311,6 +3432,9 @@ function compactOutputRules(settings = {}, {
     scope = 'mixed',
     speakerIdentity = {},
 } = {}) {
+    if (galbwaeMode(settings) !== 'off') {
+        return galbwaeExclusiveRules(settings, scope, nameTokens, speakerIdentity);
+    }
     if (developerExtremeCompressedPromptEnabled(settings)) {
         return extremeOutputRules(settings, { oneTimeInstruction, nameTokens, tuning, scope, speakerIdentity });
     }
@@ -3428,6 +3552,9 @@ ${taggedContent ? `TAGGED-CONTENT FORMAT OVERRIDE — ABSOLUTE
 }
 
 function scopedOutputRules(settings, oneTimeInstruction = '', nameTokens = [], tuning = null, scope = 'narration', speakerIdentity = {}) {
+    if (galbwaeMode(settings) !== 'off') {
+        return galbwaeExclusiveRules(settings, scope, nameTokens, speakerIdentity);
+    }
     if (developerCompressedPromptEnabled(settings)) {
         return compactOutputRules(settings, {
             oneTimeInstruction,
@@ -3551,13 +3678,19 @@ export function buildScopedOutputPrompt({
     scope = 'narration',
     speakerIdentity = {},
 }) {
-    const payload = (segments || []).map(({ id, type, text }) => ({ id, type, text }));
+    const payload = (segments || []).map(({ id, type, text, tagContext }) => ({
+        id,
+        type,
+        ...(tagContext?.length ? { tag_context: tagContext } : {}),
+        text,
+    }));
     const dialogue = scope === 'target_dialogue' || scope === 'other_dialogue';
     const taggedContent = scope === 'tagged_content';
     const targetDialogue = scope === 'target_dialogue';
+    const galbwaeExclusive = galbwaeMode(settings) !== 'off';
     const madExclusive = madKoreanExclusiveEnabled(settings);
     const compressed = developerCompressedPromptEnabled(settings);
-    const bilingual = !madExclusive && dialogue && bilingualDialogueRequested(settings);
+    const bilingual = !galbwaeExclusive && !madExclusive && dialogue && bilingualDialogueRequested(settings);
     const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
     const bilingualRule = bilingual
         ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
@@ -3789,6 +3922,9 @@ ${otherLocks.length ? `FIXED SPELLINGS — reference only, no extra tokens\n${JS
 }
 
 function sharedOutputRules(settings, oneTimeInstruction = '', speakerIdentity = {}, nameTokens = [], tuning = null) {
+    if (galbwaeMode(settings) !== 'off') {
+        return galbwaeExclusiveRules(settings, 'mixed', nameTokens, speakerIdentity);
+    }
     if (developerCompressedPromptEnabled(settings)) {
         return compactOutputRules(settings, {
             oneTimeInstruction,
@@ -3834,15 +3970,23 @@ ${bannedWords.length ? bannedWords.join(', ') : '(없음)'}`;
 }
 
 export function buildOutputPrompt(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null) {
-    const payload = segmented.segments.map(({ id, type, text }) => ({ id, type, text }));
+    const payload = segmented.segments.map(({ id, type, text, tagContext }) => ({
+        id,
+        type,
+        ...(tagContext?.length ? { tag_context: tagContext } : {}),
+        text,
+    }));
+    const galbwaeExclusive = galbwaeMode(settings) !== 'off';
     const madExclusive = madKoreanExclusiveEnabled(settings);
     const compressed = developerCompressedPromptEnabled(settings);
-    const bilingual = !madExclusive && bilingualDialogueRequested(settings);
+    const bilingual = !galbwaeExclusive && !madExclusive && bilingualDialogueRequested(settings);
     const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
     const bilingualRule = bilingual
         ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
         : '';
-    const taskRules = compressed
+    const taskRules = galbwaeExclusive
+        ? `Translate every supplied segment into final Korean under EXCLUSIVE TEMPORARY CHUSEOK GALBWAE TRANSLATION. Read all segments together for continuity, but return exactly one result for each id. Preserve narration/dialogue roles, quotation marks, Markdown and protected structure.`
+        : compressed
         ? `- Produce one result for every segment id. Read all segments together for continuity and speaker attribution; preserve each narration/dialogue type and quotation marks.
 - ${madExclusive ? 'Re-author directly as Korean-original writing under MAD KOREAN EXCLUSIVE.' : 'Translate into Korean; include source text only where an active GLOBAL/ALL-DIALOGUE rule explicitly requires bilingual output.'}`
         : madExclusive
@@ -4584,6 +4728,7 @@ TASK
 Repair only the supplied segments because foreign source text was accidentally left untranslated.
 - Return a complete corrected Korean translation for every supplied segment id.
 - Translate the accidentally retained foreign sentence or phrase naturally into Korean.
+- If detected_problem starts with UNTRANSLATED_CHARACTER_NAME, verify that the flagged token is a human or fictional character name in context, then render it in natural Hangul. A supplied fixed name mapping wins. Do not preserve a character name in Latin script merely because proper names normally remain unchanged; keep genuine brands, products, acronyms, codes, URLs and handles unchanged.
 - Keep already-correct Korean content, meaning, tone, intensity, speaker attribution, paragraph structure, and protected tokens intact.
 - Do not remove or translate proper names, acronyms, product names, or other terms that are naturally meant to stay in their original spelling.
 - Do not change or return any segment that was not supplied.
@@ -4687,6 +4832,10 @@ export function selectionTouchesDialogue(value, start, end) {
     return dialogueSpans(value).some(span => start < span.end && end > span.start);
 }
 
+function selectionTouchesTaggedContent(value, start, end) {
+    return pairedTagBlockRanges(value).some(range => start < range.end && end > range.start);
+}
+
 export function buildSelectionPrompt({
     source,
     sourceContext,
@@ -4725,12 +4874,18 @@ export function buildSelectionPrompt({
         ? boundReference(translation, contextMode === 'message' ? 20000 : 16000)
         : `${left}${selected}${right}`;
     const inDialogue = selectionTouchesDialogue(translation, start, end);
+    const inTaggedContent = selectionTouchesTaggedContent(translation, start, end);
+    const galbwaeExclusive = galbwaeMode(settings) !== 'off';
     const madExclusive = madKoreanExclusiveEnabled(settings);
-    const promptBaseline = madExclusive
+    const promptBaseline = galbwaeExclusive
+        ? galbwaeExclusiveRules(settings, inTaggedContent ? 'tagged_content' : inDialogue ? 'dialogue_mixed' : 'narration', [], speakerIdentity)
+        : madExclusive
         ? madKoreanExclusiveRules(settings, inDialogue ? 'mixed' : 'narration', [], speakerIdentity)
         : `ABSOLUTE TRANSLATION BASELINE
 ${baseTranslationPrompt(settings, inDialogue ? 'mixed' : 'scoped')}${normalizeNameLocks(speakerIdentity.nameLocks).length ? `\n\n${nameTokenInstruction([], speakerIdentity)}` : ''}`;
-    const configuredRules = madExclusive
+    const configuredRules = galbwaeExclusive
+        ? ''
+        : madExclusive
         ? (!developerCompressedPromptEnabled(settings) && settings?.developerHongjinFlavorEnabled === true ? promptIdentityAliasBlock(speakerIdentity) : '')
         : `${orderedTranslationRuleBlocks(settings, {
         oneTimeInstruction,
@@ -4852,12 +5007,17 @@ export function buildMultiSelectionPrompt({
         };
     });
     const hasDialogue = rows.some(row => row.in_dialogue);
+    const galbwaeExclusive = galbwaeMode(settings) !== 'off';
     const madExclusive = madKoreanExclusiveEnabled(settings);
-    const promptBaseline = madExclusive
+    const promptBaseline = galbwaeExclusive
+        ? galbwaeExclusiveRules(settings, 'mixed', [], speakerIdentity)
+        : madExclusive
         ? madKoreanExclusiveRules(settings, 'mixed', [], speakerIdentity)
         : `ABSOLUTE TRANSLATION BASELINE
 ${baseTranslationPrompt(settings, 'mixed')}${normalizeNameLocks(speakerIdentity.nameLocks).length ? `\n\n${nameTokenInstruction([], speakerIdentity)}` : ''}`;
-    const configuredRules = madExclusive
+    const configuredRules = galbwaeExclusive
+        ? ''
+        : madExclusive
         ? (!developerCompressedPromptEnabled(settings) && settings?.developerHongjinFlavorEnabled === true ? promptIdentityAliasBlock(speakerIdentity) : '')
         : `${orderedTranslationRuleBlocks(settings, {
         oneTimeInstruction,
