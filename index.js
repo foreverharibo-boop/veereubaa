@@ -5,7 +5,7 @@ import { sanitizeDebugValue, debugErrorChain, classifyDebugError, rememberReques
 import { createOutputTiming, outputTimingText } from './timing.js';
 import { bindPromptExpandEditors } from './prompt-editor.js';
 import { collectSegmentResponse, repairUnexpectedProseBreaks, repairSourceEllipses, selectionEllipsisReference } from './response-parser.js';
-import { minimalOutputEnabled, translateMinimalOutput } from './minimal-output.js';
+import { minimalOutputEnabled, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMinimalOutput } from './minimal-output.js';
 import { outputSplitCount, runOutputBatches, createSplitRequestQueue } from './output-splitting.js';
 import { activateTranslationExtension, isTranslationExtensionActive, registerTranslationExtension } from './pair-coordinator.js';
 import { buildDefaultCustomTranslatorTemplates } from './custom-translator-defaults.js';
@@ -48,7 +48,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.96';
+const EXTENSION_VERSION = '0.5.97';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3630,8 +3630,8 @@ function collectPartialSegmentTranslations(raw, expectedSegments) {
 }
 
 async function requestSegments(prompt, expectedSegments, options = {}) {
-    const maxRetries = 5;
-    const parseRetryDelays = [500, 700, 1000, 1400, 2000];
+    const maxRetries = 1;
+    const parseRetryDelays = [500];
     const completed = new Map();
     let pending = [...(expectedSegments || [])];
     let lastError;
@@ -3709,8 +3709,8 @@ Do not add markdown fences, commentary, explanations, or extra ids.`
     throw finalError;
 }
 async function requestSelectionCandidates(prompt, options = {}) {
-    const maxRetries = 5;
-    const parseRetryDelays = [500, 700, 1000, 1400, 2000];
+    const maxRetries = 1;
+    const parseRetryDelays = [500];
     let lastError;
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
@@ -4885,66 +4885,75 @@ async function translateOutputText(source, options = {}) {
         stage: options.stage || 'output-translation',
     }));
 
-    for (let repairAttempt = 0; repairAttempt < 5; repairAttempt += 1) {
-        const invalid = segmented.segments.filter(segment =>
-            findBannedWords(translations.get(segment.id), settings).length,
-        );
-        if (!invalid.length) break;
-        await repairSegmentsByOutputScope({
-            invalid,
-            segmented,
-            translations,
+    // This local pass never calls the provider. Keep deterministic marker,
+    // bilingual-dialogue and excess-name cleanup active even while all later
+    // AI repair requests are dormant.
+    normalizeLocallyRecoverableProtectedTokens(segmented, translations, settings, speakerScopes);
+
+    if (POST_TRANSLATION_AI_REPAIR_ENABLED) {
+        for (let repairAttempt = 0; repairAttempt < 5; repairAttempt += 1) {
+            const invalid = segmented.segments.filter(segment =>
+                findBannedWords(translations.get(segment.id), settings).length,
+            );
+            if (!invalid.length) break;
+            await repairSegmentsByOutputScope({
+                invalid,
+                segmented,
+                translations,
+                speakerScopes,
+                options: { ...options, speakerIdentity },
+                buildPrompt: buildBannedRepairPrompt,
+                stage: 'banned-word-repair',
+            });
+        }
+
+        for (let repairAttempt = 0; repairAttempt < 5; repairAttempt += 1) {
+            const invalid = findUntranslatedSegments(segmented.segments, translations, settings, speakerScopes);
+            if (!invalid.length) break;
+            // 짧은 이름 미번역만 남은 경우에는 동일 문장을 반복 호출하지 않는다.
+            if (repairAttempt >= 1 && invalid.every(segment => String(segment.untranslatedReason || '').startsWith('UNTRANSLATED_CHARACTER_NAME:'))) break;
+            await repairSegmentsByOutputScope({
+                invalid,
+                segmented,
+                translations,
+                speakerScopes,
+                options: { ...options, speakerIdentity },
+                buildPrompt: buildUntranslatedRepairPrompt,
+                stage: 'untranslated-repair',
+            });
+        }
+
+        // Planned terms are protected and no longer appear as plain source words
+        // here. The fallback therefore checks only any repeated roles that could
+        // not be planned, without touching already locked terminology.
+        await repairRepeatedRoleTermConsistency(segmented, translations, {
+            signal: options.signal,
+            timing: options.timing,
+        });
+
+        // Validate against the original protected source, not merely against the
+        // previous repair result. A missing NAME token can otherwise survive every
+        // post-processing pass and only fail during final assembly.
+        await repairProtectedTokenIntegrity(segmented, translations, {
+            ...options,
+            speakerIdentity,
             speakerScopes,
-            options: { ...options, speakerIdentity },
-            buildPrompt: buildBannedRepairPrompt,
-            stage: 'banned-word-repair',
         });
     }
-
-    for (let repairAttempt = 0; repairAttempt < 5; repairAttempt += 1) {
-        const invalid = findUntranslatedSegments(segmented.segments, translations, settings, speakerScopes);
-        if (!invalid.length) break;
-        // 짧은 이름 미번역만 남은 경우에는 동일 문장을 반복 호출하지 않는다.
-        if (repairAttempt >= 1 && invalid.every(segment => String(segment.untranslatedReason || '').startsWith('UNTRANSLATED_CHARACTER_NAME:'))) break;
-        await repairSegmentsByOutputScope({
-            invalid,
-            segmented,
-            translations,
-            speakerScopes,
-            options: { ...options, speakerIdentity },
-            buildPrompt: buildUntranslatedRepairPrompt,
-            stage: 'untranslated-repair',
-        });
-    }
-
-    // Planned terms are protected and no longer appear as plain source words
-    // here. The fallback therefore checks only any repeated roles that could
-    // not be planned, without touching already locked terminology.
-    await repairRepeatedRoleTermConsistency(segmented, translations, {
-        signal: options.signal,
-        timing: options.timing,
-    });
-
-    // Validate against the original protected source, not merely against the
-    // previous repair result. A missing NAME token can otherwise survive every
-    // post-processing pass and only fail during final assembly.
-    await repairProtectedTokenIntegrity(segmented, translations, {
-        ...options,
-        speakerIdentity,
-        speakerScopes,
-    });
 
     for (const [id, translation] of translations) {
         translations.set(id, repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(translation, speakerIdentity)));
     }
 
-    await runExperimentalQualityAudit({
-        segmented,
-        translations,
-        speakerScopes,
-        speakerIdentity,
-        options,
-    });
+    if (POST_TRANSLATION_AI_REPAIR_ENABLED) {
+        await runExperimentalQualityAudit({
+            segmented,
+            translations,
+            speakerScopes,
+            speakerIdentity,
+            options,
+        });
+    }
 
     normalizeTaggedOutputTranslations(segmented, translations);
 
@@ -4964,16 +4973,21 @@ async function translateOutputText(source, options = {}) {
 
     const remaining = [...translations.values()].flatMap(text => findBannedWords(text, settings));
     if (remaining.length) {
-        throw new Error(`금지어가 계속 남아 번역을 적용하지 않았습니다: ${[...new Set(remaining)].join(', ')}`);
+        if (POST_TRANSLATION_AI_REPAIR_ENABLED) {
+            throw new Error(`금지어가 계속 남아 번역을 적용하지 않았습니다: ${[...new Set(remaining)].join(', ')}`);
+        }
+        console.warn(`[베에르으바아] 금지어 의심이 남았지만 최초 번역 결과를 우선 적용합니다: ${[...new Set(remaining)].join(', ')}`);
     }
     const untranslated = findUntranslatedSegments(segmented.segments, translations, settings, speakerScopes);
     if (untranslated.length) {
-        if (untranslated.length === segmented.segments.length) {
+        if (POST_TRANSLATION_AI_REPAIR_ENABLED && untranslated.length === segmented.segments.length) {
             throw new Error('전체 번역 결과가 외국어 원문으로 남아 번역을 적용하지 않았습니다.');
         }
-        console.warn('[베에르으바아] 일부 구간의 미번역 의심이 해소되지 않아 나머지 번역 결과를 우선 적용합니다.', untranslated);
+        console.warn('[베에르으바아] 미번역 의심이 해소되지 않았지만 최초 번역 결과를 우선 적용합니다.', untranslated);
     }
-    const result = assembleTranslation(segmented, translations);
+    const result = assembleTranslation(segmented, translations, {
+        allowDamagedProtected: !POST_TRANSLATION_AI_REPAIR_ENABLED,
+    });
     if (!result.trim()) throw new Error('완성된 번역문이 비어 있습니다.');
     return {
         translation: result,

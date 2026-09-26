@@ -1250,7 +1250,7 @@ export function segmentSource(value, nameLocks = [], { translateTaggedContent = 
     };
 }
 
-export function assembleTranslation(segmented, translations) {
+export function assembleTranslation(segmented, translations, options = {}) {
     const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
     const joined = segmented.parts.map(part => {
         if (part.type === 'passthrough') return part.text;
@@ -1270,7 +1270,9 @@ export function assembleTranslation(segmented, translations) {
         strict: true,
         allowMissing: true,
     }));
-    const fullyRestored = restoreProtected(namesRestored, segmented.tokens, { strict: true });
+    const fullyRestored = restoreProtected(namesRestored, segmented.tokens, {
+        strict: options?.allowDamagedProtected !== true,
+    });
 
     // Critical final surface pass: malformed alternatives can become visible
     // only after an opaque NAME token is restored, which is AFTER AI QA.

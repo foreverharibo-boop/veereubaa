@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { minimalOutputEnabled, buildMinimalOutputPrompt, translateMinimalOutput } from '../minimal-output.js';
+import { minimalOutputEnabled, buildMinimalOutputPrompt, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMinimalOutput } from '../minimal-output.js';
 import { splitOutputSegments } from '../output-splitting.js';
 const splitMinimalOutputSegments = segmented => splitOutputSegments(segmented, 2);
 import { segmentSource, restoreProtected, assembleTranslation, buildOutputPrompt } from '../core.js';
@@ -17,6 +17,7 @@ const p=buildMinimalOutputPrompt(segmented.segments,settings,segmented.nameToken
 assert.match(p,/짧게 써줘/);assert.match(p,/홍진/);
 assert.ok(!p.includes('KEEP_CODE'));
 for(const forbidden of ['GLOBAL_SENTINEL','VOICE_SENTINEL','MAD KOREAN','HONGJIN FLAVOR','BANNED','FINE TUNING','SPEAKER ATTRIBUTION','TAGGED-CONTENT']) assert.ok(!p.includes(forbidden),forbidden);
+assert.equal(POST_TRANSLATION_AI_REPAIR_ENABLED,false);
 assert.ok(buildMinimalOutputPrompt([], {...settings,developerMinimalPrompt:'  '}).startsWith('자연스럽게 한국어로 번역하라.'));
 assert.ok(buildMinimalOutputPrompt([], {...settings,developerMinimalPrompt:'</textarea> TEST'}).startsWith('</textarea> TEST'));
 let calls=[];
@@ -49,8 +50,9 @@ const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMini
 calls=[];await run('He waited.');assert.equal(calls.length,1);
 settings.developerMode=false;await assert.rejects(run('He waited.'),/NORMAL_PATH/);settings.developerMode=true;
 settings.developerMinimalPromptEnabled=false;await assert.rejects(run('He waited.'),/NORMAL_PATH/);settings.developerMinimalPromptEnabled=true;
-// Missing NAME tokens are natural Korean omission and need no AI repair.
-let attempts=0;const damaged=segmentSource('Hong-jin waited.\n\nShe nodded.',[{source:'Hong-jin',target:'홍진'}]);
+// Post-translation protected-token repair remains in source but makes no AI
+// call while the shared switch is off, even when a structural token is absent.
+let attempts=0;const damaged=segmentSource('<b>Hong-jin</b> waited.\n\nShe nodded.',[{source:'Hong-jin',target:'홍진'}]);
 await translateMinimalOutput(damaged,settings,{}, {buildSourceMap,requestSegments:async(prompt,segments,opts)=>{
  attempts++;assert.ok(!prompt.includes('HONGJIN FLAVOR'));
  if(opts.stage!=='protected-token-repair')return new Map(segments.map(s=>[s.id,'기다렸다.']));
@@ -58,7 +60,9 @@ await translateMinimalOutput(damaged,settings,{}, {buildSourceMap,requestSegment
  return new Map(segments.map(s=>[s.id,translated(s)]));
 }});assert.equal(attempts,2);
 attempts=0;const omittedName=await translateMinimalOutput(damaged,settings,{}, {buildSourceMap,requestSegments:async(_p,ss)=>{attempts++;return new Map(ss.map(s=>[s.id,'누락']));}});
-assert.equal(attempts,2);assert.doesNotMatch(omittedName.translation,/홍진/);
+assert.equal(attempts,2);assert.match(omittedName.translation,/누락/);assert.doesNotMatch(omittedName.translation,/@@VERBA_DEEP/);
+const minimalSource=fs.readFileSync(new URL('../minimal-output.js', import.meta.url),'utf8');
+assert.match(minimalSource,/if \(POST_TRANSLATION_AI_REPAIR_ENABLED\)/);assert.match(minimalSource,/protected-token-repair/);
 const controller=new AbortController();controller.abort();calls=[];
 await assert.rejects(translateMinimalOutput(segmented,settings,{signal:controller.signal},{requestSegments,buildSourceMap}),{name:'AbortError'});assert.equal(calls.length,0);
 // Existing local newline cleanup and offsets still agree after assembly.

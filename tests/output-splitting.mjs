@@ -69,11 +69,12 @@ for(const row of requests){
   assert.equal(scope,expected);
  }
 }
-// Real whole-output pipeline: planning and final verification run once for the
-// whole message, not once per chunk; only the main translation is divided.
+// Real whole-output pipeline: planning/classification stay once per whole
+// message; dormant post-translation AI auditing makes no additional request.
 Object.assign(settings,{developerMadKoreanOutputEnabled:true,developerHongjinFlavorEnabled:true,developerMinimalPromptEnabled:false});
 let planned=0,classified=0,audited=0;
 const fullEnv={...env, ...core, minimalOutputEnabled,translateMinimalOutput,
+ POST_TRANSLATION_AI_REPAIR_ENABLED:false,
  normalizedCharacterNameLocks:()=>[{source:'Hong-jin',target:'홍진'}],
  planRepeatedRoleTermLocks:async s=>{planned++;assert.equal(s.segments.length,segmented.segments.length);return [];},
  classifyOutputDialogueSpeakers:async()=>{classified++;return scopes;},requestScopedOutputTranslations:route,
@@ -83,7 +84,7 @@ const fullEnv={...env, ...core, minimalOutputEnabled,translateMinimalOutput,
  buildSourceMap:(_s,_t,result)=>[{start:0,end:result.length}],console};
 const full=Function(...Object.keys(fullEnv),between('function normalizeTaggedOutputTranslations(', 'async function repairSegmentsByOutputScope(')+between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\nreturn translateOutputText;')(...Object.values(fullEnv));
 requests=[];const fullResult=await full(source,{speakerIdentity:identity});
-assert.equal(requests.length,3);assert.equal(planned,1);assert.equal(classified,1);assert.equal(audited,1);
+assert.equal(requests.length,3);assert.equal(planned,1);assert.equal(classified,1);assert.equal(audited,0);
 assert.match(fullResult.translation,/홍진/);assert.match(fullResult.translation,/`CODE_UNCHANGED`/);assert.match(fullResult.translation,/<Info_panel>/);
 // Minimal uses ONLY its own prompt regardless of the independent split setting.
 for(const count of [1,2,3]){
