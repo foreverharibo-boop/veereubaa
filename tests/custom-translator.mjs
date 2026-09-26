@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { buildDefaultCustomTranslatorTemplates } from '../custom-translator-defaults.js';
 
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
+const style = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 const definitions = [
     'output', 'input', 'selection', 'name', 'consistency', 'repair', 'quality', 'flavor', 'other',
 ];
@@ -212,5 +213,8 @@ assert.match(index, /target\.dataset\.verbaDeepCustomTranslatorKey[\s\S]*?normal
 assert.match(index, /customTranslatorModified\[key\] = instruction !== DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES\[key\]/);
 assert.match(index, /const outgoingPrompt = applyCustomTranslatorPrompt\(prompt, options\)/);
 assert.match(index, /customTargetSegments: pending/);
+assert.match(style, /\.verba-deep-custom-translator-field \.verba-deep-prompt-slot-head[\s\S]*?flex-wrap: nowrap/);
+assert.match(style, /\.verba-deep-custom-translator-state[\s\S]*?flex: 0 0 auto/);
+assert.match(style, /\.verba-deep-custom-translator-reset-one[\s\S]*?width: auto !important/);
 
 console.log('PASS: custom translator fully replaces default prompts with plain English instructions, automatic source data, and locked response contracts.');
