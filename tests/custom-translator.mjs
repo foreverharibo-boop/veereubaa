@@ -26,6 +26,38 @@ assert.equal(
     'Translate naturally.',
 );
 
+const normalizeSettingsStart = index.indexOf('function normalizeCustomTranslatorSettings(');
+const normalizeSettingsEnd = index.indexOf('const DEFAULT_SETTINGS =', normalizeSettingsStart);
+assert.ok(normalizeSettingsStart >= 0 && normalizeSettingsEnd > normalizeSettingsStart);
+const visibleDefaults = Object.fromEntries(definitions.map(key => [key, `Bundled ${key} instruction.`]));
+const normalizeCustomTranslatorSettings = Function(
+    'CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS',
+    'DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES',
+    'normalizeCustomTranslatorInstruction',
+    `${index.slice(normalizeSettingsStart, normalizeSettingsEnd)}\nreturn normalizeCustomTranslatorSettings;`,
+)(definitions.map(key => ({ key })), visibleDefaults, normalizeCustomTranslatorInstruction);
+const migratedBlank = normalizeCustomTranslatorSettings(
+    Object.fromEntries(definitions.map(key => [key, ''])),
+    {},
+);
+assert.equal(migratedBlank.templates.output, visibleDefaults.output);
+assert.equal(migratedBlank.modified.output, false);
+const migratedLegacyCustom = normalizeCustomTranslatorSettings({ output: 'My saved replacement.' }, {});
+assert.equal(migratedLegacyCustom.templates.output, 'My saved replacement.');
+assert.equal(migratedLegacyCustom.modified.output, true);
+const refreshedBundled = normalizeCustomTranslatorSettings(
+    { output: 'Old bundled instruction.' },
+    { output: false },
+);
+assert.equal(refreshedBundled.templates.output, visibleDefaults.output);
+assert.equal(refreshedBundled.modified.output, false);
+const preservedEdited = normalizeCustomTranslatorSettings(
+    { output: 'My edited instruction.' },
+    { output: true },
+);
+assert.equal(preservedEdited.templates.output, 'My edited instruction.');
+assert.equal(preservedEdited.modified.output, true);
+
 const settings = {
     customTranslatorEnabled: true,
     customTranslatorTemplates: {
@@ -93,6 +125,37 @@ assert.equal(
 );
 settings.customTranslatorEnabled = false;
 assert.equal(api.applyCustomTranslatorPrompt('UNCHANGED', { stage: 'output-translation' }), 'UNCHANGED');
+settings.customTranslatorEnabled = true;
+settings.customTranslatorModified = { ...Object.fromEntries(definitions.map(key => [key, false])) };
+settings.customTranslatorTemplates.output = 'Visible bundled text that must not replace the dynamic prompt.';
+assert.equal(
+    api.applyCustomTranslatorPrompt('DYNAMIC BUILT-IN PROMPT', {
+        stage: 'output-translation',
+        customTargetSegments: targets,
+    }),
+    'DYNAMIC BUILT-IN PROMPT',
+    'displayed but unedited bundled text keeps 베에르으바아의 dynamic built-in prompt',
+);
+settings.customTranslatorModified.output = true;
+assert.match(
+    api.applyCustomTranslatorPrompt('DYNAMIC BUILT-IN PROMPT', {
+        stage: 'output-translation',
+        customTargetSegments: targets,
+    }),
+    /Visible bundled text that must not replace the dynamic prompt/,
+    'editing the field activates complete prompt replacement',
+);
+settings.chuseokGalbwaeScope = 'all';
+settings.customTranslatorTemplates.output = 'CUSTOM TRANSLATOR MUST NOT APPEAR';
+const exclusiveGalbwae = api.applyCustomTranslatorPrompt('OLD DEFAULT MUST NOT APPEAR', {
+    stage: 'output-translation',
+    customTargetSegments: targets,
+});
+assert.match(exclusiveGalbwae, /EXCLUSIVE TEMPORARY CHUSEOK GALBWAE STYLE/);
+assert.match(exclusiveGalbwae, /나 알아\? → 나를 아늕랴!!/);
+assert.match(exclusiveGalbwae, /씨핤, 씨핧, 샤갈, 쌱앐, 쌰갈, 시핣/);
+assert.match(exclusiveGalbwae, /NAME HANDLING ORDER — ABSOLUTE/);
+assert.doesNotMatch(exclusiveGalbwae, /CUSTOM TRANSLATOR MUST NOT APPEAR|OLD DEFAULT MUST NOT APPEAR/);
 
 const expectedOrder = definitions.map(key => `{ key: '${key}'`);
 let previous = -1;
@@ -112,14 +175,26 @@ assert.doesNotMatch(customTranslatorUi, /data-verba-deep-custom-translator-mode/
 assert.doesNotMatch(customTranslatorUi, /간편 설정/);
 assert.doesNotMatch(customTranslatorUi, /고급 설정/);
 assert.doesNotMatch(customTranslatorUi, /직접 구성용 변수 보기/);
-assert.match(customTranslatorUi, /원하는 항목에 <b>영어 지침만<\/b> 적으세요/);
-assert.match(customTranslatorUi, /기존 프롬프트를 완전히 대체합니다/);
-assert.match(customTranslatorUi, /원문 데이터·JSON 응답 형식·이름·태그·보호 표식은 베에르으바아가 자동으로 붙이며/);
-assert.match(index, /채팅 번역/);
-assert.match(index, /내가 보내는 글/);
-assert.match(index, /선택한 부분 다시 번역/);
+assert.match(customTranslatorUi, /<b>영어 내장 핵심 지침<\/b>이 표시됩니다/);
+assert.match(customTranslatorUi, /그대로 두면 실제 번역은 기존 동적 내장 프롬프트를 사용하고/);
+assert.match(customTranslatorUi, /내용을 편집하면 그 항목만 커스텀 지침으로 전환되어 기존 프롬프트를 완전히 대체/);
+assert.match(customTranslatorUi, /원문 데이터·JSON 응답 형식·이름·태그·보호 표식은 베에르으바아가 자동으로 붙입니다/);
+assert.match(customTranslatorUi, /내장 기본값 사용 중/);
+assert.match(customTranslatorUi, /커스텀 대체 중/);
+assert.match(customTranslatorUi, /data-verba-deep-custom-translator-reset-key/);
+assert.match(index, /아웃풋 번역/);
+assert.match(index, /인풋 번역/);
+assert.match(index, /선택 재번역/);
+assert.doesNotMatch(index, /label: '채팅 번역'/);
+assert.doesNotMatch(index, /label: '내가 보내는 글'/);
+assert.match(customTranslatorUi, /new Set\(\['output', 'input', 'selection', 'flavor'\]\)/);
+assert.match(customTranslatorUi, /일반 사용자용/);
+assert.match(customTranslatorUi, /class="verba-deep-custom-translator-advanced"/);
+assert.match(customTranslatorUi, /<summary>고급 내부 항목 <small>내부 처리용 · 수정 비추천<\/small><\/summary>/);
+assert.doesNotMatch(customTranslatorUi, /<details class="verba-deep-custom-translator-advanced" open/);
 assert.match(index, /bindPromptExpandEditors\(panel\);\s*syncCustomTranslatorControls\(panel\);/);
 assert.match(index, /target\.dataset\.verbaDeepCustomTranslatorKey[\s\S]*?normalizeCustomTranslatorInstruction\(target\.value\)[\s\S]*?saveSettings\(\)/);
+assert.match(index, /customTranslatorModified\[key\] = instruction !== DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES\[key\]/);
 assert.match(index, /const outgoingPrompt = applyCustomTranslatorPrompt\(prompt, options\)/);
 assert.match(index, /customTargetSegments: pending/);
 
