@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { buildDefaultCustomTranslatorTemplates } from '../custom-translator-defaults.js';
 
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const definitions = [
     'output', 'input', 'selection', 'name', 'consistency', 'repair', 'quality', 'flavor', 'other',
 ];
 const defaults = Object.fromEntries(definitions.map(key => [key, '']));
+const originalDefaults = buildDefaultCustomTranslatorTemplates([
+    'global', 'allDialogue', 'dialogue', 'otherDialogue', 'fineTuning',
+]);
+assert.ok(originalDefaults.output.length > 10000, 'output shows the original long built-in prompt');
+assert.ok(originalDefaults.input.length > 7000, 'input shows the original long built-in prompt');
+assert.ok(originalDefaults.selection.length > 8000, 'selection shows the original long built-in prompt');
+assert.ok(originalDefaults.flavor.length > 25000, 'flavor shows the original MAD Korean + Hongjin prompt');
+assert.match(originalDefaults.output, /You are a precise translation engine/);
+assert.match(originalDefaults.input, /Korean-to-English translation engine/);
+assert.match(originalDefaults.flavor, /MAD KOREAN EXCLUSIVE ENGINE/);
+assert.match(originalDefaults.flavor, /KIM HONG-JIN/);
+assert.match(originalDefaults.repair, /BANNED WORD REPAIR — ORIGINAL BUILT-IN PROMPT/);
+assert.doesNotMatch(originalDefaults.output, /Translate every supplied source segment into fluent, idiomatic Korean that reads as if it were originally written in Korean/);
 
 const normalizeStart = index.indexOf('function normalizeCustomTranslatorInstruction(');
 const normalizeEnd = index.indexOf('const DEFAULT_SETTINGS =', normalizeStart);
@@ -175,10 +189,11 @@ assert.doesNotMatch(customTranslatorUi, /data-verba-deep-custom-translator-mode/
 assert.doesNotMatch(customTranslatorUi, /간편 설정/);
 assert.doesNotMatch(customTranslatorUi, /고급 설정/);
 assert.doesNotMatch(customTranslatorUi, /직접 구성용 변수 보기/);
-assert.match(customTranslatorUi, /<b>영어 내장 핵심 지침<\/b>이 표시됩니다/);
-assert.match(customTranslatorUi, /그대로 두면 실제 번역은 기존 동적 내장 프롬프트를 사용하고/);
+assert.match(customTranslatorUi, /<b>기존 영어 내장 프롬프트 원문<\/b>이 표시됩니다/);
+assert.match(customTranslatorUi, /실제 수정 대상인 지침 본문은 줄이지 않고 그대로 불러옵니다/);
+assert.match(customTranslatorUi, /그대로 두면 기존 동적 내장 프롬프트를 사용하고/);
 assert.match(customTranslatorUi, /내용을 편집하면 그 항목만 커스텀 지침으로 전환되어 기존 프롬프트를 완전히 대체/);
-assert.match(customTranslatorUi, /원문 데이터·JSON 응답 형식·이름·태그·보호 표식은 베에르으바아가 자동으로 붙입니다/);
+assert.match(customTranslatorUi, /원문 데이터와 잠긴 JSON 응답 계약처럼 실행할 때 자동으로 붙는 부분만 제외하고/);
 assert.match(customTranslatorUi, /내장 기본값 사용 중/);
 assert.match(customTranslatorUi, /커스텀 대체 중/);
 assert.match(customTranslatorUi, /data-verba-deep-custom-translator-reset-key/);
