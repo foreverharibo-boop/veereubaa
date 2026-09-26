@@ -220,6 +220,40 @@
     writing-mode: horizontal-tb !important;
 }
 
+.verba-deep-profile-fallback-options,
+.verba-deep-profile-race-options {
+    display: grid;
+    gap: 6px;
+    padding: 7px 8px;
+    border: 1px solid color-mix(in srgb, var(--verba-deep-border) 42%, transparent);
+    border-radius: 9px;
+}
+
+.verba-deep-profile-fallback-options[hidden],
+.verba-deep-profile-race-options[hidden] {
+    display: none !important;
+}
+
+.verba-deep-profile-fallback-time-row,
+.verba-deep-profile-race-time-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.verba-deep-profile-fallback-time-row input,
+.verba-deep-profile-race-time-row input {
+    flex: 0 0 62px;
+    width: 62px !important;
+    min-width: 62px;
+    max-width: 62px;
+}
+
+.verba-deep-profile-fallback-time-row > span,
+.verba-deep-profile-race-time-row > span {
+    white-space: nowrap;
+}
+
 .verba-deep-wide {
     width: 100%;
 }
@@ -3074,6 +3108,18 @@
     flex-basis: 72px;
     width: 72px !important;
     min-width: 72px;
+}
+
+#verba-deep-settings .verba-deep-profile-fallback-options,
+#verba-deep-settings .verba-deep-profile-race-options {
+    gap: 4px;
+    padding: 5px 6px;
+    border-radius: 7px;
+}
+
+#verba-deep-settings .verba-deep-profile-fallback-time-row,
+#verba-deep-settings .verba-deep-profile-race-time-row {
+    gap: 5px;
 }
 
 #verba-deep-settings .verba-deep-check-row {
