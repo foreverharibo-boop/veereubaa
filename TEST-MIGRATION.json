@@ -1,0 +1,19 @@
+{
+  "baselineVersion": "0.6.1",
+  "findings": {
+    "compressed-prompts.mjs": "Old vocative/subject-omission wording conflicts with current policy. Preserve builder matrix, test current compression gates and retain multilingual/scope checks in source-policy-update.",
+    "extreme-compressed-prompts.mjs": "Expects removed DEEPSEEK HONGJIN VOICE PASS marker. Current compression matrix and style-policy tests cover active scopes/controls.",
+    "hongjin-final-gate.mjs": "Removed final_hongjin_voice_gate marker. Replaced by executable confirmed-speaker-only audit tests.",
+    "hongjin-profanity-targeting.mjs": "Old profanity wording/quota assertions. Test actual current strengths, USER-directed profanity guard and source-grounded audit.",
+    "hongjin-raw-voice.mjs": "Old voice labels. Test current long voice labels, controls and narration/input isolation.",
+    "local-speaker-attribution.mjs": "Imports absent inferLocalTargetDialogueScopes; long engine uses async classifyOutputDialogueSpeakers. New speaker-audit-routing tests actual classifier with mock success, unknown and failure.",
+    "mad-final-gate.mjs": "Removed final_mad_korean_gate marker. New executable audit covers combined tastes and mode exclusions.",
+    "mad-recomposition.mjs": "Expects removed DEEPSEEK V4.1 workflow. Current-style-policy checks active SCENE-FIRST RECOMPOSITION, scene relations and input isolation.",
+    "mad-targeted-repair.mjs": "Imports absent buildMadKoreanTargetedAuditPrompt. New audit validates complete ids, content, protected tokens, layout, banned words and abort before committing any edit.",
+    "real-output-regressions.mjs": "Imports absent buildHongjinVoiceRewritePrompt. New source/draft fixture checks mocked correction; does not claim live-model translation quality.",
+    "subject-pronoun-omission.mjs": "Contradicts current conditional omission rule by requiring OMIT ONLY WHEN MORE NATURAL to be absent. Current-style-policy verifies existing rule without changing translation prose.",
+    "translation-layer-separation.mjs": "Imports absent voice rewrite builder. New tests cover taste-off skip and current primary/taste isolation.",
+    "voice-intensity-flexibility.mjs": "Expects obsolete unrestricted MAD surface-intensity override. Current long engine preserves source force and grants scoped Hongjin voice permission. Current-style-policy preserves that distinction."
+  },
+  "disposition": "Original 13 failing sources retained in tests/legacy/*.mjs.txt. Active equivalents and new executable audit tests are listed above; no production prose was changed just to satisfy an obsolete assertion. All tests use local code/mocks; no live AI provider or SillyTavern browser was exercised."
+}

@@ -1,3 +1,4 @@
+const Function = (...args) => globalThis.Function('POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, POST_TRANSLATION_AI_REPAIR_ENABLED);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { minimalOutputEnabled, buildMinimalOutputPrompt, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMinimalOutput } from '../minimal-output.js';

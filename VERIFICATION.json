@@ -1,328 +1,253 @@
 {
-  "version": "0.6.1",
-  "baselineVersion": "0.6.0",
-  "passed": 31,
-  "total": 44,
-  "newFailures": [],
-  "preExistingFailures": [
-    "compressed-prompts.mjs",
-    "extreme-compressed-prompts.mjs",
-    "hongjin-final-gate.mjs",
-    "hongjin-profanity-targeting.mjs",
-    "hongjin-raw-voice.mjs",
-    "local-speaker-attribution.mjs",
-    "mad-final-gate.mjs",
-    "mad-recomposition.mjs",
-    "mad-targeted-repair.mjs",
-    "real-output-regressions.mjs",
-    "subject-pronoun-omission.mjs",
-    "translation-layer-separation.mjs",
-    "voice-intensity-flexibility.mjs"
-  ],
-  "unchangedDefaultBuilderComparisons": 324,
-  "syntax": "All 57 JS/MJS pass node --check",
-  "coverage": [
-    "Repeated names in current message",
-    "Distinct original identities and ambiguous shared rows",
-    "Legacy translation without source map",
-    "Aligned evidence from active translation and swipes",
-    "AI history disabled by default; checked candidates only",
-    "Local name lock without profile, AI fallback only when needed",
-    "AI error and cancellation preserve safe local path",
-    "Popup dependency controls",
-    "Existing custom migration and independent tastes retained"
-  ],
-  "limitations": [
-    "No live SillyTavern server/browser session",
-    "No external translation API calls"
-  ],
-  "results": [
+  "version": "0.6.2",
+  "passed": 45,
+  "failed": 0,
+  "tests": [
     {
       "test": "auto-input-setting.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: auto-input initial state, ON/OFF, change/save handling and early binding; DOM adapter, not native browser clicks.\n"
     },
     {
       "test": "backport-features.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: v0.5.53 long prompts with local line-break recovery, prompt editor integration, and selection-only request isolation.\n"
     },
     {
       "test": "bilingual-dedupe-and-token-variants.mjs",
       "exit": 0,
-      "output": ""
+      "output": "bilingual-dedupe-and-token-variants ok\n"
     },
     {
       "test": "bilingual-dialogue-local-format.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: bilingual dialogue is detected from user prompts and enforced locally.\n"
     },
     {
       "test": "chuseok-galbwae.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 긴르바 갈봬체 배타 모드, 태그 예외, 굵은 글씨 지시, 이름 소유격 검수와 UI가 연결됨.\n"
     },
     {
       "test": "compressed-prompts.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: 152 current compression routes and developer gates, with original builder fixtures.\n"
+    },
+    {
+      "test": "current-style-policy.mjs",
+      "exit": 0,
+      "output": "PASS: current long MAD recomposition, conditional subject omission, force fidelity, Hongjin override/controls and scope isolation across compression modes.\n"
     },
     {
       "test": "custom-translator.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: five original-prose editors with separately scoped tastes; custom replacement preserves dynamic settings, identities, names, payloads, selection contexts and schemas; legacy saved values survive update/reload.\nPASS: exact one-time taste migration, independent reset/reload, compression modes, speaker scopes and five rendered fields.\n"
     },
     {
       "test": "diagnostics.mjs",
       "exit": 0,
-      "output": ""
-    },
-    {
-      "test": "extreme-compressed-prompts.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "PASS: diagnostic classification, redaction, bounded raw responses, request ON/OFF, cancellation, last-record UI/copy gates\n"
     },
     {
       "test": "flavor-preset-restore.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: preset JSON roundtrip, ON/OFF, all 9 choices, visible controls and disabled states, re-save, legacy and prompt-only, developer locked/unlocked.\nPASS: minimal experiment flag/text persist in translation presets without unlocking developer mode.\nPASS: independent split count in translation presets, prompt-only preservation, legacy defaults, invalid values, no developer auto-unlock.\n"
     },
     {
       "test": "general-flavors.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: new password, old-session relock without setting loss, general controls/handlers, flavor independence and developer-only gates (local mocks).\n"
     },
     {
       "test": "general-translation-settings.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: general split/relationship layout, solid borders, lock independence, target-only prompts, saved settings and complete monitor removal.\n"
     },
     {
       "test": "google-free.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 긴르바 무료 Google 엔진 선택, 안전 분할, 보호 토큰, 로컬 한영병기 경로, AI 전용 기능 차단.\n"
+    },
+    {
+      "test": "hongjin-enforced-rewrite.mjs",
+      "exit": 0,
+      "output": "PASS: common OFF gate makes zero requests; unchanged compliant voice is accepted.\n"
     },
     {
       "test": "hongjin-final-gate.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: Hongjin review only receives confirmed target dialogue.\n"
     },
     {
       "test": "hongjin-profanity-targeting.mjs",
-      "exit": 1,
-      "output": "음)\\n' +\n    '\\n' +\n    '\\n' +\n    '\\n' +\n    'TOP PRIORITY — NO MISOGYNY\\n' +\n    \"- Across the entire translated output, never use misogynistic slurs, woman-hating labels, gendered degradation, or wording that reduces women to sex objects or an inferior class. This covers narration, inner thought, metadata, and every character, USER, and NPC's dialogue.\\n\" +\n    '- This rule overrides source-word fidelity and every style permission: Mad Korean, Hongjin flavor, transcreation strength, profanity frequency, vulgarity, teasing, playfulness, and age voice. Neither joking intimacy, affection, fictional characterization, nor rough narration grants an exception.\\n' +\n    '- Person-directed forms including 년/네 년/이년/저년/미친년/독한 년/씨발년/시발년/썅년/개년/김치녀/된장녀/맘충/보지년/걸레년/창녀/암캐/계집/계집애 are forbidden, also with spaces, particles, intervening punctuation, or spelling evasion. In particular, “네 년” is a slur, not an allowed spaced variant. Calendar/elapsed-time year units such as 2026년/몇 년 remain allowed.\\n' +\n    '- If the source contains abuse, preserve its target, intent, force, and scene consequence in non-gendered wording rather than reproducing the prohibited expression. Before returning, inspect every translated field and rewrite any violation without adding commentary.\\n' +\n    'END TOP PRIORITY\\n' +\n    'DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY\\n' +\n    '- EXPERIMENTAL E→K voice transcreation layer.\\n' +\n    '- Fixed personality premise sent with this translation:\\n' +\n    '  \"이 캐릭터는 능글맞고 장난기가 많은 성격이며 츤데레식, 능글맞은, 천박한 말투를 사용한다.\"\\n' +\n    \"- Translate the TARGET CHARACTER's dialogue as if this personality is speaking Korean natively: sly, shamelessly playful, teasing, tsundere-flavored, rough, vulgar, brazen, and casually profane.\\n\" +\n    '- This is intentionally a CHARACTER-VOICE OVERRIDE for translation style. It may add profanity, vulgar intensifiers, cheeky verbal jabs, interjections, and playful phrasing even when those exact words are absent from the source, according to the selected controls below.\\n' +\n    \"- Added material may ONLY operate at the surface voice level. Preserve the source's underlying proposition, events, actions, who did what to whom, speaker/addressee, factual relationships, chronology, consent/refusal, threats that actually exist, sexual explicitness, emotional direction, and scene stakes.\\n\" +\n    '- Do NOT inv'... 8989 more characters,\n  expected: /아, 씨발\\. 뒤 보지 마\\./,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: current profanity strengths, user-target guard and source-grounded review.\n"
     },
     {
       "test": "hongjin-raw-voice.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: concise voice control values and speaker/input isolation.\n"
     },
     {
-      "test": "local-speaker-attribution.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "test": "integrated-author-pass.mjs",
+      "exit": 0,
+      "output": "PASS: audit reuses active custom taste prose, current settings, identity and original source.\n"
     },
     {
       "test": "mad-final-gate.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: combined MAD/Hongjin scopes and exclusive/minimal/free-engine exclusions.\n"
     },
     {
-      "test": "mad-recomposition.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "test": "mad-narration-micro-audit.mjs",
+      "exit": 0,
+      "output": "PASS: source-grounded MAD review handles narration and retains draft on request failure.\n"
     },
     {
       "test": "mad-targeted-repair.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: invalid ids/empty/layout/banned/token results and cancellation never commit partial edits.\n"
     },
     {
       "test": "minimal-output.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: minimal-only prompt and actual entry path, lock/enable gates, optional call exclusion, name/code/tag preservation, source mapping, local cleanup, repair bounds and cancellation.\nPASS: developer-only escaped UI, toggle restores saved settings, developer shutdown disables experiment but retains text/flavors.\n"
     },
     {
       "test": "name-lock-collision.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: exact source identities stay separate; safe repeated names update locally, ambiguous rows change only the selected occurrence, and optional AI history uses aligned evidence.\n"
     },
     {
       "test": "name-lock-flow.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: swipe evidence collection, exact identity, optional API flow, checked forms only, failure/cancel handling and popup controls.\n"
     },
     {
       "test": "name-lock-priority.mjs",
       "exit": 0,
-      "output": ""
+      "output": "Name-lock routing: PASS (841 checks plus identity/restoration assertions; no live AI calls)\n"
     },
     {
       "test": "namespace-isolation.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 베에르으바아 uses isolated verba-deep extension, DOM, storage, command, token, and global namespaces.\n"
     },
     {
       "test": "output-action.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: /verba-deep routing/cancellation/retry, duplicate guards, errors, popup creation/options/dismissal/placement (DOM adapter). API calls: 0; live SillyTavern browser: not tested.\n"
     },
     {
       "test": "output-splitting.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: independent 1/2/3 split gate, full coverage, unchanged normal/compact/extreme prompts, scope isolation, whole-output planning/checks, minimal combinations, 3-request concurrency, order, cancellation/failure and UI.\n"
     },
     {
       "test": "output-timing.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: output timing accounting, parallel overlap, OFF/reset, newest-job isolation, real request/parse/transport retry/fallback paths, queued/active cancellation; simulated provider only.\n"
     },
     {
       "test": "pair-coordination.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: verba-deep shares one display owner, defaults to Verba, switches manually, rejects peer display adoption, and gates automatic input/output work.\n"
     },
     {
       "test": "post-translation-ai-repair-disabled.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: local cleanup remains active while every post-translation AI repair path is preserved but dormant.\n"
     },
     {
       "test": "profile-action.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: profile command registration, A/B/C popup, current marker, disabled/stale slots, persistence, dismissal, hidden-anchor placement and existing icon cycle. DOM adapter; no API calls.\n"
     },
     {
       "test": "profile-race.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 긴르바 지연 경주가 사용자 지정 초 간격 시차 호출·첫 정상 응답·패배 요청 취소·분 단위 제한·사용자 취소를 처리함.\n"
     },
     {
       "test": "prompt-slots-collapse.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: four prompt slots collapse together, preserve their controls, default open, and persist UI state.\n"
     },
     {
       "test": "protected-recovery.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS protected recovery: exact missing/excess counts, moved marks, mappings, redaction/limits, successful log/copy data, no-op, OFF/reset, newer-log guard, 5-attempt failure, cancellation, diagnostic isolation (mock requests).\n"
     },
     {
       "test": "real-output-regressions.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: recorded-style defect is sent with source/draft evidence and mock correction applied; no live AI quality claim.\n"
     },
     {
       "test": "response-recovery.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: safe syntax recovery, exact text preservation, truncated-row salvage, malformed/ambiguous rejection, missing-only retry, intermediate recovered logs and debug OFF/reset (mock AI).\nPASS: unexpected prose blank lines, protected layout, source-map offsets and one-call cleanup with debug ON/OFF.\n"
     },
     {
       "test": "source-ellipsis.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 1260 ellipsis assertions plus parser/assembly/candidate/selection/protected-content integration; local mean 0.436 ms for 24800 characters. No API calls.\n"
     },
     {
       "test": "source-layout.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 490 layout assertions plus protected layout/candidate checks; 28500 chars, mean 0.668 ms/local pass (container, not phone).\n"
     },
     {
       "test": "source-map-selection.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: selection retranslation preserves source mapping across single, crossed, and repeated ranges.\n"
     },
     {
       "test": "source-policy-update.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 228 prompt routes, multilingual source policies, profanity/metric scope, three-candidate local cleanup and removed register monitor. No live AI calls.\n"
     },
     {
-      "test": "subject-pronoun-omission.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "test": "speaker-audit-routing.mjs",
+      "exit": 0,
+      "output": "PASS: dormant audit can classify speakers when explicitly enabled; unknown/failure never grants Hongjin voice. Ordinary MAD routing unchanged.\n"
     },
     {
       "test": "tagged-content-toggle.mjs",
       "exit": 0,
-      "output": ""
+      "output": "PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 긴르바 저장/UI/분할 경로에 연결됨.\n"
+    },
+    {
+      "test": "taste-audit-wiring.mjs",
+      "exit": 0,
+      "output": "PASS: real output entry point makes zero audit calls when OFF and applies a mock audit when deliberately enabled; UI shows disabled without resetting saved preferences.\n"
     },
     {
       "test": "translation-layer-separation.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "voice-intensity-flexibility.mjs",
-      "exit": 1,
-      "output": " invent an ellipsis to dramatize the Korean. Stuttering/restarts, commas, sleepy speech, and sentence breaks do not authorize trailing dots: \"W-what time is it?\" can be \"지, 지금 몇 시야?\", not \"지, 지금 몇 시야……?\"; \"So,\" does not supply \"그럼……\". Before returning, compare ellipsis sequences in each target with its source in order; preserve the same sequence count and exact characters, including zero when none exist. Place each at its corresponding pause in the translated passage; for selected fragments, preserve only pauses belonging to that fragment, never import surrounding ones. This also applies with the optional voice add-on enabled. It does not require matching the total number of sentence-ending periods after sentence restructuring; do not modify decimals, URLs, code, or protected tokens.\\n' +\n    '- NATURAL VOCATIVES: rebuild teasing/insulting addresses as idiomatic Korean phrases, not stacked translated labels. Do not append 인간/사람 to an insult unless human identity itself matters. Keep the same referent, meaningful size/trait, and force; do not soften into affection. Added profanity requires the active voice exception. This addresses dialogue wording, not valid surrounding narration.\\n' +\n    \"- SUBJECT OR VOCATIVE: in dialogue, choose whether a name, affectionate nickname, or title works more naturally as a grammatical subject or as direct address. If particles or honorific agreement make the connection awkward, separate an actual listener's name/address from the clause and rebuild the rest as spoken Korean. Preserve the actor and listener; never turn a reference to a third person into direct address.\\n\" +\n    '- Keep affectionate address and playful honorifics when supported by the source or authorized voice and natural in context. Do not add formal particles such as 께서 merely to match 시/계시 or make the grammar look ceremonious; neither 께서 nor playful honorifics are banned. Preserve configured 반말/존댓말 and established relationships.\\n' +\n    '- Do not place a comma after every name, omit subjects wholesale, or invent a nickname or action. Use separation only when it sounds more natural aloud; omission must still meet the applicable subject/possessive rule, and ellipsis fidelity remains unchanged.\\n' +\n    '- NATURAL INSULT REFERENC'... 16049 more characters,\n  expected: /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\\n]+may be freely adjusted/u,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "exit": 0,
+      "output": "PASS: ordinary translation, active flavor composition and optional review remain separate.\n"
     }
   ],
-  "baselineFailures": [
-    {
-      "test": "compressed-prompts.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "extreme-compressed-prompts.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "hongjin-final-gate.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "hongjin-profanity-targeting.mjs",
-      "exit": 1,
-      "output": "음)\\n' +\n    '\\n' +\n    '\\n' +\n    '\\n' +\n    'TOP PRIORITY — NO MISOGYNY\\n' +\n    \"- Across the entire translated output, never use misogynistic slurs, woman-hating labels, gendered degradation, or wording that reduces women to sex objects or an inferior class. This covers narration, inner thought, metadata, and every character, USER, and NPC's dialogue.\\n\" +\n    '- This rule overrides source-word fidelity and every style permission: Mad Korean, Hongjin flavor, transcreation strength, profanity frequency, vulgarity, teasing, playfulness, and age voice. Neither joking intimacy, affection, fictional characterization, nor rough narration grants an exception.\\n' +\n    '- Person-directed forms including 년/네 년/이년/저년/미친년/독한 년/씨발년/시발년/썅년/개년/김치녀/된장녀/맘충/보지년/걸레년/창녀/암캐/계집/계집애 are forbidden, also with spaces, particles, intervening punctuation, or spelling evasion. In particular, “네 년” is a slur, not an allowed spaced variant. Calendar/elapsed-time year units such as 2026년/몇 년 remain allowed.\\n' +\n    '- If the source contains abuse, preserve its target, intent, force, and scene consequence in non-gendered wording rather than reproducing the prohibited expression. Before returning, inspect every translated field and rewrite any violation without adding commentary.\\n' +\n    'END TOP PRIORITY\\n' +\n    'DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY\\n' +\n    '- EXPERIMENTAL E→K voice transcreation layer.\\n' +\n    '- Fixed personality premise sent with this translation:\\n' +\n    '  \"이 캐릭터는 능글맞고 장난기가 많은 성격이며 츤데레식, 능글맞은, 천박한 말투를 사용한다.\"\\n' +\n    \"- Translate the TARGET CHARACTER's dialogue as if this personality is speaking Korean natively: sly, shamelessly playful, teasing, tsundere-flavored, rough, vulgar, brazen, and casually profane.\\n\" +\n    '- This is intentionally a CHARACTER-VOICE OVERRIDE for translation style. It may add profanity, vulgar intensifiers, cheeky verbal jabs, interjections, and playful phrasing even when those exact words are absent from the source, according to the selected controls below.\\n' +\n    \"- Added material may ONLY operate at the surface voice level. Preserve the source's underlying proposition, events, actions, who did what to whom, speaker/addressee, factual relationships, chronology, consent/refusal, threats that actually exist, sexual explicitness, emotional direction, and scene stakes.\\n\" +\n    '- Do NOT inv'... 8989 more characters,\n  expected: /아, 씨발\\. 뒤 보지 마\\./,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "hongjin-raw-voice.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "local-speaker-attribution.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "mad-final-gate.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "mad-recomposition.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "mad-targeted-repair.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "real-output-regressions.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "subject-pronoun-omission.mjs",
-      "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "translation-layer-separation.mjs",
-      "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
-    },
-    {
-      "test": "voice-intensity-flexibility.mjs",
-      "exit": 1,
-      "output": " invent an ellipsis to dramatize the Korean. Stuttering/restarts, commas, sleepy speech, and sentence breaks do not authorize trailing dots: \"W-what time is it?\" can be \"지, 지금 몇 시야?\", not \"지, 지금 몇 시야……?\"; \"So,\" does not supply \"그럼……\". Before returning, compare ellipsis sequences in each target with its source in order; preserve the same sequence count and exact characters, including zero when none exist. Place each at its corresponding pause in the translated passage; for selected fragments, preserve only pauses belonging to that fragment, never import surrounding ones. This also applies with the optional voice add-on enabled. It does not require matching the total number of sentence-ending periods after sentence restructuring; do not modify decimals, URLs, code, or protected tokens.\\n' +\n    '- NATURAL VOCATIVES: rebuild teasing/insulting addresses as idiomatic Korean phrases, not stacked translated labels. Do not append 인간/사람 to an insult unless human identity itself matters. Keep the same referent, meaningful size/trait, and force; do not soften into affection. Added profanity requires the active voice exception. This addresses dialogue wording, not valid surrounding narration.\\n' +\n    \"- SUBJECT OR VOCATIVE: in dialogue, choose whether a name, affectionate nickname, or title works more naturally as a grammatical subject or as direct address. If particles or honorific agreement make the connection awkward, separate an actual listener's name/address from the clause and rebuild the rest as spoken Korean. Preserve the actor and listener; never turn a reference to a third person into direct address.\\n\" +\n    '- Keep affectionate address and playful honorifics when supported by the source or authorized voice and natural in context. Do not add formal particles such as 께서 merely to match 시/계시 or make the grammar look ceremonious; neither 께서 nor playful honorifics are banned. Preserve configured 반말/존댓말 and established relationships.\\n' +\n    '- Do not place a comma after every name, omit subjects wholesale, or invent a nickname or action. Use separation only when it sounds more natural aloud; omission must still meet the applicable subject/possessive rule, and ellipsis fidelity remains unchanged.\\n' +\n    '- NATURAL INSULT REFERENC'... 16049 more characters,\n  expected: /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\\n]+may be freely adjusted/u,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
-    }
-  ]
+  "syntaxChecked": [
+    "base-editor.js",
+    "core.js",
+    "custom-translator-defaults.js",
+    "diagnostics.js",
+    "google-free.js",
+    "index.js",
+    "minimal-output.js",
+    "output-splitting.js",
+    "pair-coordinator.js",
+    "prompt-editor.js",
+    "response-parser.js",
+    "taste-audit.js",
+    "timing.js",
+    "translation-composer.js"
+  ],
+  "baselinePromptComparisons": 324,
+  "legacyFailureReport": "TEST-MIGRATION.json",
+  "aiAuditEnabled": false,
+  "liveApiTested": false,
+  "liveSillyTavernTested": false
 }
