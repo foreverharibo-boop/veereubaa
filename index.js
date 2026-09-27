@@ -1,3 +1,4 @@
+import { previousUserSource, appendPreviousUserContext } from './previous-user-context.js';
 import { runTasteQualityAudit } from './taste-audit.js';
 import { extension_settings, getContext } from '../../../../scripts/extensions.js';
 import { messageFormatting, showMoreMessages } from '../../../../script.js';
@@ -50,7 +51,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.2';
+const EXTENSION_VERSION = '0.6.3';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -3522,7 +3523,10 @@ async function sendWithRetry(prompt, options = {}) {
     }
 
     const requestOptions = { ...options, signal: controller.signal };
-    const outgoingPrompt = applyCustomTranslatorPrompt(prompt, options);
+    const customPrompt = applyCustomTranslatorPrompt(prompt, options);
+    const outgoingPrompt = options.previousUserSource
+        ? appendPreviousUserContext(customPrompt, options.previousUserSource)
+        : customPrompt;
     let lastError;
 
     try {
@@ -5871,6 +5875,7 @@ async function translateMessage(messageId, options = {}) {
     const work = (async () => {
         try {
             const translated = await translateOutputText(source, {
+                previousUserSource: previousUserSource(chatReference, id, messageSource),
                 signal: controller.signal,
                 timing,
                 oneTimeInstruction: options.oneTimeInstruction || '',
@@ -9136,6 +9141,7 @@ async function retranslateSelectionBundle() {
         includeCharacterDialogue: bundleHasDialogue,
     });
     const speakerIdentity = outputSpeakerIdentity(state.message);
+    const previousUserSourceText = previousUserSource(liveContext().chat, state.messageId, messageSource);
 
     const selections = state.ranges.map((range, index) => ({
         ...range,
@@ -9159,6 +9165,7 @@ async function retranslateSelectionBundle() {
     try {
         const result = await requestSegments(prompt, expected, {
             signal: controller.signal,
+            previousUserSource: previousUserSourceText,
             stage: 'multi-selection-retranslation',
         });
         for (const row of selections) {
@@ -9180,6 +9187,7 @@ Your previous response echoed the existing Korean wording for these ids: ${JSON.
 - Follow the user's one-time request. Do not return an unchanged selection.`;
             const retryResult = await requestSegments(changedPrompt, expected, {
                 signal: controller.signal,
+                previousUserSource: previousUserSourceText,
                 stage: 'multi-selection-retranslation-unchanged-retry',
             });
             unchangedIds.forEach(id => result.set(
@@ -9411,6 +9419,7 @@ async function retranslateSelection(snapshot) {
         includeCharacterDialogue: selectionHasDialogue,
     });
     const speakerIdentity = outputSpeakerIdentity(snapshot.message);
+    const previousUserSourceText = previousUserSource(liveContext().chat, snapshot.messageId, messageSource);
 
     const controller = new AbortController();
     trackSelectionTranslation(controller);
@@ -9438,6 +9447,7 @@ async function retranslateSelection(snapshot) {
         if (candidateMode) {
             const received = (await requestSelectionCandidates(prompt, {
                 signal: controller.signal,
+                previousUserSource: previousUserSourceText,
                 stage: 'selection-candidates',
                 customTargetSegments: expected,
                 customRequestData: {
@@ -9463,7 +9473,11 @@ async function retranslateSelection(snapshot) {
             replacement = await requestSelectionCandidateChoice(candidates, snapshot.selected);
             if (replacement === null) return;
         } else {
-            let result = await requestSegments(prompt, expected, { signal: controller.signal, stage: 'selection-retranslation' });
+            let result = await requestSegments(prompt, expected, {
+                signal: controller.signal,
+                previousUserSource: previousUserSourceText,
+                stage: 'selection-retranslation',
+            });
             replacement = repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();
             if (!replacement || sameRetranslationWording(replacement, snapshot.selected)) {
                 const changedPrompt = `${prompt}\n\nMANDATORY RETRANSLATION CORRECTION
@@ -9474,6 +9488,7 @@ Your previous replacement was empty or unchanged. Return a genuinely different K
 - Change only wording, syntax, or rhythm; return replacement text only in the required JSON schema.`;
                 result = await requestSegments(changedPrompt, expected, {
                     signal: controller.signal,
+                    previousUserSource: previousUserSourceText,
                     stage: 'selection-retranslation-unchanged-retry',
                 });
                 replacement = repairKoreanParticleAlternatives(repairIndivisibleIdentityNames(result.get('seg_0000'), speakerIdentity)).trim();

@@ -1,6 +1,7 @@
 {
-  "version": "0.6.2",
-  "passed": 45,
+  "version": "0.6.3",
+  "baselineVersion": "0.6.2",
+  "passed": 46,
   "failed": 0,
   "tests": [
     {
@@ -159,6 +160,11 @@
       "output": "PASS: local cleanup remains active while every post-translation AI repair path is preserved but dormant.\n"
     },
     {
+      "test": "previous-user-context.mjs",
+      "exit": 0,
+      "output": "PASS: nearest raw user turn only, old target/swipes/chat isolation, reference contract, actual output split/minimal/custom/style requests, retry snapshot, input/free-engine isolation and selection wiring. No live AI calls.\n"
+    },
+    {
       "test": "profile-action.mjs",
       "exit": 0,
       "output": "PASS: profile command registration, A/B/C popup, current marker, disabled/stale slots, persistence, dismissal, hidden-anchor placement and existing icon cycle. DOM adapter; no API calls.\n"
@@ -191,12 +197,12 @@
     {
       "test": "source-ellipsis.mjs",
       "exit": 0,
-      "output": "PASS: 1260 ellipsis assertions plus parser/assembly/candidate/selection/protected-content integration; local mean 0.436 ms for 24800 characters. No API calls.\n"
+      "output": "PASS: 1260 ellipsis assertions plus parser/assembly/candidate/selection/protected-content integration; local mean 0.492 ms for 24800 characters. No API calls.\n"
     },
     {
       "test": "source-layout.mjs",
       "exit": 0,
-      "output": "PASS: 490 layout assertions plus protected layout/candidate checks; 28500 chars, mean 0.668 ms/local pass (container, not phone).\n"
+      "output": "PASS: 490 layout assertions plus protected layout/candidate checks; 28500 chars, mean 0.554 ms/local pass (container, not phone).\n"
     },
     {
       "test": "source-map-selection.mjs",
@@ -239,15 +245,22 @@
     "minimal-output.js",
     "output-splitting.js",
     "pair-coordinator.js",
+    "previous-user-context.js",
     "prompt-editor.js",
     "response-parser.js",
     "taste-audit.js",
     "timing.js",
     "translation-composer.js"
   ],
-  "baselinePromptComparisons": 324,
-  "legacyFailureReport": "TEST-MIGRATION.json",
+  "context": "one nearest preceding user message, raw active source only",
   "aiAuditEnabled": false,
   "liveApiTested": false,
-  "liveSillyTavernTested": false
+  "liveSillyTavernTested": false,
+  "unchangedModules": [
+    "core.js",
+    "translation-composer.js",
+    "minimal-output.js",
+    "taste-audit.js",
+    "base-editor.js"
+  ]
 }
