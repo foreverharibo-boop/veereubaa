@@ -3526,3 +3526,19 @@
     color: inherit;
     margin: 8px 0;
 }
+
+.verba-deep-name-history-candidates {
+    display: grid;
+    gap: 3px;
+    max-height: min(34vh, 260px);
+    overflow-y: auto;
+    padding: 5px 8px;
+    border: 1px solid color-mix(in srgb, var(--verba-deep-border) 78%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--verba-deep-surface) 94%, transparent);
+}
+
+.verba-deep-name-history-candidates .verba-deep-check-row {
+    min-height: 29px;
+}
+

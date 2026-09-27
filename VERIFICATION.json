@@ -1,8 +1,8 @@
 {
-  "version": "0.6.0",
-  "baselineVersion": "0.5.100",
-  "passed": 30,
-  "total": 43,
+  "version": "0.6.1",
+  "baselineVersion": "0.6.0",
+  "passed": 31,
+  "total": 44,
   "newFailures": [],
   "preExistingFailures": [
     "compressed-prompts.mjs",
@@ -20,14 +20,17 @@
     "voice-intensity-flexibility.mjs"
   ],
   "unchangedDefaultBuilderComparisons": 324,
-  "syntax": "All JS/MJS pass node --check",
+  "syntax": "All 57 JS/MJS pass node --check",
   "coverage": [
-    "Five general editor fields",
-    "Separate MAD and Hongjin original prose and request injection",
-    "Exact combined custom migration and reload",
-    "Independent edit and reset with the other taste preserved",
-    "Enabled/disabled and compression mode combinations",
-    "Speaker scopes and retained internal request composition"
+    "Repeated names in current message",
+    "Distinct original identities and ambiguous shared rows",
+    "Legacy translation without source map",
+    "Aligned evidence from active translation and swipes",
+    "AI history disabled by default; checked candidates only",
+    "Local name lock without profile, AI fallback only when needed",
+    "AI error and cancellation preserve safe local path",
+    "Popup dependency controls",
+    "Existing custom migration and independent tastes retained"
   ],
   "limitations": [
     "No live SillyTavern server/browser session",
@@ -62,7 +65,7 @@
     {
       "test": "compressed-prompts.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "custom-translator.mjs",
@@ -77,7 +80,7 @@
     {
       "test": "extreme-compressed-prompts.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "flavor-preset-restore.mjs",
@@ -102,7 +105,7 @@
     {
       "test": "hongjin-final-gate.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "hongjin-profanity-targeting.mjs",
@@ -112,27 +115,27 @@
     {
       "test": "hongjin-raw-voice.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "local-speaker-attribution.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-final-gate.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-recomposition.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-targeted-repair.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "minimal-output.mjs",
@@ -141,6 +144,11 @@
     },
     {
       "test": "name-lock-collision.mjs",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "test": "name-lock-flow.mjs",
       "exit": 0,
       "output": ""
     },
@@ -202,7 +210,7 @@
     {
       "test": "real-output-regressions.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "response-recovery.mjs",
@@ -232,7 +240,7 @@
     {
       "test": "subject-pronoun-omission.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "tagged-content-toggle.mjs",
@@ -242,7 +250,7 @@
     {
       "test": "translation-layer-separation.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.1/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "voice-intensity-flexibility.mjs",
@@ -254,17 +262,17 @@
     {
       "test": "compressed-prompts.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action\n    at contains (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:43:46)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/compressed-prompts.mjs:103:17\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "extreme-compressed-prompts.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "hongjin-final-gate.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: final gate count\n\n0 !== 1\n\n    at assertGateAfter (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:18:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-final-gate.mjs:50:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "hongjin-profanity-targeting.mjs",
@@ -274,42 +282,42 @@
     {
       "test": "hongjin-raw-voice.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/hongjin-raw-voice.mjs:38:16\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "local-speaker-attribution.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-final-gate.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count\n\n0 !== 1\n\n    at assertMadGate (file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:15:12)\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-final-gate.mjs:48:9\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-recomposition.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "mad-targeted-repair.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/mad-targeted-repair.mjs:4\n    buildMadKoreanTargetedAuditPrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "real-output-regressions.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/real-output-regressions.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "subject-pronoun-omission.mjs",
       "exit": 1,
-      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "translation-layer-separation.mjs",
       "exit": 1,
-      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-main/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+      "output": "file:///workspace/scratch/d825e73a60a2/work/veereubaa-v0.6.0/tests/translation-layer-separation.mjs:4\n    buildHongjinVoiceRewritePrompt,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
     },
     {
       "test": "voice-intensity-flexibility.mjs",
