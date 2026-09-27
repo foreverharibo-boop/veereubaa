@@ -63,7 +63,15 @@ const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const style = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 assert.match(index, /id="verba-deep-chuseok-galbwae-all"/);
 assert.match(index, /id="verba-deep-chuseok-galbwae-dialogue-inner"/);
-assert.match(index, /galbwaeScope !== 'off'.*includes\('repair'\)/s);
+const applyStart = index.indexOf('function customTranslatorPromptKey(');
+const applyEnd = index.indexOf('function sendProfileRaceAttempt(', applyStart);
+const apply = Function('settings', `${index.slice(applyStart, applyEnd)}\nreturn applyCustomTranslatorPrompt;`)({
+    customTranslatorEnabled: true,
+    chuseokGalbwaeScope: 'all',
+    customTranslatorTemplates: { repair: 'DO NOT REPLACE LIVE GALBWAE REPAIR' },
+    customTranslatorModified: { repair: true },
+});
+assert.equal(apply('LIVE GALBWAE REPAIR WITH CURRENT TRANSLATION', { stage: 'untranslated-name-repair' }), 'LIVE GALBWAE REPAIR WITH CURRENT TRANSLATION');
 assert.match(style, /\.verba-deep-visibility-actions\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
 
 console.log('PASS: 긴르바 갈봬체 배타 모드, 태그 예외, 굵은 글씨 지시, 이름 소유격 검수와 UI가 연결됨.');

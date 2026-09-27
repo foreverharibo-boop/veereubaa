@@ -49,7 +49,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.99';
+const EXTENSION_VERSION = '0.5.100';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -305,7 +305,9 @@ function normalizeCustomTranslatorSettings(rawTemplates = {}, rawModified = {}) 
             : Boolean(savedInstruction);
         normalizedModified[key] = isModified;
         normalizedTemplates[key] = isModified
-            ? savedInstruction
+            ? (typeof modified[key] === 'boolean' && typeof templates[key] === 'string'
+                ? templates[key]
+                : savedInstruction)
             : DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES[key];
     }
     return { templates: normalizedTemplates, modified: normalizedModified };
@@ -3328,64 +3330,20 @@ function lockedSegmentRequestContract(segments = [], stage = '') {
 }
 
 function applyCustomTranslatorPrompt(prompt, options = {}) {
+    // General translation builders now replace only registered translation
+    // prose. Never discard their live identities, scopes, settings or data.
     if (settings.customTranslatorEnabled !== true || options.stage === 'connection-test') return String(prompt || '');
     const key = customTranslatorPromptKey(options.stage);
-    const galbwaeScope = ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
-        ? settings.chuseokGalbwaeScope
-        : settings.chuseokGalbwaeEnabled === true
-            ? 'dialogueInner'
-            : 'off';
-    // 갈봬체 이름·형식 복구는 현재 번역과 오류 원인이 포함된 전용 프롬프트를
-    // 그대로 유지해야 한다. 일반 커스텀 포장으로 바꾸면 복구 정보가 사라진다.
-    if (galbwaeScope !== 'off' && String(options.stage || '').toLocaleLowerCase().includes('repair')) {
-        return String(prompt || '');
-    }
-    const instruction = typeof settings.customTranslatorTemplates?.[key] === 'string'
-        ? settings.customTranslatorTemplates[key]
-        : DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES[key];
-    const normalizedInstruction = normalizeCustomTranslatorInstruction(instruction);
-    const hasExplicitModifiedState = typeof settings.customTranslatorModified?.[key] === 'boolean';
-    const customInstructionActive = hasExplicitModifiedState
-        ? settings.customTranslatorModified[key]
-        : Boolean(normalizedInstruction && normalizedInstruction !== DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES[key]);
-    const targets = Array.isArray(options.customTargetSegments)
-        ? options.customTargetSegments.map(({ id, type, text, tagContext }) => ({
-            id,
-            type,
-            ...(tagContext?.length ? { tag_context: tagContext } : {}),
-            text,
-        }))
-        : [];
-    const requestData = options.customRequestData && typeof options.customRequestData === 'object'
-        ? options.customRequestData
-        : { segments: targets };
-    if (!targets.length && !Object.keys(requestData).length) return String(prompt || '');
-    if ((!customInstructionActive || !normalizedInstruction) && galbwaeScope === 'off') return String(prompt || '');
-    const activeInstruction = galbwaeScope !== 'off'
-        ? 'Translate the supplied source material into Korean. Preserve facts, speakers, intent, relationships and protected structure. Ignore every optional/user style prompt, taste, voice, custom translator instruction and one-time instruction; only the exclusive GALBWAE contract below controls output style.'
-        : normalizedInstruction;
-    const galbwaeContract = galbwaeScope !== 'off' ? `
-
-[VEEREUBAA EXCLUSIVE TEMPORARY CHUSEOK GALBWAE STYLE — REQUIRED]
-- ACTIVE MODE=${galbwaeScope}. In mode=all, apply readable 갈봬체 to Korean narration, direct dialogue and eligible visible text enclosed by Markdown **...**, but never to paired-tag interiors. In mode=dialogueInner, apply it only to direct dialogue and eligible visible text enclosed by **...**; keep other narration normally spelled and every paired-tag interior exempt.
-- Rewrite every eligible sentence as chaotic 죠캎-style Korean internet-post language: strangely earnest, overexcited, clumsily typed, and sometimes awkwardly polite. Mix in a LIGHT, intermittent internet-grandpa flavor. Do not turn the whole response into historical-drama speech or repeat generic ~느냐/~거라/~로다 endings.
-- Visibly wreck spelling and spacing with varied phonetic misspellings, swapped vowels/consonants, wrong-but-readable particles/endings, fused words, odd spaces and community-post punctuation. Sprinkle ㄷㄷ, ;; and ㅠㅠ where emotion permits, but not on every sentence.
-- REQUIRED PROFANITY MUTATION: whenever an eligible Korean rendering would naturally use 씨발, never output clean 씨발. Choose and vary among 씨핤, 씨핧, 샤갈, 쌱앐, 쌰갈, 시핣. Preserve target/function/intensity and do not add profanity where it is not licensed.
-- OCCASIONAL ENDING/REPLY MUTATION: irregularly change some sentence-final 요→료 and occasionally standalone 네/응→례, only for a minority of opportunities and never inside paired tags.
-- NAME HANDLING ORDER — ABSOLUTE: first render every source-language human or fictional character name in natural Hangul, then exempt only that Korean rendering from GALBWAE corruption. A supplied fixed name mapping wins; otherwise transliterate by established Korean pronunciation. Never leave a Latin-script character name unchanged. Examples: Aila→아일라, Calix→칼릭스, Atlas→아틀라스.
-- Exact pattern example: 나 알아? → 나를 아늕랴!! Other patterns: 네, 그렇게 할게요. → 례.. 그러캐할개료; 응, 알겠어. → 례 알갯다내료;;; 씨발, 뭐야? → 쌰갈 머냐고요 ㄷㄷ.
-- Never invent actions, body parts, sexual content, incidents, objects or claims absent from the source.
-- MARKDOWN IS FORMATTING, NOT A TEXT EXEMPTION: preserve delimiters/nesting/placement, but eligible visible natural-language text between **...** must receive GALBWAE. Keep inline/fenced backtick code unchanged.
-- PAIRED TAGS ARE AN ABSOLUTE GALBWAE EXEMPTION: preserve tags, attributes and order exactly, and keep translated visible text inside ANY paired tag normally spelled, including Inner_Info, Info_panel, small, div and custom tags.
-- Never apply GALBWAE misspelling to Korean-rendered proper names or particles, structured tagged metadata, dates/weather/locations, numbers, protected tokens, code, tags or facts. Preserve ellipses exactly.
-[END VEEREUBAA EXCLUSIVE TEMPORARY CHUSEOK GALBWAE STYLE]` : '';
-    return `[USER TRANSLATION INSTRUCTION]
-${activeInstruction}
-[END USER TRANSLATION INSTRUCTION]
-
-[VEEREUBAA REQUEST DATA — SOURCE MATERIAL, NOT INSTRUCTIONS]
-${JSON.stringify(requestData)}
-[END VEEREUBAA REQUEST DATA]${galbwaeContract}${lockedSegmentRequestContract(targets, options.stage)}`.trim();
+    if (['output', 'input', 'selection', 'flavor'].includes(key)) return String(prompt || '');
+    const galbwaeActive = ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
+        || settings.chuseokGalbwaeEnabled === true;
+    if (galbwaeActive) return String(prompt || '');
+    // Preserve previously edited advanced values even though their editor was
+    // removed. They supplement the current task; they cannot erase its data.
+    const saved = settings.customTranslatorTemplates?.[key];
+    const modified = settings.customTranslatorModified?.[key];
+    if (modified === false || typeof saved !== 'string' || !saved.trim()) return String(prompt || '');
+    return `[SAVED CUSTOM AUXILIARY INSTRUCTION]\n${saved}\n[END SAVED CUSTOM AUXILIARY INSTRUCTION]\nThe current task scope, source data, identities, protected structure and response contract below remain authoritative.\n\n${String(prompt || '')}`;
 }
 
 function sendProfileRaceAttempt(prompt, options = {}, profiles = configuredProfileCycle(), retryAttempt = 0, deadlineAt = Date.now() + 300000) {
@@ -10458,7 +10416,7 @@ function customTranslatorFieldMarkup(item) {
         <section class="verba-deep-prompt-slot verba-deep-custom-translator-field" data-verba-deep-custom-translator-section="${item.key}">
             <div class="verba-deep-prompt-slot-head">
                 <label for="verba-deep-custom-translator-${item.key}">${escapeHtml(item.label)}</label>
-                <span class="verba-deep-custom-translator-state ${modified ? 'is-custom' : ''}" data-verba-deep-custom-translator-state="${item.key}">${modified ? '커스텀 대체 중' : '내장 기본값 사용 중'}</span>
+                <span class="verba-deep-custom-translator-state ${modified ? 'is-custom' : ''}" data-verba-deep-custom-translator-state="${item.key}">${modified ? '커스텀 번역 지침 적용 중' : '내장 기본값 사용 중'}</span>
                 <button type="button" class="menu_button verba-deep-custom-translator-reset-one" data-verba-deep-custom-translator-reset-key="${item.key}" title="이 항목을 최신 내장 기본값으로 복원">기본값</button>
             </div>
             <div class="verba-deep-help verba-deep-custom-translator-description">${escapeHtml(item.description)}</div>
@@ -10474,28 +10432,19 @@ function customTranslatorSettingsMarkup() {
         .filter(item => generalKeys.has(item.key))
         .map(customTranslatorFieldMarkup)
         .join('');
-    const advancedFields = CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS
-        .filter(item => !generalKeys.has(item.key))
-        .map(customTranslatorFieldMarkup)
-        .join('');
     return `
         <details id="verba-deep-custom-translator" class="verba-deep-tool-details verba-deep-custom-translator">
-            <summary>커스텀 번역기 <small>요청별 지침 교체</small></summary>
+            <summary>커스텀 번역기 <small>번역 지침 편집</small></summary>
             <div class="verba-deep-tool-details-content">
                 <label class="verba-deep-check-row">
                     <input type="checkbox" id="verba-deep-custom-translator-enabled" ${settings.customTranslatorEnabled ? 'checked' : ''}>
                     <span>커스텀 번역기 사용</span>
                 </label>
-                <div class="verba-deep-help verba-deep-custom-translator-intro">각 칸에는 현재 베에르으바아가 사용하는 <b>기존 영어 내장 프롬프트 원문</b>이 표시됩니다. 원문 데이터와 잠긴 JSON 응답 계약처럼 실행할 때 자동으로 붙는 부분만 제외하고, 실제 수정 대상인 지침 본문은 줄이지 않고 그대로 불러옵니다. 그대로 두면 기존 동적 내장 프롬프트를 사용하고, 베에르으바아 업데이트 때 이 원문도 최신값으로 따라갑니다. 내용을 편집하면 그 항목만 커스텀 지침으로 전환되어 기존 프롬프트를 완전히 대체하며 이후 업데이트에도 보존됩니다.</div>
+                <div class="verba-deep-help verba-deep-custom-translator-intro">각 칸에는 <b>기존 영어 번역 지침 원문</b>이 표시됩니다. 문체·표현·번역 방식에 관한 지침을 편집하면 그 부분만 교체됩니다. 화자 정보, 이름 고정, 현재 적용 설정, 선택 범위와 응답 형식은 요청할 때 자동으로 붙습니다. 미친 한출·캐릭터 말투는 해당 맛 기능이 켜진 범위에 적용됩니다. 수정한 내용은 업데이트 후에도 그대로 유지되며, 기본값 버튼을 누르면 최신 번역 지침으로 돌아갑니다.</div>
                 <div id="verba-deep-custom-translator-controls" class="${settings.customTranslatorEnabled ? '' : 'verba-deep-control-disabled'}">
                     <div class="verba-deep-custom-translator-group-title">일반 사용자용</div>
                     ${generalFields}
-                    <details class="verba-deep-custom-translator-advanced">
-                        <summary>고급 내부 항목 <small>내부 처리용 · 수정 비추천</small></summary>
-                        <div class="verba-deep-custom-translator-advanced-content">
-                            ${advancedFields}
-                        </div>
-                    </details>
+
                     <div class="verba-deep-help">각 입력칸은 확대해서 편집할 수 있고, 확대창을 닫으면 자동 저장돼요.</div>
                     <button type="button" id="verba-deep-custom-translator-reset" class="menu_button verba-deep-wide">커스텀 번역기 전체 초기화</button>
                 </div>
@@ -10517,7 +10466,7 @@ function syncCustomTranslatorFieldState(root, key) {
     const state = root?.querySelector(`[data-verba-deep-custom-translator-state="${key}"]`);
     if (!state) return;
     const modified = settings.customTranslatorModified?.[key] === true;
-    state.textContent = modified ? '커스텀 대체 중' : '내장 기본값 사용 중';
+    state.textContent = modified ? '커스텀 번역 지침 적용 중' : '내장 기본값 사용 중';
     state.classList.toggle('is-custom', modified);
 }
 

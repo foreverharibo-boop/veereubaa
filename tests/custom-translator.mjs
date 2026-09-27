@@ -1,220 +1,106 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { buildDefaultCustomTranslatorTemplates } from '../custom-translator-defaults.js';
+import { buildOutputPrompt, buildScopedOutputPrompt, buildInputPrompt, buildSelectionPrompt, buildMultiSelectionPrompt, segmentSource } from '../core.js';
+import { buildMinimalOutputPrompt } from '../minimal-output.js';
 
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
-const style = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
-const definitions = [
-    'output', 'input', 'selection', 'name', 'consistency', 'repair', 'quality', 'flavor', 'other',
-];
-const defaults = Object.fromEntries(definitions.map(key => [key, '']));
-const originalDefaults = buildDefaultCustomTranslatorTemplates([
-    'global', 'allDialogue', 'dialogue', 'otherDialogue', 'fineTuning',
-]);
-assert.ok(originalDefaults.output.length > 10000, 'output shows the original long built-in prompt');
-assert.ok(originalDefaults.input.length > 7000, 'input shows the original long built-in prompt');
-assert.ok(originalDefaults.selection.length > 8000, 'selection shows the original long built-in prompt');
-assert.ok(originalDefaults.flavor.length > 25000, 'flavor shows the original MAD Korean + Hongjin prompt');
-assert.match(originalDefaults.output, /You are a precise translation engine/);
-assert.match(originalDefaults.input, /Korean-to-English translation engine/);
-assert.match(originalDefaults.flavor, /MAD KOREAN EXCLUSIVE ENGINE/);
-assert.match(originalDefaults.flavor, /KIM HONG-JIN/);
-assert.match(originalDefaults.repair, /BANNED WORD REPAIR — ORIGINAL BUILT-IN PROMPT/);
-assert.doesNotMatch(originalDefaults.output, /Translate every supplied source segment into fluent, idiomatic Korean that reads as if it were originally written in Korean/);
+const defaults = buildDefaultCustomTranslatorTemplates();
+const general = ['output', 'input', 'selection', 'flavor'];
+for (const key of general) {
+    assert.ok(defaults[key].length > 1000, `${key}: original prose is displayed in full, not a short summary`);
+    assert.doesNotMatch(defaults[key], /SPEAKER ATTRIBUTION CONTEXT|TARGET CHARACTER GENDER|TARGET ADDRESSEE GENDER|NAME LOCK|@@VERBA|JSON|LEFT CONTEXT|RIGHT CONTEXT|PRIORITY \d|SCENE FACTS AND OUTPUT CONTRACT|Their saved values remain untouched/);
+}
+assert.match(defaults.output, /Interpret the source as discourse before wording it in Korean/);
+assert.match(defaults.input, /KOREAN INTERNET \/ TEXTING SHORTHAND/);
+assert.match(defaults.selection, /A retranslation request requires changed wording/);
+assert.match(defaults.flavor, /SCENE-FIRST RECOMPOSITION/);
 
 const normalizeStart = index.indexOf('function normalizeCustomTranslatorInstruction(');
 const normalizeEnd = index.indexOf('const DEFAULT_SETTINGS =', normalizeStart);
-assert.ok(normalizeStart >= 0 && normalizeEnd > normalizeStart);
-const normalizeCustomTranslatorInstruction = Function(
-    'CUSTOM_TRANSLATOR_SIMPLE_MARKER',
-    `${index.slice(normalizeStart, normalizeEnd)}\nreturn normalizeCustomTranslatorInstruction;`,
-)('[사용자 추가 지침]');
-
-assert.equal(normalizeCustomTranslatorInstruction(''), '');
-assert.equal(normalizeCustomTranslatorInstruction('{기본_프롬프트}'), '');
-assert.equal(
-    normalizeCustomTranslatorInstruction('{기본_프롬프트}\n\n[사용자 추가 지침]\nTranslate naturally.'),
-    'Translate naturally.',
+const apiNormalize = Function('CUSTOM_TRANSLATOR_SIMPLE_MARKER', 'CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS', 'DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES', `${index.slice(normalizeStart, normalizeEnd)}\nreturn { normalizeCustomTranslatorSettings };`)(
+    '[사용자 추가 지침]', Object.keys(defaults).map(key => ({ key })), defaults,
 );
-assert.equal(
-    normalizeCustomTranslatorInstruction('Translate naturally.\n{기본_프롬프트}\n{대상_JSON}'),
-    'Translate naturally.',
-);
-
-const normalizeSettingsStart = index.indexOf('function normalizeCustomTranslatorSettings(');
-const normalizeSettingsEnd = index.indexOf('const DEFAULT_SETTINGS =', normalizeSettingsStart);
-assert.ok(normalizeSettingsStart >= 0 && normalizeSettingsEnd > normalizeSettingsStart);
-const visibleDefaults = Object.fromEntries(definitions.map(key => [key, `Bundled ${key} instruction.`]));
-const normalizeCustomTranslatorSettings = Function(
-    'CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS',
-    'DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES',
-    'normalizeCustomTranslatorInstruction',
-    `${index.slice(normalizeSettingsStart, normalizeSettingsEnd)}\nreturn normalizeCustomTranslatorSettings;`,
-)(definitions.map(key => ({ key })), visibleDefaults, normalizeCustomTranslatorInstruction);
-const migratedBlank = normalizeCustomTranslatorSettings(
-    Object.fromEntries(definitions.map(key => [key, ''])),
-    {},
-);
-assert.equal(migratedBlank.templates.output, visibleDefaults.output);
-assert.equal(migratedBlank.modified.output, false);
-const migratedLegacyCustom = normalizeCustomTranslatorSettings({ output: 'My saved replacement.' }, {});
-assert.equal(migratedLegacyCustom.templates.output, 'My saved replacement.');
-assert.equal(migratedLegacyCustom.modified.output, true);
-const refreshedBundled = normalizeCustomTranslatorSettings(
-    { output: 'Old bundled instruction.' },
-    { output: false },
-);
-assert.equal(refreshedBundled.templates.output, visibleDefaults.output);
-assert.equal(refreshedBundled.modified.output, false);
-const preservedEdited = normalizeCustomTranslatorSettings(
-    { output: 'My edited instruction.' },
-    { output: true },
-);
-assert.equal(preservedEdited.templates.output, 'My edited instruction.');
-assert.equal(preservedEdited.modified.output, true);
-
-const settings = {
-    customTranslatorEnabled: true,
-    customTranslatorTemplates: {
-        ...defaults,
-        output: 'Translate as natural Korean prose.',
-    },
-};
-const start = index.indexOf('function customTranslatorPromptKey(');
-const end = index.indexOf('async function sendWithRetry(', start);
-assert.ok(start >= 0 && end > start);
-const api = Function(
-    'settings',
-    'DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES',
-    'normalizeCustomTranslatorInstruction',
-    `${index.slice(start, end)}\nreturn { customTranslatorPromptKey, applyCustomTranslatorPrompt };`,
-)(settings, defaults, normalizeCustomTranslatorInstruction);
-
-assert.equal(api.customTranslatorPromptKey('output-retranslation:narration'), 'output');
-assert.equal(api.customTranslatorPromptKey('input-translation'), 'input');
-assert.equal(api.customTranslatorPromptKey('selection-candidates'), 'selection');
-assert.equal(api.customTranslatorPromptKey('name-match'), 'name');
-assert.equal(api.customTranslatorPromptKey('role-term-plan'), 'consistency');
-assert.equal(api.customTranslatorPromptKey('banned-word-repair'), 'repair');
-assert.equal(api.customTranslatorPromptKey('quality-audit'), 'quality');
-assert.equal(api.customTranslatorPromptKey('hongjin-voice-rewrite'), 'flavor');
-assert.equal(api.customTranslatorPromptKey('future-stage'), 'other');
-
-const targets = [{ id: 'seg_0001', type: 'narration', text: 'Source text.' }];
-const replaced = api.applyCustomTranslatorPrompt('OLD DEFAULT PROMPT MUST DISAPPEAR', {
-    stage: 'output-translation',
-    customTargetSegments: targets,
-});
-assert.doesNotMatch(replaced, /OLD DEFAULT PROMPT MUST DISAPPEAR/);
-assert.match(replaced, /USER TRANSLATION INSTRUCTION/);
-assert.match(replaced, /Translate as natural Korean prose\./);
-assert.match(replaced, /VEEREUBAA REQUEST DATA/);
-assert.match(replaced, /Source text\./);
-assert.match(replaced, /VEEREUBAA LOCKED RESPONSE CONTRACT/);
-assert.match(replaced, /@@VERBA_DEEP_\.\.\.@/);
-assert.match(replaced, /seg_0001/);
-
-settings.customTranslatorTemplates.selection = 'Create three natural Korean alternatives.';
-const candidatePrompt = api.applyCustomTranslatorPrompt('OLD CANDIDATE PROMPT', {
-    stage: 'selection-candidates',
-    customTargetSegments: [{ id: 'seg_0000', type: 'selection', text: '기존 번역' }],
-    customRequestData: { selectedText: '기존 번역', sourceContext: 'Original source context.' },
-});
-assert.doesNotMatch(candidatePrompt, /OLD CANDIDATE PROMPT/);
-assert.match(candidatePrompt, /Create three natural Korean alternatives\./);
-assert.match(candidatePrompt, /Original source context\./);
-assert.match(candidatePrompt, /"candidates"/);
-assert.doesNotMatch(candidatePrompt, /"segments":\[/);
-
-assert.equal(
-    api.applyCustomTranslatorPrompt('INPUT ORIGINAL', {
-        stage: 'input-translation',
-        customTargetSegments: targets,
-    }),
-    'INPUT ORIGINAL',
-    'a blank category keeps 베에르으바아의 existing prompt unchanged',
-);
-assert.equal(
-    api.applyCustomTranslatorPrompt('PING', { stage: 'connection-test', customTargetSegments: targets }),
-    'PING',
-);
-settings.customTranslatorEnabled = false;
-assert.equal(api.applyCustomTranslatorPrompt('UNCHANGED', { stage: 'output-translation' }), 'UNCHANGED');
-settings.customTranslatorEnabled = true;
-settings.customTranslatorModified = { ...Object.fromEntries(definitions.map(key => [key, false])) };
-settings.customTranslatorTemplates.output = 'Visible bundled text that must not replace the dynamic prompt.';
-assert.equal(
-    api.applyCustomTranslatorPrompt('DYNAMIC BUILT-IN PROMPT', {
-        stage: 'output-translation',
-        customTargetSegments: targets,
-    }),
-    'DYNAMIC BUILT-IN PROMPT',
-    'displayed but unedited bundled text keeps 베에르으바아의 dynamic built-in prompt',
-);
-settings.customTranslatorModified.output = true;
-assert.match(
-    api.applyCustomTranslatorPrompt('DYNAMIC BUILT-IN PROMPT', {
-        stage: 'output-translation',
-        customTargetSegments: targets,
-    }),
-    /Visible bundled text that must not replace the dynamic prompt/,
-    'editing the field activates complete prompt replacement',
-);
-settings.chuseokGalbwaeScope = 'all';
-settings.customTranslatorTemplates.output = 'CUSTOM TRANSLATOR MUST NOT APPEAR';
-const exclusiveGalbwae = api.applyCustomTranslatorPrompt('OLD DEFAULT MUST NOT APPEAR', {
-    stage: 'output-translation',
-    customTargetSegments: targets,
-});
-assert.match(exclusiveGalbwae, /EXCLUSIVE TEMPORARY CHUSEOK GALBWAE STYLE/);
-assert.match(exclusiveGalbwae, /나 알아\? → 나를 아늕랴!!/);
-assert.match(exclusiveGalbwae, /씨핤, 씨핧, 샤갈, 쌱앐, 쌰갈, 시핣/);
-assert.match(exclusiveGalbwae, /NAME HANDLING ORDER — ABSOLUTE/);
-assert.doesNotMatch(exclusiveGalbwae, /CUSTOM TRANSLATOR MUST NOT APPEAR|OLD DEFAULT MUST NOT APPEAR/);
-
-const expectedOrder = definitions.map(key => `{ key: '${key}'`);
-let previous = -1;
-for (const token of expectedOrder) {
-    const position = index.indexOf(token, previous + 1);
-    assert.ok(position > previous, `${token} order`);
-    previous = position;
+const customValues = {output:'Write terse Korean.',input:'Keep my casual English.',selection:'Keep the meaning; change the rhythm.',flavor:'Use my own Korean voice.',repair:'My saved repair preference.'};
+for (const flags of [{},Object.fromEntries(Object.keys(customValues).map(key=>[key,true]))]) {
+    const migrated = apiNormalize.normalizeCustomTranslatorSettings(customValues, flags);
+    for (const [key,value] of Object.entries(customValues)) {
+        assert.equal(migrated.templates[key],value);
+        assert.equal(migrated.modified[key],true);
+    }
+    const reload = apiNormalize.normalizeCustomTranslatorSettings(JSON.parse(JSON.stringify(migrated.templates)), migrated.modified);
+    assert.deepEqual(reload,migrated,'save/reload does not replace custom values with defaults');
 }
+const bundled=apiNormalize.normalizeCustomTranslatorSettings({output:'Old bundled prompt'}, {output:false});
+assert.equal(bundled.templates.output,defaults.output);
+assert.equal(bundled.modified.output,false);
+const oldLong='My legacy custom rule.\nSPEAKER ATTRIBUTION CONTEXT\n- TARGET CHARACTER: "Old name"';
+assert.equal(apiNormalize.normalizeCustomTranslatorSettings({output:oldLong},{output:true}).templates.output,oldLong);
 
-const uiStart = index.indexOf('function customTranslatorInstructionPlaceholder(');
-const uiEnd = index.indexOf('function injectSettingsPanel(', uiStart);
-const customTranslatorUi = index.slice(uiStart, uiEnd);
-assert.match(customTranslatorUi, /<summary>커스텀 번역기/);
-assert.match(customTranslatorUi, /id="verba-deep-custom-translator-enabled"/);
-assert.match(customTranslatorUi, /data-verba-deep-custom-translator-key/);
-assert.doesNotMatch(customTranslatorUi, /data-verba-deep-custom-translator-mode/);
-assert.doesNotMatch(customTranslatorUi, /간편 설정/);
-assert.doesNotMatch(customTranslatorUi, /고급 설정/);
-assert.doesNotMatch(customTranslatorUi, /직접 구성용 변수 보기/);
-assert.match(customTranslatorUi, /<b>기존 영어 내장 프롬프트 원문<\/b>이 표시됩니다/);
-assert.match(customTranslatorUi, /실제 수정 대상인 지침 본문은 줄이지 않고 그대로 불러옵니다/);
-assert.match(customTranslatorUi, /그대로 두면 기존 동적 내장 프롬프트를 사용하고/);
-assert.match(customTranslatorUi, /내용을 편집하면 그 항목만 커스텀 지침으로 전환되어 기존 프롬프트를 완전히 대체/);
-assert.match(customTranslatorUi, /원문 데이터와 잠긴 JSON 응답 계약처럼 실행할 때 자동으로 붙는 부분만 제외하고/);
-assert.match(customTranslatorUi, /내장 기본값 사용 중/);
-assert.match(customTranslatorUi, /커스텀 대체 중/);
-assert.match(customTranslatorUi, /data-verba-deep-custom-translator-reset-key/);
-assert.match(index, /아웃풋 번역/);
-assert.match(index, /인풋 번역/);
-assert.match(index, /선택 재번역/);
-assert.doesNotMatch(index, /label: '채팅 번역'/);
-assert.doesNotMatch(index, /label: '내가 보내는 글'/);
-assert.match(customTranslatorUi, /new Set\(\['output', 'input', 'selection', 'flavor'\]\)/);
-assert.match(customTranslatorUi, /일반 사용자용/);
-assert.match(customTranslatorUi, /class="verba-deep-custom-translator-advanced"/);
-assert.match(customTranslatorUi, /<summary>고급 내부 항목 <small>내부 처리용 · 수정 비추천<\/small><\/summary>/);
-assert.doesNotMatch(customTranslatorUi, /<details class="verba-deep-custom-translator-advanced" open/);
-assert.match(index, /bindPromptExpandEditors\(panel\);\s*syncCustomTranslatorControls\(panel\);/);
-assert.match(index, /target\.dataset\.verbaDeepCustomTranslatorKey[\s\S]*?normalizeCustomTranslatorInstruction\(target\.value\)[\s\S]*?saveSettings\(\)/);
-assert.match(index, /customTranslatorModified\[key\] = instruction !== DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES\[key\]/);
-assert.match(index, /const outgoingPrompt = applyCustomTranslatorPrompt\(prompt, options\)/);
-assert.match(index, /customTargetSegments: pending/);
-assert.match(style, /\.verba-deep-custom-translator-field \.verba-deep-prompt-slot-head[\s\S]*?flex-wrap: nowrap/);
-assert.match(style, /\.verba-deep-custom-translator-state[\s\S]*?flex: 0 0 auto/);
-assert.match(style, /\.verba-deep-custom-translator-reset-one[\s\S]*?width: auto !important/);
+const identity={characterName:'Nyen',userName:'혜담은',characterGender:'male',nameLocks:[{source:'Nyen',target:'니엔'}]};
+const source='Nyen closed the door. "Come here," he said.\n<Info_panel>Sunny</Info_panel>';
+const segmented=segmentSource(source,identity.nameLocks);
+const base={globalPrompt:'GLOBAL_LIVE_RULE',allDialoguePrompt:'ALL_DIALOGUE_LIVE_RULE',dialoguePrompt:'TARGET_LIVE_RULE',otherDialoguePrompt:'OTHER_LIVE_RULE',bannedWords:'금지말',relationTemperature:'close',narrationLocalizationLevel:'native',dialogueLocalizationLevel:'balanced',developerRelationshipExperimentEnabled:true,developerTargetToUserAddress:'공주님',developerTargetToUserRegister:'jondaetmal'};
+const settings={...base,customTranslatorEnabled:true,customTranslatorTemplates:customValues,customTranslatorModified:Object.fromEntries(general.map(key=>[key,true]))};
+const output=buildOutputPrompt(segmented,settings,'ONE_TIME_LIVE_RULE',identity);
+assert.equal(output.split(customValues.output).length-1,1);
+assert.doesNotMatch(output,/Interpret the source as discourse before wording it in Korean/,'old base translation prose is replaced');
+for(const value of ['GLOBAL_LIVE_RULE','ALL_DIALOGUE_LIVE_RULE','TARGET_LIVE_RULE','ONE_TIME_LIVE_RULE','Nyen','혜담은','니엔','금지말','NAME LOCK','SPEAKER ATTRIBUTION CONTEXT','Return exactly this schema:']) assert.ok(output.includes(value),value);
+assert.deepEqual(JSON.parse(output.split('\nSEGMENTS\n').at(-1)).map(x=>x.text),segmented.segments.map(x=>x.text));
+const scoped=buildScopedOutputPrompt({segments:segmented.segments.filter(x=>x.type==='dialogue_candidate'),sourceContext:source,settings,oneTimeInstruction:'ONE_TIME_LIVE_RULE',nameTokens:segmented.nameTokens,scope:'target_dialogue',speakerIdentity:identity});
+for(const value of [customValues.output,'TARGET_LIVE_RULE','ALL_DIALOGUE_LIVE_RULE','GLOBAL_LIVE_RULE','공주님','NAME LOCK','Nyen','혜담은','SOURCE CONTEXT']) assert.ok(scoped.includes(value),value);
 
-console.log('PASS: custom translator fully replaces default prompts with plain English instructions, automatic source data, and locked response contracts.');
+const input=buildInputPrompt('니엔, 이리 와.',settings,'male',{...identity,exactNamePairs:[{korean:'니엔',english:'Nyen'}]});
+assert.equal(input.split(customValues.input).length-1,1);
+assert.match(input,/TARGET ADDRESSEE GENDER\nmale/);
+assert.match(input,/EXACT KOREAN → ENGLISH NAME SPELLINGS/);
+assert.match(input,/Nyen/);
+assert.doesNotMatch(input,/GLOBAL_LIVE_RULE|Write English that a fluent native speaker/);
+assert.equal(JSON.parse(input.split('\nSOURCE\n').at(-1))[0].text,'니엔, 이리 와.');
+
+const selected='문을 닫았다';
+const selectionArgs={source,sourceContext:source,translation:'니엔은 문을 닫았다.',selected,start:4,end:11,settings,oneTimeInstruction:'SELECTION_ONCE',speakerIdentity:identity,candidateCount:3,contextMode:'paragraph'};
+const selection=buildSelectionPrompt(selectionArgs);
+for(const value of [customValues.selection,'SELECTION_ONCE','"candidates"','LEFT CONTEXT','RIGHT CONTEXT','ORIGINAL SOURCE CONTEXT','NAME LOCK','혜담은']) assert.ok(selection.includes(value),value);
+assert.equal(selection.split(customValues.selection).length-1,1);
+assert.doesNotMatch(selection,/Interpret the source as discourse before wording it in Korean/);
+const multi=buildMultiSelectionPrompt({...selectionArgs,selections:[{id:'multi_0000',selected,start:4,end:11,sourceContext:source},{id:'multi_0001',selected:'니엔',start:0,end:2,sourceContext:source}]});
+assert.equal(multi.split(customValues.selection).length-1,1);
+assert.deepEqual(JSON.parse(multi.split('\nSELECTIONS\n').at(-1)).map(x=>x.id),['multi_0000','multi_0001']);
+
+for(const flags of [{developerMadKoreanOutputEnabled:true},{developerHongjinFlavorEnabled:true},{developerMadKoreanOutputEnabled:true,developerHongjinFlavorEnabled:true}]) {
+    const flavor=buildOutputPrompt(segmented,{...settings,...flags},'',identity);
+    assert.equal(flavor.split(customValues.flavor).length-1,1,'flavor custom applies to the actual initial translation once');
+    for(const value of ['Nyen','혜담은','NAME LOCK','금지말','Return exactly this schema:']) assert.ok(flavor.includes(value),value);
+    if(flags.developerMadKoreanOutputEnabled) assert.doesNotMatch(flavor,/SCENE-FIRST RECOMPOSITION: source text is scene evidence/);
+}
+assert.doesNotMatch(output,/Use my own Korean voice/,'disabled taste does not inject flavor custom');
+const galbwae=buildOutputPrompt(segmented,{...settings,chuseokGalbwaeScope:'all'},'',identity);
+for(const value of Object.values(customValues)) assert.ok(!galbwae.includes(value),'exclusive Galbwae retains its existing isolation');
+const galbwaeSelection=buildSelectionPrompt({...selectionArgs,settings:{...settings,chuseokGalbwaeScope:'all'}});
+assert.ok(!galbwaeSelection.includes(customValues.selection));
+const galbwaeInput=buildInputPrompt('이리 와.',{...settings,chuseokGalbwaeScope:'all'},'male',identity);
+assert.ok(galbwaeInput.includes(customValues.input),'output taste does not suppress input customization');
+for (const scope of ['narration','other_dialogue','tagged_content']) {
+    const scopedFlavor=buildScopedOutputPrompt({segments:segmented.segments,sourceContext:source,settings:{...settings,developerHongjinFlavorEnabled:true},nameTokens:segmented.nameTokens,scope,speakerIdentity:identity});
+    assert.ok(!scopedFlavor.includes(customValues.flavor),`Hongjin customization stays out of ${scope}`);
+}
+const exactSaved='  My exact saved custom text.\n\n';
+assert.equal(apiNormalize.normalizeCustomTranslatorSettings({output:exactSaved},{output:true}).templates.output,exactSaved);
+const minimal=buildMinimalOutputPrompt(segmented.segments,settings,segmented.nameTokens,'MINIMAL_ONCE');
+for(const value of [customValues.output,'JSON only','MINIMAL_ONCE','TARGETS']) assert.ok(minimal.includes(value));
+
+const start=index.indexOf('function customTranslatorPromptKey('), end=index.indexOf('function sendProfileRaceAttempt(',start);
+const outgoing=Function('settings',`${index.slice(start,end)}\nreturn applyCustomTranslatorPrompt;`)(settings);
+assert.equal(outgoing(output,{stage:'output-translation'}),output,'transport must not rebuild or discard composed requests');
+assert.equal(outgoing(selection,{stage:'selection-candidates'}),selection);
+assert.equal(outgoing(input,{stage:'input-translation'}),input);
+assert.match(outgoing('LIVE_REPAIR_CONTEXT',{stage:'protected-token-repair'}),/My saved repair preference\.[\s\S]*LIVE_REPAIR_CONTEXT/);
+
+const ui=index.slice(index.indexOf('function customTranslatorSettingsMarkup('),index.indexOf('function syncCustomTranslatorControls('));
+assert.match(ui,/new Set\(\['output', 'input', 'selection', 'flavor'\]\)/);
+assert.doesNotMatch(ui,/advancedFields|고급 내부 항목|custom-translator-advanced/);
+assert.match(ui,/기존 영어 번역 지침 원문/);
+assert.match(ui,/그 부분만 교체/);
+assert.match(ui,/수정한 내용은 업데이트 후에도 그대로 유지/);
+console.log('PASS: four original-prose editors; custom replacement preserves dynamic settings, identities, names, payloads, selection contexts and schemas; legacy saved values survive update/reload.');

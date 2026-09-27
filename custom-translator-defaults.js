@@ -1,3 +1,4 @@
+import { collectTranslationProse } from './translation-composer.js';
 import {
     buildBannedRepairPrompt,
     buildInputPrompt,
@@ -180,9 +181,14 @@ export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
     const other = buildSpeakerAttributionPrompt(segmented, speakerIdentity, baseSettings);
 
     return {
-        output: editablePromptBody(output),
-        input: editablePromptBody(input),
-        selection: editablePromptBody(selection),
+        output: collectTranslationProse(baseSettings, 'output', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null)),
+        input: collectTranslationProse(baseSettings, 'input', current => buildInputPrompt('{{KOREAN_INPUT}}', current, 'unknown', speakerIdentity)),
+        selection: collectTranslationProse(baseSettings, 'selection', current => buildSelectionPrompt({
+            source: '{{ORIGINAL_SOURCE}}', sourceContext: '{{ORIGINAL_SOURCE_CONTEXT}}',
+            translation: '{{SELECTED_KOREAN_FRAGMENT}}', selected: '{{SELECTED_KOREAN_FRAGMENT}}',
+            start: 0, end: 28, settings: current, oneTimeInstruction: '', speakerIdentity,
+            candidateCount: 1, contextMode: 'selection', tuning: null,
+        })),
         name: [
             originalPromptSection('NAME MATCH', nameMatch),
             originalPromptSection('NAME HISTORY FORMS', nameHistory),
@@ -197,7 +203,7 @@ export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
             originalPromptSection('UNTRANSLATED TEXT REPAIR', untranslatedRepair),
         ].join('\n\n'),
         quality: editablePromptBody(quality),
-        flavor: editablePromptBody(flavor),
+        flavor: collectTranslationProse(flavorSettings, 'flavor', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null)),
         other: editablePromptBody(other),
     };
 }

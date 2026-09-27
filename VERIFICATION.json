@@ -1,0 +1,114 @@
+{
+  "version": "0.5.100",
+  "source_version": "0.5.99",
+  "summary": "Translation prose replacement preserves live internal request assembly; four editors; saved custom values preserved.",
+  "syntax": "All JavaScript files passed node --check.",
+  "prompt_compatibility": {
+    "cases": 324,
+    "result": "Byte-for-byte equal to v0.5.99 for unedited settings across normal/compressed/ultra, MAD/Hongjin/Galbwae, output/scoped/input/selection/multi-selection."
+  },
+  "regression": {
+    "total": 43,
+    "passed": 30,
+    "new_failures": [],
+    "pre_existing_failures": [
+      {
+        "test": "compressed-prompts.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: Do not place a comma after every name or invent a nickname or action"
+      },
+      {
+        "test": "extreme-compressed-prompts.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden"
+      },
+      {
+        "test": "hongjin-final-gate.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: output/{}/false: final gate count"
+      },
+      {
+        "test": "hongjin-profanity-targeting.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: standard/mad=false: allowed urgency example"
+      },
+      {
+        "test": "hongjin-raw-voice.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:"
+      },
+      {
+        "test": "local-speaker-attribution.mjs",
+        "baseline_failed": true,
+        "reason": "SyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'"
+      },
+      {
+        "test": "mad-final-gate.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: output/{}/false: Mad gate count"
+      },
+      {
+        "test": "mad-recomposition.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once"
+      },
+      {
+        "test": "mad-targeted-repair.mjs",
+        "baseline_failed": true,
+        "reason": "SyntaxError: The requested module '../core.js' does not provide an export named 'buildMadKoreanTargetedAuditPrompt'"
+      },
+      {
+        "test": "real-output-regressions.mjs",
+        "baseline_failed": true,
+        "reason": "SyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'"
+      },
+      {
+        "test": "subject-pronoun-omission.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:"
+      },
+      {
+        "test": "translation-layer-separation.mjs",
+        "baseline_failed": true,
+        "reason": "SyntaxError: The requested module '../core.js' does not provide an export named 'buildHongjinVoiceRewritePrompt'"
+      },
+      {
+        "test": "voice-intensity-flexibility.mjs",
+        "baseline_failed": true,
+        "reason": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\\n]+may be freely adjusted/u. Input:"
+      }
+    ]
+  },
+  "changed_feature_tests": [
+    "original English prose shown without internal context/schema explanations",
+    "old translation prose replaced instead of duplicated",
+    "live settings, names, speaker identity and exact source payload retained",
+    "input canonical spellings and gender retained",
+    "single/three-candidate/multi-selection context and schema retained",
+    "flavor customization applied only in eligible enabled scopes",
+    "Galbwae exclusive behavior retained",
+    "minimal prompt contract retained",
+    "legacy custom text and modified flags survive update/reload",
+    "advanced editor removed; prior auxiliary edits preserved with live internal task"
+  ],
+  "limits": [
+    "No live SillyTavern browser/server integration session was available.",
+    "No paid translation API request was made.",
+    "13 supplied tests already failed on the original v0.5.99 archive; no new failing regression tests."
+  ],
+  "files": {
+    "base-editor.js": "d864bd5ae00ee2c62b1a999569611a4d6b4c5e3ab6aa671eeb612f1464e80d04",
+    "core.js": "2f91e67a3830332fdce6583089a0367cce2b1a10ef0705aa571ec85d2affdb97",
+    "custom-translator-defaults.js": "e95e58d49c6e57cb90ef11dcc5e781aac2735b63b2c0e84577a32032ec3ed92a",
+    "diagnostics.js": "6ed884243beee5470d36d3c0ccda8932f9c96bf5e2669ec85a61e939eff7bfbe",
+    "google-free.js": "eb41b69dc2a5b250f8f0baafb07848339e8e24f933eeb8476a278aafcaa34e8b",
+    "index.js": "0ad5850b06490c3d46debee9a6588738f3f15c983dfa291a6c4bf5f921a8042a",
+    "minimal-output.js": "f4785c5e40ccd94c9128cd79b59f70a995f5dcf4e3df96f09e5183210ff87019",
+    "output-splitting.js": "916e74a5d1dd7bbb2250f4631be48f55a3497064ee7fc278bb9ec12c5bb2cafc",
+    "pair-coordinator.js": "2898487dd92f1e1201ef43b98266664108885789669ed44f3836afd7ec7cdd85",
+    "prompt-editor.js": "4fe6b828c4f76b6d3c4a16d001c3cc9d363a18e1c3d05da03c7589bf4868f7fa",
+    "response-parser.js": "1a1243bc03bad47418c7dc09dca1664fe9d31136373ce3fbc5627fd95b21cef4",
+    "timing.js": "5ea127751f3f15690724b1f464c1e2f6daaa8cfe889190ca1f9a5e66bde85387",
+    "translation-composer.js": "1e958a6ecf65b8d1f990ee94d57647cb76761ba64d5fce5a8582f515ac97be03"
+  }
+}
