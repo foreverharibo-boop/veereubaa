@@ -49,7 +49,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.100';
+const EXTENSION_VERSION = '0.6.0';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -214,13 +214,15 @@ const PROMPT_PRESET_SCOPE_PROMPTS = 'prompts';
 const PROMPT_PRESET_SCOPE_TRANSLATION = 'prompts_translation';
 const PROFILE_STATS_STORAGE_KEY = 'verba-deep.profileStats.v1';
 const CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS = [
-    { key: 'output', label: '아웃풋 번역', description: 'AI가 보낸 메시지를 한국어로 번역하거나 전체 재번역할 때 사용해요.' },
-    { key: 'input', label: '인풋 번역', description: '내 한국어 입력을 영어로 바꿔 전송할 때 사용해요.' },
-    { key: 'selection', label: '선택 재번역', description: '드래그한 부분만 다시 번역하거나 여러 후보를 만들 때 사용해요.' },
+    { key: 'output', label: '채팅 번역', description: 'AI가 보낸 메시지를 한국어로 번역하거나 전체 재번역할 때 사용해요.' },
+    { key: 'input', label: '내가 보내는 글', description: '내 한국어 입력을 영어로 바꿔 전송할 때 사용해요.' },
+    { key: 'selection', label: '선택한 부분 다시 번역', description: '드래그한 부분만 다시 번역하거나 여러 후보를 만들 때 사용해요.' },
     { key: 'name', label: '이름 찾기·연결', description: '원문의 이름과 저장할 한국어 이름이 같은 인물인지 확인할 때 사용해요.' },
     { key: 'consistency', label: '호칭·용어 통일', description: '같은 인물의 호칭이나 반복 용어를 한 번 더 맞출 때 사용해요.' },
     { key: 'repair', label: '누락·형식 오류 복구', description: '미번역 문장이나 금지어, 깨진 출력 형식을 고칠 때 사용해요.' },
     { key: 'quality', label: '번역 품질 확인', description: '뜻·화자·말투·번역투를 검사하거나 교정할 때 사용해요.' },
+    { key: 'mad', label: '미친 한출의 맛', description: '미친 한출의 맛을 켰을 때 사용하는 한국어 재구성 지침이에요.' },
+    { key: 'hongjin', label: '김홍진의 맛', description: '김홍진의 맛을 켰을 때 캐릭터 대사에 사용하는 말투 지침이에요.' },
     { key: 'flavor', label: '미친 한출·캐릭터 말투', description: '미친 한출의 맛이나 캐릭터 전용 말투 요청에 사용해요.' },
     { key: 'other', label: '그 밖의 내부 요청', description: '위 항목에 포함되지 않는 보조 AI 요청에 사용해요.' },
 ];
@@ -309,6 +311,15 @@ function normalizeCustomTranslatorSettings(rawTemplates = {}, rawModified = {}) 
                 ? templates[key]
                 : savedInstruction)
             : DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES[key];
+    }
+    // Only migrate once: a new field (including a reset-to-default field)
+    // always takes precedence over the historical combined taste.
+    for (const key of ['mad', 'hongjin']) {
+        if (!Object.prototype.hasOwnProperty.call(templates, key)
+            && typeof modified[key] !== 'boolean' && normalizedModified.flavor) {
+            normalizedTemplates[key] = normalizedTemplates.flavor;
+            normalizedModified[key] = true;
+        }
     }
     return { templates: normalizedTemplates, modified: normalizedModified };
 }
@@ -10404,13 +10415,15 @@ function customTranslatorInstructionPlaceholder(key) {
         consistency: 'Example: Keep names, titles and recurring terms consistent throughout the passage.',
         repair: 'Example: Repair only the broken portion without rewriting correct sentences.',
         quality: 'Example: Correct mistranslations and awkward calques while preserving the original facts.',
+        mad: 'Example: Reconstruct the scene as natural Korean fiction while preserving its facts.',
+        hongjin: 'Example: Apply the character voice naturally without changing scene facts.',
         flavor: 'Example: Apply the configured character voice clearly without changing scene facts.',
         other: 'Example: Follow the requested task exactly and preserve all protected elements.',
     })[key] || 'Write the instruction in plain English.';
 }
 
 function customTranslatorFieldMarkup(item) {
-    const instruction = normalizeCustomTranslatorInstruction(settings.customTranslatorTemplates?.[item.key]);
+    const instruction = String(settings.customTranslatorTemplates?.[item.key] ?? '');
     const modified = settings.customTranslatorModified?.[item.key] === true;
     return `
         <section class="verba-deep-prompt-slot verba-deep-custom-translator-field" data-verba-deep-custom-translator-section="${item.key}">
@@ -10427,7 +10440,7 @@ function customTranslatorFieldMarkup(item) {
 }
 
 function customTranslatorSettingsMarkup() {
-    const generalKeys = new Set(['output', 'input', 'selection', 'flavor']);
+    const generalKeys = new Set(['output', 'input', 'selection', 'mad', 'hongjin']);
     const generalFields = CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS
         .filter(item => generalKeys.has(item.key))
         .map(customTranslatorFieldMarkup)
@@ -10440,7 +10453,7 @@ function customTranslatorSettingsMarkup() {
                     <input type="checkbox" id="verba-deep-custom-translator-enabled" ${settings.customTranslatorEnabled ? 'checked' : ''}>
                     <span>커스텀 번역기 사용</span>
                 </label>
-                <div class="verba-deep-help verba-deep-custom-translator-intro">각 칸에는 <b>기존 영어 번역 지침 원문</b>이 표시됩니다. 문체·표현·번역 방식에 관한 지침을 편집하면 그 부분만 교체됩니다. 화자 정보, 이름 고정, 현재 적용 설정, 선택 범위와 응답 형식은 요청할 때 자동으로 붙습니다. 미친 한출·캐릭터 말투는 해당 맛 기능이 켜진 범위에 적용됩니다. 수정한 내용은 업데이트 후에도 그대로 유지되며, 기본값 버튼을 누르면 최신 번역 지침으로 돌아갑니다.</div>
+                <div class="verba-deep-help verba-deep-custom-translator-intro">각 칸에는 <b>기존 영어 번역 지침 원문</b>이 표시됩니다. 문체·표현·번역 방식에 관한 지침을 편집하면 그 부분만 교체됩니다. 화자 정보, 이름 고정, 현재 적용 설정, 선택 범위와 응답 형식은 요청할 때 자동으로 붙습니다. 미친 한출의 맛과 김홍진의 맛은 각각 편집할 수 있으며 해당 맛 기능이 켜진 범위에만 적용됩니다. 예전 통합 말투 지침을 수정했다면 두 항목에 같은 내용이 이어지고, 이후 각각 독립적으로 저장됩니다. 수정한 내용은 업데이트 후에도 그대로 유지되며, 기본값 버튼을 누르면 최신 번역 지침으로 돌아갑니다.</div>
                 <div id="verba-deep-custom-translator-controls" class="${settings.customTranslatorEnabled ? '' : 'verba-deep-control-disabled'}">
                     <div class="verba-deep-custom-translator-group-title">일반 사용자용</div>
                     ${generalFields}
@@ -12192,7 +12205,7 @@ function injectSettingsPanel() {
         if (target instanceof HTMLTextAreaElement && target.dataset.verbaDeepCustomTranslatorKey) {
             const key = String(target.dataset.verbaDeepCustomTranslatorKey || '');
             if (CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS.some(item => item.key === key)) {
-                const instruction = normalizeCustomTranslatorInstruction(target.value);
+                const instruction = target.value;
                 settings.customTranslatorTemplates[key] = instruction;
                 settings.customTranslatorModified[key] = instruction !== DEFAULT_CUSTOM_TRANSLATOR_TEMPLATES[key];
                 syncCustomTranslatorFieldState(panel, key);

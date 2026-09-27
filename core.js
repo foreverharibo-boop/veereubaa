@@ -1801,7 +1801,7 @@ function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
 - An explicitly named or titled NPC addressee, an NPC reply, a group audience, or an ambiguous listener means ZERO added uses of “오빠” in that line. Use ordinary first-person Korean such as “나/내가” when needed.
 - If TARGET CHARACTER is clearly not male, or if the addressee or speaker is ambiguous, do not use the added “오빠” self-reference. It is a playful/affectionate speech device authorized by this setting, not evidence of literal sibling kinship and not permission to alter age, gender, hierarchy, relationship, consent, or scene facts.`;
 
-    return `${madKoreanExclusiveEnabled(settings) ? '' : translationProse(settings, 'flavor', noMisogynyRule()) + '\n'}${translationProse(settings, 'flavor', `DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
+    return `${madKoreanExclusiveEnabled(settings) ? '' : translationProse(settings, 'hongjin', noMisogynyRule()) + '\n'}${translationProse(settings, 'hongjin', `DEVELOPER KIM HONGJIN FLAVOR — TARGET CHARACTER DIALOGUE ONLY
 - EXPERIMENTAL E→K voice transcreation layer.
 - Fixed personality premise sent with this translation:
   "이 캐릭터는 능글맞고 장난기가 많은 성격이며 츤데레식, 능글맞은, 천박한 말투를 사용한다."
@@ -1810,7 +1810,7 @@ function developerHongjinFlavorBlock(settings = {}, scope = 'narration') {
 - Added material may ONLY operate at the surface voice level. Preserve the source's underlying proposition, events, actions, who did what to whom, speaker/addressee, factual relationships, chronology, consent/refusal, threats that actually exist, sexual explicitness, emotional direction, and scene stakes.
 - Do NOT invent new events, physical actions, sexual acts, relationship status, backstory, promises, consent, accusations, threats, insults aimed at a NEW target, or factual claims.
 - Surface profanity may be stronger than the literal source, but it must not transform friendliness into genuine hostility, joking into a serious threat, rejection into consent, or a neutral statement into a new accusation.`)}
-${translationProse(settings, 'flavor', noDirectUserProfanityRule())}
+${translationProse(settings, 'hongjin', noDirectUserProfanityRule())}
 ${madKoreanExclusiveEnabled(settings) ? '' : `${dialogueSubjectVocativeRule()}\n${naturalInsultReferenceRule()}`}
 - Never apply this block to narration, USER/NPC/OTHER-speaker dialogue, quoted speech spoken by someone else, tagged content outside TARGET CHARACTER dialogue, or K→E input.
 
@@ -1941,7 +1941,7 @@ function developerMadKoreanOutputBlock(settings = {}, scope = 'mixed') {
                     ? 'USER/NPC/OTHER DIALOGUE'
                     : 'ALL E→K OUTPUT SCOPES';
 
-    return translationProse(settings, 'flavor', `MAD KOREAN EXCLUSIVE ENGINE — FACT-LOCKED KOREAN REAUTHORING
+    return translationProse(settings, 'mad', `MAD KOREAN EXCLUSIVE ENGINE — FACT-LOCKED KOREAN REAUTHORING
 - This is the only E→K writing engine for ${scopeLabel}. Produce the final Korean directly in one pass; never draft a literal translation first and never apply this mode to K→E input.
 - Ignore every saved/custom base instruction, one-time request, global/dialogue prompt, ordinary fine-tuning option, and other developer experiment EXCEPT KIM HONG-JIN FLAVOR when it is enabled for target-character dialogue. Their saved values remain untouched and their text is absent from this request.
 
@@ -2206,7 +2206,7 @@ function madKoreanExclusiveRules(settings = {}, scope = 'mixed', nameTokens = []
         settings,
         scope === 'mixed' ? 'target_dialogue' : scope,
     );
-    return `${translationProse(settings, 'flavor', noMisogynyRule())}
+    return `${translationProse(settings, 'mad', noMisogynyRule())}
 ${developerMadKoreanOutputBlock(settings, scope)}
 
 ${madKoreanIdentityReferenceBlock(speakerIdentity)}

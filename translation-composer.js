@@ -2,7 +2,7 @@
 // Only explicitly registered prose blocks pass through this module. Identity,
 // current settings, task contracts and source data never enter this splitter.
 const COMPOSITION = Symbol('translation composition');
-const GENERAL_KEYS = new Set(['output', 'input', 'selection', 'flavor']);
+const GENERAL_KEYS = new Set(['output', 'input', 'selection', 'mad', 'hongjin']);
 
 const INTERNAL_SENTENCE = /@@VERBA|\b(?:JSON|NAME LOCK|TARGET CHARACTER|TARGET-CHARACTER|TARGET ADDRESSEE GENDER|USER\/NPC|CURRENT USER|PRIMARY CAST REFERENCES|K→E input|segment id|editable id|between ids|protected (?:layout|structure|tokens)|required output format|identity spelling context|inert data)\b|Ignore every saved\/custom base instruction|This is the only E→K writing engine|Never apply this block to|Translation direction is always|User prompts may affect|LEFT CONTEXT|RIGHT CONTEXT|EXISTING KOREAN CONTEXT|Return exactly three distinct|Return a new Korean replacement for only|Preserve (?:Markdown|macros)|tags, attributes, code|Metadata keeps its existing number\/layout rules|^Handle /iu;
 
@@ -48,8 +48,8 @@ export function withTranslationComposition(settings = {}, key, build) {
         ((key !== 'output' || settings.developerMadKoreanOutputEnabled !== true)
             && customTranslationInstruction(settings, key) !== null)
         || (key !== 'input'
-            && (settings.developerMadKoreanOutputEnabled === true || settings.developerHongjinFlavorEnabled === true)
-            && customTranslationInstruction(settings, 'flavor') !== null)
+            && ((settings.developerMadKoreanOutputEnabled === true && customTranslationInstruction(settings, 'mad') !== null)
+                || (settings.developerHongjinFlavorEnabled === true && customTranslationInstruction(settings, 'hongjin') !== null)))
     );
     const current = { ...settings, [COMPOSITION]: context };
     // Custom prose is not rewritten through the experimental compressed modes.
@@ -74,11 +74,11 @@ export function translationProse(settings, slot, original) {
     }
     const first = !context.emitted.has(key);
     context.emitted.add(key);
-    return [first ? `[CUSTOM ${key.toUpperCase()} TRANSLATION RULES]\n${custom}\n[END CUSTOM TRANSLATION RULES]\nThe current engine context, active setting scopes, protected structure and response contract supplied by this request remain authoritative; this block replaces translation prose only. A CUSTOM FLAVOR block is the active writing instruction for the enabled taste, not an excluded ordinary base prompt. Apply it only within the enabled taste and speaker scope.` : '', parts.internal].filter(Boolean).join('\n');
+    return [first ? `[CUSTOM ${key.toUpperCase()} TRANSLATION RULES]\n${custom}\n[END CUSTOM TRANSLATION RULES]\nThe current engine context, active setting scopes, protected structure and response contract supplied by this request remain authoritative; this block replaces translation prose only. A CUSTOM MAD or CUSTOM HONGJIN block is the active writing instruction for that enabled taste, not an excluded ordinary base prompt. CUSTOM HONGJIN applies only to confirmed TARGET dialogue; CUSTOM MAD follows the enabled MAD scope. Apply it only within the enabled taste and speaker scope.` : '', parts.internal].filter(Boolean).join('\n');
 }
 
 export function collectTranslationProse(settings, key, build) {
-    const context = { key, collectKey: key, emitted: new Set(), collected: [] };
+    const context = { key: ['mad', 'hongjin'].includes(key) ? 'output' : key, collectKey: key, emitted: new Set(), collected: [] };
     build({ ...settings, customTranslatorEnabled: false, [COMPOSITION]: context });
     return [...new Set(context.collected)].join('\n\n');
 }

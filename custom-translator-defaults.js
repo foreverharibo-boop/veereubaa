@@ -65,11 +65,6 @@ function previewSettings(ruleOrder = []) {
 
 export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
     const baseSettings = previewSettings(ruleOrder);
-    const flavorSettings = {
-        ...baseSettings,
-        developerMadKoreanOutputEnabled: true,
-        developerHongjinFlavorEnabled: true,
-    };
     const speakerIdentity = {
         characterName: '{{char}}',
         userName: '{{user}}',
@@ -177,8 +172,10 @@ export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
         tuning: null,
         enabledChecks: ['meaning', 'referent', 'voice', 'translationese', 'continuity'],
     });
-    const flavor = buildOutputPrompt(segmented, flavorSettings, '', speakerIdentity, null);
     const other = buildSpeakerAttributionPrompt(segmented, speakerIdentity, baseSettings);
+
+    const mad = collectTranslationProse({ ...baseSettings, developerMadKoreanOutputEnabled: true }, 'mad', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null));
+    const hongjin = collectTranslationProse({ ...baseSettings, developerHongjinFlavorEnabled: true }, 'hongjin', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null));
 
     return {
         output: collectTranslationProse(baseSettings, 'output', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null)),
@@ -203,7 +200,10 @@ export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
             originalPromptSection('UNTRANSLATED TEXT REPAIR', untranslatedRepair),
         ].join('\n\n'),
         quality: editablePromptBody(quality),
-        flavor: collectTranslationProse(flavorSettings, 'flavor', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null)),
+        mad,
+        hongjin,
+        // Historical storage key is retained for exact legacy edit migration.
+        flavor: [mad, hongjin].join('\n\n'),
         other: editablePromptBody(other),
     };
 }
