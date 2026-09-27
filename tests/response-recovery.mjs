@@ -175,7 +175,7 @@ for (const [before, after] of breakCases) {
         assert.equal(parsed.partial.get(prose.id), after);
     }
 }
-for (const type of ['tagged_content', 'user_input', 'name_match', 'role_term']) {
+for (const type of ['user_input', 'name_match', 'role_term']) {
     assert.equal(repairUnexpectedProseBreaks('믿을\n\n 수', { ...prose, type }), '믿을\n\n 수');
 }
 assert.equal(repairUnexpectedProseBreaks('믿을\n\n 수', { ...prose, text: 'First\nSecond' }), '믿을\n\n 수');

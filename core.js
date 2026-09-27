@@ -1214,10 +1214,14 @@ export function segmentSource(value, nameLocks = [], { translateTaggedContent = 
     };
 
     for (const region of regions) {
-        const blocks = region.text.split(/(\n{2,})/);
+        // Store every source line break outside the AI target. Adjacent rows
+        // still travel together in one request; local assembly alone restores
+        // CRLF, single hard wraps and blank-line counts after any 1/2/3-way
+        // parallel translation.
+        const blocks = region.text.split(/((?:(?:\r\n)|[\r\n\u0085\u2028\u2029])+)/u);
         for (const block of blocks) {
             if (!block) continue;
-            if (/^\n{2,}$/.test(block)) {
+            if (/^(?:(?:\r\n)|[\r\n\u0085\u2028\u2029])+$/u.test(block)) {
                 parts.push({ type: 'passthrough', text: block });
                 continue;
             }

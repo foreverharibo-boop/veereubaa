@@ -9,6 +9,7 @@ import { minimalOutputEnabled, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMini
 import { outputSplitCount, runOutputBatches, createSplitRequestQueue } from './output-splitting.js';
 import { activateTranslationExtension, isTranslationExtensionActive, registerTranslationExtension } from './pair-coordinator.js';
 import { buildDefaultCustomTranslatorTemplates } from './custom-translator-defaults.js';
+import { translateGoogleFreeSegments, translateGoogleFreeText } from './google-free.js';
 import {
     assembleTranslation,
     buildBannedRepairPrompt,
@@ -48,7 +49,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.5.97';
+const EXTENSION_VERSION = '0.5.99';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -310,6 +311,7 @@ function normalizeCustomTranslatorSettings(rawTemplates = {}, rawModified = {}) 
     return { templates: normalizedTemplates, modified: normalizedModified };
 }
 const DEFAULT_SETTINGS = {
+    translationEngine: 'ai',
     profileId: '',
     fallbackProfileId: '',
     thirdProfileId: '',
@@ -444,6 +446,7 @@ const legacyProfileStats = settings.profileStats;
 let profileStatsState = loadLocalProfileStats(legacyProfileStats);
 
 settings.autoProfileFallback = settings.autoProfileFallback !== false;
+settings.translationEngine = settings.translationEngine === 'google-free' ? 'google-free' : 'ai';
 settings.timeoutSeconds = Math.min(3600, Math.max(60, Number(settings.timeoutSeconds) || 120));
 settings.profileRaceEnabled = settings.profileRaceEnabled === true;
 settings.profileRaceStaggerSeconds = Math.min(180, Math.max(5, Math.round(Number(settings.profileRaceStaggerSeconds) || 35)));
@@ -2774,6 +2777,31 @@ function profileList() {
     }));
 }
 
+function googleFreeEngineEnabled() {
+    return settings.translationEngine === 'google-free';
+}
+
+function aiTranslationEngineEnabled() {
+    return !googleFreeEngineEnabled();
+}
+
+function googleFreeStageOptions(stage = '') {
+    const value = String(stage || '').toLocaleLowerCase();
+    if (/^input-translation(?:$|:)/u.test(value)) {
+        return { sourceLanguage: 'ko', targetLanguage: 'en' };
+    }
+    if (/^output-(?:translation|retranslation)(?:$|:)/u.test(value)) {
+        return { sourceLanguage: 'auto', targetLanguage: 'ko' };
+    }
+    return null;
+}
+
+function requireAiEngineForFeature(featureLabel) {
+    if (aiTranslationEngineEnabled()) return true;
+    notify(`${featureLabel} 기능은 AI 번역 엔진에서만 사용할 수 있어요. 번역 엔진을 “AI 연결 프로필”로 바꿔 주세요.`, 'warning');
+    return false;
+}
+
 function fillProfileSelect(select, selectedId, placeholder) {
     if (!select) return;
     const profiles = profileList();
@@ -2804,6 +2832,24 @@ function refreshProfileSelect() {
     );
     refreshProfileToggleButton();
     renderProfileStats();
+}
+
+function syncTranslationEngineUi(root = document.querySelector('#verba-deep-settings')) {
+    if (!root) return;
+    const google = googleFreeEngineEnabled();
+    const engineSelect = root.querySelector('#verba-deep-translation-engine');
+    const aiOptions = root.querySelector('#verba-deep-ai-profile-options');
+    const note = root.querySelector('#verba-deep-translation-engine-note');
+    const testButton = root.querySelector('#verba-deep-test-profile');
+    if (engineSelect instanceof HTMLSelectElement) engineSelect.value = google ? 'google-free' : 'ai';
+    if (aiOptions) aiOptions.hidden = google;
+    if (note) {
+        note.textContent = google
+            ? 'API 키 없이 무료 Google 번역을 사용해요. 긴 글은 자동 분할됩니다. 비공식 요청 방식이라 예고 없이 막힐 수 있으며, 프롬프트·맛 기능·선택 재번역은 적용되지 않습니다.'
+            : 'SillyTavern 연결 프로필의 AI 모델로 번역해요. 프롬프트·말투·맛 기능과 선택 재번역을 사용할 수 있습니다.';
+    }
+    if (testButton) testButton.textContent = google ? '무료 Google 번역 테스트' : '현재 AI 연결 테스트';
+    refreshProfileToggleButton();
 }
 
 function enqueueRequest(task) {
@@ -3630,6 +3676,17 @@ function collectPartialSegmentTranslations(raw, expectedSegments) {
 }
 
 async function requestSegments(prompt, expectedSegments, options = {}) {
+    const googleOptions = typeof settings !== 'undefined' && settings.translationEngine === 'google-free'
+        ? googleFreeStageOptions(options.stage)
+        : null;
+    if (googleOptions) {
+        return translateGoogleFreeSegments(expectedSegments, {
+            ...googleOptions,
+            signal: options.signal || null,
+            concurrency: 2,
+        });
+    }
+
     const maxRetries = 1;
     const parseRetryDelays = [500];
     const completed = new Map();
@@ -3854,7 +3911,7 @@ function segmentContainsRoleTerm(segment, terms) {
 }
 
 async function planRepeatedRoleTermLocks(segmented, options = {}) {
-    if (madKoreanExclusiveMode()) return [];
+    if (googleFreeEngineEnabled() || madKoreanExclusiveMode()) return [];
     const terms = repeatedRoleTerms(segmented?.segments);
     if (!terms.length) return [];
 
@@ -4349,6 +4406,7 @@ function speakerAttributionCacheKey(segmented, speakerIdentity = {}) {
 async function classifyOutputDialogueSpeakers(segmented, speakerIdentity, options = {}) {
     const dialogueSegments = (segmented?.segments || []).filter(segment => segment.type === 'dialogue_candidate');
     const scopes = Object.fromEntries(dialogueSegments.map(segment => [segment.id, 'other_dialogue']));
+    if (googleFreeEngineEnabled()) return scopes;
 
     const needsSpeakerIsolation = madKoreanExclusiveMode()
         ? false
@@ -4452,6 +4510,13 @@ async function requestScopedGroupTranslations({
     }
 }
 async function requestScopedOutputTranslations(segmented, speakerScopes, options = {}) {
+    if (settings.translationEngine === 'google-free') {
+        return requestSegments('', segmented.segments, {
+            ...options,
+            stage: options.stage || 'output-translation',
+        });
+    }
+
     // Split only the initial translation request. Existing speaker isolation,
     // prompts, full-message planning, repair and quality checks remain intact.
     const splitCount = outputSplitCount(settings);
@@ -5780,7 +5845,7 @@ async function translateMessage(messageId, options = {}) {
         if (!options.automatic) notify('번역할 외국어 원문이 없어요.', 'warning');
         return;
     }
-    if (!settings.profileId) {
+    if (settings.translationEngine !== 'google-free' && !settings.profileId) {
         if (!options.automatic) notify('먼저 번역기 전용 연결 프로필을 선택해 주세요.', 'warning');
         return;
     }
@@ -8835,6 +8900,7 @@ function addSelectionToBundle(snapshot) {
 async function retranslateSelectionBundle() {
     const state = multiSelectionState;
     if (!state || selectionBusy) return;
+    if (!requireAiEngineForFeature('묶음 선택 재번역')) return;
     if (!settings.profileId) {
         notify('먼저 번역기 전용 연결 프로필을 선택해 주세요.', 'warning');
         return;
@@ -8975,6 +9041,7 @@ Your previous response echoed the existing Korean wording for these ids: ${JSON.
 
 async function lockSelectionName(snapshot) {
     if (!snapshot || selectionBusy) return;
+    if (!requireAiEngineForFeature('선택 이름 찾기')) return;
     if (!settings.profileId) {
         notify('원문 이름을 찾으려면 먼저 번역기 전용 연결 프로필을 선택해 주세요.', 'warning');
         return;
@@ -9064,6 +9131,7 @@ async function lockSelectionName(snapshot) {
 
 async function retranslateSelection(snapshot) {
     if (!snapshot || selectionBusy) return;
+    if (!requireAiEngineForFeature('선택 재번역')) return;
     if (!settings.profileId) {
         notify('먼저 번역기 전용 연결 프로필을 선택해 주세요.', 'warning');
         return;
@@ -9714,7 +9782,7 @@ function refreshProfileToggleButton() {
     if (!button) return;
     const profiles = configuredProfileCycle();
     const configured = configuredProfiles();
-    const canSwitch = configured.length >= 2;
+    const canSwitch = aiTranslationEngineEnabled() && configured.length >= 2;
     button.hidden = !canSwitch;
     button.querySelector('.verba-deep-profile-slot').textContent = profiles.slot;
     button.classList.toggle('verba-deep-profile-b', profiles.slot === 'B');
@@ -9835,21 +9903,28 @@ function injectInputAction() {
 }
 
 async function testConnection(button) {
-    if (!settings.profileId) {
-        notify('먼저 연결 프로필을 선택해 주세요.', 'warning');
-        return;
-    }
-    const profiles = configuredProfileCycle();
-    const profileId = profiles.active;
-    const profileSlot = profiles.slot;
-    if (!profileId) {
-        notify('테스트할 현재 연결 프로필이 없어요.', 'warning');
-        return;
-    }
     const oldText = button.textContent;
     button.disabled = true;
     button.textContent = '테스트 중…';
     try {
+        if (googleFreeEngineEnabled()) {
+            const translated = String(await translateGoogleFreeText('Hello, this is a translation test.', {
+                sourceLanguage: 'en',
+                targetLanguage: 'ko',
+            })).trim();
+            if (!translated) throw new Error('무료 Google 번역 테스트 결과가 비어 있습니다.');
+            notify(`무료 Google 번역 연결 성공: ${translated}`, 'success');
+            return;
+        }
+
+        if (!settings.profileId) {
+            notify('먼저 연결 프로필을 선택해 주세요.', 'warning');
+            return;
+        }
+        const profiles = configuredProfileCycle();
+        const profileId = profiles.active;
+        const profileSlot = profiles.slot;
+        if (!profileId) throw new Error('테스트할 현재 연결 프로필이 없어요.');
         const source = '안녕하세요.';
         const expected = [{ id: 'seg_0000', type: 'user_input', text: source }];
         const targetGender = detectCharacterGender(currentCharacterReference()?.character);
@@ -9865,7 +9940,16 @@ async function testConnection(button) {
         notify(`프로필 ${profileSlot} 연결 성공: ${translated}`, 'success');
     } catch (error) {
         if (!isAbort(error)) {
-            reportError('connection-test', error, `프로필 ${profileSlot} “${profileDisplayName(profileId)}” 연결 실패: ${errorText(error)}`);
+            const profiles = configuredProfileCycle();
+            const profileId = profiles.active;
+            const profileSlot = profiles.slot;
+            reportError(
+                'connection-test',
+                error,
+                googleFreeEngineEnabled()
+                    ? `무료 Google 번역 연결 실패: ${errorText(error)}`
+                    : `프로필 ${profileSlot} “${profileDisplayName(profileId)}” 연결 실패: ${errorText(error)}`,
+            );
         }
     } finally {
         button.disabled = false;
@@ -10506,6 +10590,14 @@ function injectSettingsPanel() {
                 ${settingsVisibilityMarkup()}
 
                 <section id="verba-deep-profile-settings-group" class="verba-deep-settings-section-group">
+                <label for="verba-deep-translation-engine">번역 엔진</label>
+                <select id="verba-deep-translation-engine" class="text_pole">
+                    <option value="ai" ${settings.translationEngine !== 'google-free' ? 'selected' : ''}>AI 연결 프로필</option>
+                    <option value="google-free" ${settings.translationEngine === 'google-free' ? 'selected' : ''}>무료 Google 번역</option>
+                </select>
+                <div id="verba-deep-translation-engine-note" class="verba-deep-help"></div>
+
+                <div id="verba-deep-ai-profile-options">
                 <label for="verba-deep-profile">연결 프로필 A</label>
                 <div class="verba-deep-profile-row">
                     <select id="verba-deep-profile" class="text_pole"></select>
@@ -10517,7 +10609,6 @@ function injectSettingsPanel() {
 
                 <label for="verba-deep-third-profile">연결 프로필 C <small>(선택)</small></label>
                 <select id="verba-deep-third-profile" class="text_pole"></select>
-                <button type="button" id="verba-deep-test-profile" class="menu_button verba-deep-wide">현재 프로필 연결 테스트</button>
                 <div class="verba-deep-help">입력창 옆 ⇄ᴬ/⇄ᴮ/⇄ᶜ 버튼으로 설정된 프로필을 순서대로 직접 바꿀 수 있어요.</div>
 
                 <label class="verba-deep-check-row">
@@ -10553,6 +10644,8 @@ function injectSettingsPanel() {
                     </div>
                     <div class="verba-deep-help">최초 프로필 호출부터 계산해 입력한 시간이 지나면 경주 중인 A·B·C 요청을 모두 종료해요. 마지막 입력값은 저장됩니다.</div>
                 </div>
+                </div>
+                <button type="button" id="verba-deep-test-profile" class="menu_button verba-deep-wide">현재 번역 엔진 테스트</button>
                 </section>
 
                 <section id="verba-deep-input-settings-group" class="verba-deep-settings-section-group">
@@ -11103,6 +11196,7 @@ function injectSettingsPanel() {
     bindAutoInputSetting(panel);
     bindBaseTranslationEditor(panel, settings, { save: saveSettings, notify });
     refreshProfileSelect();
+    syncTranslationEngineUi(panel);
     renderNameLockManager();
     renderProfileStats();
     renderTranslationRuleOrder();
@@ -11630,6 +11724,18 @@ function injectSettingsPanel() {
 
     panel.querySelector('#verba-deep-name-lock-manager').addEventListener('toggle', event => {
         if (event.currentTarget.open) renderNameLockManager();
+    });
+
+    panel.querySelector('#verba-deep-translation-engine').addEventListener('change', event => {
+        settings.translationEngine = event.target.value === 'google-free' ? 'google-free' : 'ai';
+        syncTranslationEngineUi(panel);
+        saveSettings();
+        notify(
+            googleFreeEngineEnabled()
+                ? '무료 Google 번역을 사용합니다. 프롬프트와 맛 기능은 적용되지 않아요.'
+                : 'AI 연결 프로필 번역을 사용합니다.',
+            'info',
+        );
     });
 
     panel.querySelector('#verba-deep-profile').addEventListener('change', event => {

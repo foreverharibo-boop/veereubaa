@@ -10,7 +10,7 @@ function segmentNumberKey(id) {
 // multi-line translations by character offsets: rewording makes that ambiguous.
 export function repairUnexpectedProseBreaks(translation, segment) {
     if (typeof translation !== 'string'
-        || !['narration', 'dialogue_candidate', 'target_dialogue', 'other_dialogue', 'selection', 'multi_selection'].includes(segment?.type)
+        || !['narration', 'dialogue_candidate', 'target_dialogue', 'other_dialogue', 'tagged_content', 'selection', 'multi_selection'].includes(segment?.type)
         || typeof segment.text !== 'string' || !segment.text.trim()
         || /[\r\n\u0085\u2028\u2029]/u.test(segment.text)
         || /[`<>]|~{3}/u.test(segment.text)) return translation;
