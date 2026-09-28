@@ -1,6 +1,6 @@
 {
-  "version": "0.6.5",
-  "baselineVersion": "0.6.4",
+  "version": "0.6.7",
+  "baselineVersion": "0.6.6",
   "passed": 48,
   "failed": 0,
   "tests": [
@@ -242,7 +242,7 @@
     {
       "test": "settings-search.mjs",
       "exit": 0,
-      "output": "PASS: settings search is placed below screen composition, searches groups/options/help, opens matches, restores state, and can itself be hidden.\n"
+      "output": "PASS: settings search highlights matching words, temporarily reveals hidden groups, opens matches, and restores text/layout/open state when cleared.\n"
     }
   ],
   "syntaxChecked": [
