@@ -51,7 +51,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.7';
+const EXTENSION_VERSION = '0.6.8';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -257,7 +257,6 @@ const SETTINGS_VISIBILITY_DEFINITIONS = [
     { key: 'relationship', label: '말투·호칭 설정', selector: '#verba-deep-developer-relationship-lab' },
     { key: 'koreanFlavor', label: '한캐의 맛', selector: '#verba-deep-korean-flavor' },
     { key: 'englishFlavor', label: '영캐의 맛', selector: '#verba-deep-english-flavor' },
-    { key: 'galbwae', label: '추석 갈봬체', selector: '#verba-deep-chuseok-galbwae' },
     { key: 'madKorean', label: '미친 한출의 맛', selector: '#verba-deep-developer-mad-korean-lab' },
     { key: 'hongjin', label: '김홍진의 맛', selector: '#verba-deep-developer-hongjin-lab' },
     { key: 'beginner', label: '신입 챗시 전용', selector: '#verba-deep-beginner-character-guide' },
@@ -531,7 +530,8 @@ function madKoreanExclusiveMode() {
 }
 
 function galbwaeExclusiveMode() {
-    return normalizedChuseokGalbwaeScope(settings.chuseokGalbwaeScope, settings.chuseokGalbwaeEnabled) !== 'off';
+    return settings.developerMode === true
+        && normalizedChuseokGalbwaeScope(settings.chuseokGalbwaeScope, settings.chuseokGalbwaeEnabled) !== 'off';
 }
 
 settings.developerHongjinTranscreation = DEVELOPER_HONGJIN_TRANSCREATION_OPTIONS.some(option => option.value === settings.developerHongjinTranscreation)
@@ -3351,8 +3351,10 @@ function applyCustomTranslatorPrompt(prompt, options = {}) {
     if (settings.customTranslatorEnabled !== true || options.stage === 'connection-test') return String(prompt || '');
     const key = customTranslatorPromptKey(options.stage);
     if (['output', 'input', 'selection', 'flavor'].includes(key)) return String(prompt || '');
-    const galbwaeActive = ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
-        || settings.chuseokGalbwaeEnabled === true;
+    const galbwaeActive = settings.developerMode === true && (
+        ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
+        || settings.chuseokGalbwaeEnabled === true
+    );
     if (galbwaeActive) return String(prompt || '');
     // Preserve previously edited advanced values even though their editor was
     // removed. They supplement the current task; they cannot erase its data.
@@ -10505,6 +10507,26 @@ function generalRelationshipSettingsMarkup() {
                     </details>`;
 }
 
+function developerChuseokGalbwaeMarkup() {
+    return `
+        <details id="verba-deep-chuseok-galbwae" class="verba-deep-tool-details verba-deep-chuseok-galbwae">
+            <summary>🌕 추석 갈봬체 <small>개발자 · 기본 OFF</small></summary>
+            <div class="verba-deep-tool-details-content">
+                <label class="verba-deep-check-row">
+                    <input type="checkbox" id="verba-deep-chuseok-galbwae-all" ${settings.chuseokGalbwaeScope === 'all' ? 'checked' : ''}>
+                    <span>전체 갈봬체 <small>서술 + 대사 + **강조문**</small></span>
+                </label>
+                <label class="verba-deep-check-row">
+                    <input type="checkbox" id="verba-deep-chuseok-galbwae-dialogue-inner" ${settings.chuseokGalbwaeScope === 'dialogueInner' ? 'checked' : ''}>
+                    <span>대사·**강조문**만 갈봬체 <small>그 외 서술 정상</small></span>
+                </label>
+                <div class="verba-deep-help">개발자 모드에서만 작동합니다. 개발자 모드를 끄면 저장된 범위는 유지되지만 번역에는 적용되지 않아요. 둘 중 하나만 선택할 수 있으며, 켠 항목을 다시 끄면 갈봬체가 완전히 꺼집니다.</div>
+                <div class="verba-deep-help">켜져 있는 동안 미친 한출의 맛·김홍진의 맛·입력 프롬프트·표현 디테일 등 다른 스타일 지시는 전송하지 않는 배타 모드로 작동합니다. 모든 &lt;짝태그&gt; 안의 글씨에는 갈봬체를 적용하지 않으며 Inner_Info도 예외가 아닙니다. Info_panel·날짜·날씨·장소·이름·숫자·코드·태그 구조와 속성은 어느 옵션에서도 바꾸지 않습니다.</div>
+                <div class="verba-deep-help">대표 기준: “나 알아?” → “나를 아늕랴!!”처럼 죠캎식으로 발음·맞춤법·띄어쓰기·조사를 기괴하지만 읽히게 무너뜨립니다. 인터넷 처음 배운 할배 같은 결을 살짝 섞고, 씨발은 씨핤·씨핧·샤갈·쌱앐·쌰갈·시핣 계열로 바꿔요. 일부 요→료, 네·응→례와 ㄷㄷ·;;·ㅠㅠ도 랜덤하게 섞되 도배하지 않습니다. **굵은 글씨**는 기호를 유지하고 안쪽 문장에 적용합니다.</div>
+            </div>
+        </details>`;
+}
+
 function developerSettingsMarkup() {
     return `
         <details id="verba-deep-developer-settings" class="verba-deep-tool-details verba-deep-developer-settings" open>
@@ -10512,6 +10534,7 @@ function developerSettingsMarkup() {
             <div class="verba-deep-tool-details-content">
                 ${settings.developerMode ? `
                     <div class="verba-deep-developer-enabled-note">개발자 모드가 활성화되어 있어요.</div>
+                    ${developerChuseokGalbwaeMarkup()}
                     <details id="verba-deep-developer-minimal-prompt-lab" class="verba-deep-tool-details verba-deep-developer-lab">
                         <summary>🧪 최소 프롬프트 실험 <small>출력·전체 재번역</small></summary>
                         <div class="verba-deep-tool-details-content">
@@ -11514,22 +11537,6 @@ function injectSettingsPanel() {
                             </div>
                         </div>
                     </details>
-
-                <details id="verba-deep-chuseok-galbwae" class="verba-deep-tool-details verba-deep-chuseok-galbwae">
-                    <summary>🌕 추석 갈봬체 <small>서술·대사·**강조문** · 기본 OFF</small></summary>
-                    <div class="verba-deep-tool-details-content">
-                        <label class="verba-deep-check-row">
-                            <input type="checkbox" id="verba-deep-chuseok-galbwae-all" ${settings.chuseokGalbwaeScope === 'all' ? 'checked' : ''}>
-                            <span>전체 갈봬체 <small>서술 + 대사 + **강조문**</small></span>
-                        </label>
-                        <label class="verba-deep-check-row">
-                            <input type="checkbox" id="verba-deep-chuseok-galbwae-dialogue-inner" ${settings.chuseokGalbwaeScope === 'dialogueInner' ? 'checked' : ''}>
-                            <span>대사·**강조문**만 갈봬체 <small>그 외 서술 정상</small></span>
-                        </label>
-                        <div class="verba-deep-help">둘 중 하나만 선택할 수 있으며, 켠 항목을 다시 끄면 갈봬체가 완전히 꺼져요. 켜져 있는 동안 미친 한출의 맛·김홍진의 맛·입력 프롬프트·표현 디테일 등 다른 스타일 지시는 전송하지 않는 배타 모드로 작동합니다. 모든 &lt;짝태그&gt; 안의 글씨에는 갈봬체를 적용하지 않으며 Inner_Info도 예외가 아닙니다. Info_panel·날짜·날씨·장소·이름·숫자·코드·태그 구조와 속성은 어느 옵션에서도 바꾸지 않습니다. 프롬프트 프리셋에서 ‘프롬프트 + 번역 설정’을 저장하면 선택한 범위도 함께 저장됩니다.</div>
-                        <div class="verba-deep-help">대표 기준: “나 알아?” → “나를 아늕랴!!”처럼 죠캎식으로 발음·맞춤법·띄어쓰기·조사를 기괴하지만 읽히게 무너뜨립니다. 인터넷 처음 배운 할배 같은 결을 살짝 섞고, 씨발은 씨핤·씨핧·샤갈·쌱앐·쌰갈·시핣 계열로 바꿔요. 일부 요→료, 네·응→례와 ㄷㄷ·;;·ㅠㅠ도 랜덤하게 섞되 도배하지 않습니다. **굵은 글씨**는 기호를 유지하고 안쪽 문장에 적용합니다.</div>
-                    </div>
-                </details>
 
                 ${generalFlavorSettingsMarkup()}
 

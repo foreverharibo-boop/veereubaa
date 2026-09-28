@@ -18,6 +18,7 @@ assert.equal(disabled.segments.some(row => row.text.includes('How do I')), false
 assert.equal(disabled.segments.some(row => row.text.includes('Weather')), false);
 
 const settings = {
+    developerMode: true,
     chuseokGalbwaeScope: 'all',
     developerMadKoreanOutputEnabled: true,
     developerHongjinFlavorEnabled: true,
@@ -40,10 +41,15 @@ assert.doesNotMatch(prompt, /MUST NOT APPEAR|ALSO MUST NOT APPEAR|ONE TIME MUST 
 const leftovers = findUntranslatedSegments(
     [{ id: 'name', type: 'narration', text: "Atlas's ears moved while Aila called Calix." }],
     new Map([['name', 'Atlas의 귀가 움직이는 동안 Aila가 Calix를 불럿내료.']]),
-    { chuseokGalbwaeScope: 'all' },
+    { developerMode: true, chuseokGalbwaeScope: 'all' },
 );
 assert.equal(leftovers.length, 1);
 assert.match(leftovers[0].untranslatedReason, /UNTRANSLATED_CHARACTER_NAME: Atlas, Aila, Calix/);
+assert.equal(findUntranslatedSegments(
+    [{ id: 'locked_name', type: 'narration', text: 'Atlas called Aila.' }],
+    new Map([['locked_name', 'Atlas가 Aila를 불렀다.']]),
+    { developerMode: false, chuseokGalbwaeScope: 'all' },
+).length, 0);
 
 const translation = '<Info_panel>[날씨: 맑음]</Info_panel>';
 const start = translation.indexOf('[날씨');
@@ -54,19 +60,27 @@ const selectionPrompt = buildSelectionPrompt({
     selected: '[날씨: 맑음]',
     start,
     end: start + '[날씨: 맑음]'.length,
-    settings: { chuseokGalbwaeScope: 'all', translationRuleOrder: [] },
+    settings: { developerMode: true, chuseokGalbwaeScope: 'all', translationRuleOrder: [] },
     oneTimeInstruction: '',
 });
 assert.match(selectionPrompt, /REQUEST SCOPE=tagged_content/);
+
+const lockedPrompt = buildOutputPrompt(segmented, { ...settings, developerMode: false }, 'ONE TIME');
+assert.doesNotMatch(lockedPrompt, /EXCLUSIVE TEMPORARY CHUSEOK GALBWAE/);
 
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const style = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 assert.match(index, /id="verba-deep-chuseok-galbwae-all"/);
 assert.match(index, /id="verba-deep-chuseok-galbwae-dialogue-inner"/);
+assert.match(index, /function developerChuseokGalbwaeMarkup\(/);
+assert.doesNotMatch(index, /key: 'galbwae', label: '추석 갈봬체'/);
+assert.equal((index.match(/id="verba-deep-chuseok-galbwae-all"/g) || []).length, 1);
+assert.match(index, /settings\.developerMode \? `[\s\S]*?\$\{developerChuseokGalbwaeMarkup\(\)\}/);
 const applyStart = index.indexOf('function customTranslatorPromptKey(');
 const applyEnd = index.indexOf('function sendProfileRaceAttempt(', applyStart);
 const apply = Function('settings', `${index.slice(applyStart, applyEnd)}\nreturn applyCustomTranslatorPrompt;`)({
     customTranslatorEnabled: true,
+    developerMode: true,
     chuseokGalbwaeScope: 'all',
     customTranslatorTemplates: { repair: 'DO NOT REPLACE LIVE GALBWAE REPAIR' },
     customTranslatorModified: { repair: true },

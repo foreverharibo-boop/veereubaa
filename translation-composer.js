@@ -41,7 +41,7 @@ export function customTranslationInstruction(settings = {}, key) {
 export function withTranslationComposition(settings = {}, key, build) {
     if (settings[COMPOSITION]) return build(settings);
     const context = { key, emitted: new Set(), collected: null };
-    const galbwaeActive = key !== 'input' && (['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
+    const galbwaeActive = key !== 'input' && settings.developerMode === true && (['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
         || settings.chuseokGalbwaeEnabled === true);
     context.disabled = galbwaeActive;
     const active = !galbwaeActive && (

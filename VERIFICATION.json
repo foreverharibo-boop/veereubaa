@@ -1,6 +1,6 @@
 {
-  "version": "0.6.7",
-  "baselineVersion": "0.6.6",
+  "version": "0.6.8",
+  "baselineVersion": "0.6.7",
   "passed": 48,
   "failed": 0,
   "tests": [
@@ -222,7 +222,7 @@
     {
       "test": "tagged-content-toggle.mjs",
       "exit": 0,
-      "output": "PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 긴르바 저장/UI/분할 경로에 연결됨.\n"
+      "output": "PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 베에르으바아 저장/UI/분할 경로에 연결됨.\n"
     },
     {
       "test": "taste-audit-wiring.mjs",

@@ -366,8 +366,10 @@ const LATIN_NAME_FALSE_POSITIVES = new Set([
 ]);
 
 function galbwaeTranslationActive(settings = {}) {
-    return ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
-        || settings.chuseokGalbwaeEnabled === true;
+    return settings.developerMode === true && (
+        ['all', 'dialogueInner'].includes(settings.chuseokGalbwaeScope)
+        || settings.chuseokGalbwaeEnabled === true
+    );
 }
 
 function countExactLatinToken(value, token) {
@@ -1996,6 +1998,7 @@ function madKoreanExclusiveEnabled(settings = {}) {
 }
 
 function galbwaeMode(settings = {}) {
+    if (settings?.developerMode !== true) return 'off';
     return ['all', 'dialogueInner'].includes(settings?.chuseokGalbwaeScope)
         ? settings.chuseokGalbwaeScope
         : settings?.chuseokGalbwaeEnabled === true

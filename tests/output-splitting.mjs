@@ -126,7 +126,7 @@ for(const value of ['1','2','3']){
 assert.equal(saved,3);
 const disable=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
 Function('settings',disable)(settings);assert.equal(outputSplitCount(settings),3);assert.equal(settings.developerOutputSplitCount,3);
-const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary',defs+between('function developerSettingsMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
+const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary',defs+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
 assert.ok(!markup(settings,String,()=>'', '', '').includes('verba-deep-developer-output-split-count'));
 settings.developerMode=true;assert.ok(!markup(settings,String,()=>'', '', '').includes('verba-deep-developer-output-split-count'));
 const generalMarkup=Function('settings',between('function generalSplitSettingsMarkup(', 'function generalRelationshipSettingsMarkup(')+'\nreturn generalSplitSettingsMarkup();');

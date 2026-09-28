@@ -44,7 +44,7 @@ const identity={characterName:'Nyen',userName:'혜담은',characterGender:'male'
 const source='Nyen closed the door. "Come here," he said.\n<Info_panel>Sunny</Info_panel>';
 const segmented=segmentSource(source,identity.nameLocks);
 const base={globalPrompt:'GLOBAL_LIVE_RULE',allDialoguePrompt:'ALL_DIALOGUE_LIVE_RULE',dialoguePrompt:'TARGET_LIVE_RULE',otherDialoguePrompt:'OTHER_LIVE_RULE',bannedWords:'금지말',relationTemperature:'close',narrationLocalizationLevel:'native',dialogueLocalizationLevel:'balanced',developerRelationshipExperimentEnabled:true,developerTargetToUserAddress:'공주님',developerTargetToUserRegister:'jondaetmal'};
-const settings={...base,customTranslatorEnabled:true,customTranslatorTemplates:customValues,customTranslatorModified:Object.fromEntries(general.map(key=>[key,true]))};
+const settings={...base,developerMode:true,customTranslatorEnabled:true,customTranslatorTemplates:customValues,customTranslatorModified:Object.fromEntries(general.map(key=>[key,true]))};
 const output=buildOutputPrompt(segmented,settings,'ONE_TIME_LIVE_RULE',identity);
 assert.equal(output.split(customValues.output).length-1,1);
 assert.doesNotMatch(output,/Interpret the source as discourse before wording it in Korean/,'old base translation prose is replaced');
