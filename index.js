@@ -51,7 +51,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.3';
+const EXTENSION_VERSION = '0.6.5';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -237,6 +237,7 @@ const DEFAULT_CUSTOM_TRANSLATOR_MODIFIED = Object.freeze(Object.fromEntries(
 const CUSTOM_TRANSLATOR_SIMPLE_MARKER = '[사용자 추가 지침]';
 
 const SETTINGS_VISIBILITY_DEFINITIONS = [
+    { key: 'settingsSearch', label: '설정 검색', selector: '#verba-deep-settings-search' },
     { key: 'profiles', label: '연결 프로필', selector: '#verba-deep-profile-settings-group' },
     { key: 'input', label: '인풋 번역', selector: '#verba-deep-input-settings-group' },
     { key: 'profileStats', label: '프로필 성능 기록', selector: '#verba-deep-profile-stats' },
@@ -398,6 +399,7 @@ const DEFAULT_SETTINGS = {
     settingsVisibility: DEFAULT_SETTINGS_VISIBILITY,
     selectionCandidates: false,
     selectionQuickCount: 2,
+    messageLongPressCopyEnabled: true,
     showSelectionName: true,
     showSelectionSource: true,
     showSelectionLock: true,
@@ -656,6 +658,7 @@ settings.beginnerAgeBand = BEGINNER_AGE_OPTIONS.some(option => option.value === 
     : 'unspecified';
 settings.relationTemperatureEnabled = settings.relationTemperatureEnabled !== false;
 settings.selectionQuickCount = Math.min(5, Math.max(2, Number(settings.selectionQuickCount) || 2));
+settings.messageLongPressCopyEnabled = settings.messageLongPressCopyEnabled !== false;
 settings.globalPrompt = typeof settings.globalPrompt === 'string' ? settings.globalPrompt : '';
 settings.globalPromptEnabled = settings.globalPromptEnabled !== false;
 settings.dialoguePrompt = typeof settings.dialoguePrompt === 'string' ? settings.dialoguePrompt : '';
@@ -9709,6 +9712,7 @@ function setupSelection() {
 
 function showMessageCopyMenu(messageId) {
     if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+    if (settings.messageLongPressCopyEnabled === false) return;
     const message = liveContext().chat?.[Number(messageId)];
     const record = message && currentRecord(message);
     if (!message || !record) {
@@ -9814,6 +9818,11 @@ function pointHitsRenderedText(container, x, y) {
 function setupMessageCopyHold() {
     document.addEventListener('pointerdown', event => {
         if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+        if (settings.messageLongPressCopyEnabled === false) {
+            messageCopyHoldShown = false;
+            cancelMessageCopyHold();
+            return;
+        }
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         const messageElement = event.target?.closest?.('.mes[mesid]');
         const messageText = event.target?.closest?.('.mes_text');
@@ -9839,6 +9848,7 @@ function setupMessageCopyHold() {
         messageCopyHoldTimer = setTimeout(() => {
             messageCopyHoldTimer = null;
             if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+            if (settings.messageLongPressCopyEnabled === false) return;
             const latest = liveContext().chat?.[messageId];
             if (!messageElement.isConnected || latest !== message || !currentRecord(latest)) return;
             selectionSnapshot = null;
@@ -10786,6 +10796,18 @@ function settingsVisibilityMarkup() {
         </details>`;
 }
 
+function settingsSearchMarkup() {
+    return `
+        <section id="verba-deep-settings-search" class="verba-deep-settings-search" role="search">
+            <label for="verba-deep-settings-search-input">설정 검색</label>
+            <div class="verba-deep-settings-search-row">
+                <input type="search" id="verba-deep-settings-search-input" class="text_pole" placeholder="설정 이름·옵션·설명 검색" autocomplete="off" spellcheck="false">
+                <button type="button" id="verba-deep-settings-search-clear" class="menu_button" hidden>지우기</button>
+            </div>
+            <div id="verba-deep-settings-search-status" class="verba-deep-help" aria-live="polite">설정 이름과 하위 옵션, 설명을 검색해요.</div>
+        </section>`;
+}
+
 function applySettingsVisibility(root = document.querySelector('#verba-deep-settings')) {
     if (!root) return;
     settings.settingsVisibility = normalizedSettingsVisibility(settings.settingsVisibility);
@@ -10799,12 +10821,121 @@ function applySettingsVisibility(root = document.querySelector('#verba-deep-sett
             if (input instanceof HTMLInputElement) input.checked = !hidden;
         });
     }
+    if (root.querySelector('#verba-deep-settings-search-input')?.value.trim()) {
+        applySettingsSearch(root);
+    }
+}
+
+function normalizedSettingsSearchText(value) {
+    return String(value || '').normalize('NFKC').toLocaleLowerCase('ko-KR').replace(/\s+/g, ' ').trim();
+}
+
+function settingsSearchTargets(root) {
+    return SETTINGS_VISIBILITY_DEFINITIONS
+        .filter(({ key }) => key !== 'settingsSearch')
+        .flatMap(({ label, selector }) => [...root.querySelectorAll(selector)].map(element => ({ element, label })));
+}
+
+function settingsSearchHaystack(element, label) {
+    const attributes = [...element.querySelectorAll('[placeholder], [title], [aria-label]')]
+        .flatMap(node => [node.getAttribute('placeholder'), node.getAttribute('title'), node.getAttribute('aria-label')])
+        .filter(Boolean)
+        .join(' ');
+    return normalizedSettingsSearchText(`${label} ${element.textContent || ''} ${attributes}`);
+}
+
+function rememberSettingsSearchDetails(root) {
+    settingsSearchTargets(root).forEach(({ element }) => {
+        const details = element.tagName === 'DETAILS'
+            ? [element, ...element.querySelectorAll('details')]
+            : [...element.querySelectorAll('details')];
+        details.forEach(detail => {
+            if (!Object.hasOwn(detail.dataset, 'verbaDeepSearchWasOpen')) {
+                detail.dataset.verbaDeepSearchWasOpen = detail.open ? 'true' : 'false';
+            }
+        });
+    });
+}
+
+function resetSettingsSearch(root = document.querySelector('#verba-deep-settings')) {
+    if (!root) return;
+    const input = root.querySelector('#verba-deep-settings-search-input');
+    const clear = root.querySelector('#verba-deep-settings-search-clear');
+    const status = root.querySelector('#verba-deep-settings-search-status');
+    if (input instanceof HTMLInputElement) input.value = '';
+    if (clear) clear.hidden = true;
+    if (status) status.textContent = '설정 이름과 하위 옵션, 설명을 검색해요.';
+    settingsSearchTargets(root).forEach(({ element }) => {
+        element.classList.remove('verba-deep-settings-search-match');
+        const details = element.tagName === 'DETAILS'
+            ? [element, ...element.querySelectorAll('details')]
+            : [...element.querySelectorAll('details')];
+        details.forEach(detail => {
+            if (Object.hasOwn(detail.dataset, 'verbaDeepSearchWasOpen')) {
+                detail.open = detail.dataset.verbaDeepSearchWasOpen === 'true';
+                delete detail.dataset.verbaDeepSearchWasOpen;
+            }
+        });
+    });
+}
+
+function applySettingsSearch(root = document.querySelector('#verba-deep-settings')) {
+    if (!root) return;
+    const input = root.querySelector('#verba-deep-settings-search-input');
+    const clear = root.querySelector('#verba-deep-settings-search-clear');
+    const status = root.querySelector('#verba-deep-settings-search-status');
+    const query = normalizedSettingsSearchText(input?.value);
+    const tokens = query.split(' ').filter(Boolean);
+    if (!tokens.length) {
+        resetSettingsSearch(root);
+        applySettingsVisibility(root);
+        return;
+    }
+
+    rememberSettingsSearchDetails(root);
+    let matches = 0;
+    settingsSearchTargets(root).forEach(({ element, label }) => {
+        const matched = tokens.every(token => settingsSearchHaystack(element, label).includes(token));
+        element.toggleAttribute('hidden', !matched);
+        element.classList.toggle('verba-deep-settings-search-match', matched);
+        if (matched) matches += 1;
+        const details = element.tagName === 'DETAILS'
+            ? [element, ...element.querySelectorAll('details')]
+            : [...element.querySelectorAll('details')];
+        details.forEach(detail => {
+            const detailText = normalizedSettingsSearchText(detail.textContent || '');
+            detail.open = matched && tokens.every(token => detailText.includes(token));
+        });
+    });
+    if (clear) clear.hidden = false;
+    if (status) status.textContent = matches ? `${matches}개 설정 묶음을 찾았어요.` : '일치하는 설정이 없어요.';
+}
+
+function bindSettingsSearch(root) {
+    const input = root?.querySelector('#verba-deep-settings-search-input');
+    const clear = root?.querySelector('#verba-deep-settings-search-clear');
+    if (!(input instanceof HTMLInputElement)) return;
+    const update = () => applySettingsSearch(root);
+    input.addEventListener('input', update);
+    input.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        resetSettingsSearch(root);
+        applySettingsVisibility(root);
+        input.focus();
+    });
+    clear?.addEventListener('click', () => {
+        resetSettingsSearch(root);
+        applySettingsVisibility(root);
+        input.focus();
+    });
 }
 
 function setAllSettingsVisibility(visible, root = document.querySelector('#verba-deep-settings')) {
     settings.settingsVisibility = Object.fromEntries(
         SETTINGS_VISIBILITY_DEFINITIONS.map(({ key }) => [key, visible]),
     );
+    if (!visible) resetSettingsSearch(root);
     applySettingsVisibility(root);
     saveSettings();
 }
@@ -10832,6 +10963,7 @@ function injectSettingsPanel() {
                 <div class="verba-deep-note">AI 아웃풋은 항상 한국어로 자동 번역하며, 한국어 중심 출력은 API를 호출하지 않아요.</div>
 
                 ${settingsVisibilityMarkup()}
+                ${settingsSearchMarkup()}
 
                 <section id="verba-deep-profile-settings-group" class="verba-deep-settings-section-group">
                 <label for="verba-deep-translation-engine">번역 엔진</label>
@@ -10928,6 +11060,13 @@ function injectSettingsPanel() {
                     <small id="verba-deep-translate-tagged-content-status" aria-live="polite">${settings.translateTaggedContent !== false ? 'ON' : 'OFF'}</small>
                 </label>
                 <div class="verba-deep-help">기본 ON입니다. 끄면 Info_panel을 포함한 HTML·커스텀 짝태그의 구조와 내부 자연어를 모두 원문 그대로 두고, 태그 밖의 본문만 번역해요. 코드·style·script·숨김 사고 태그는 이 설정과 관계없이 기존처럼 보호됩니다.</div>
+
+                <label class="verba-deep-check-row" for="verba-deep-message-long-press-copy-enabled">
+                    <input type="checkbox" id="verba-deep-message-long-press-copy-enabled" ${settings.messageLongPressCopyEnabled !== false ? 'checked' : ''}>
+                    <span>아웃풋 여백 길게 눌러 복사</span>
+                    <small id="verba-deep-message-long-press-copy-status" aria-live="polite">${settings.messageLongPressCopyEnabled !== false ? 'ON' : 'OFF'}</small>
+                </label>
+                <div class="verba-deep-help">번역된 아웃풋의 글자가 없는 부분을 길게 누르면 복사 형식 메뉴를 열어요. 끄면 이 길게 누르기 동작만 비활성화됩니다.</div>
 
 
                 <details id="verba-deep-selection-menu-settings" class="verba-deep-tool-details">
@@ -11437,6 +11576,7 @@ function injectSettingsPanel() {
             </div>
         </div>`;
     host.append(panel);
+    bindSettingsSearch(panel);
     bindAutoInputSetting(panel);
     bindBaseTranslationEditor(panel, settings, { save: saveSettings, notify });
     refreshProfileSelect();
@@ -11545,6 +11685,7 @@ function injectSettingsPanel() {
             const key = String(target.dataset.verbaDeepVisibilityKey || '');
             if (SETTINGS_VISIBILITY_DEFINITIONS.some(item => item.key === key)) {
                 settings.settingsVisibility[key] = target.checked;
+                if (key === 'settingsSearch' && !target.checked) resetSettingsSearch(panel);
                 applySettingsVisibility(panel);
                 saveSettings();
             }
@@ -12217,6 +12358,20 @@ function injectSettingsPanel() {
     panel.querySelector('#verba-deep-selection-quick-count').addEventListener('change', event => {
         settings.selectionQuickCount = Math.min(5, Math.max(2, Number(event.target.value) || 2));
         hideSelectionButton();
+        saveSettings();
+    });
+    panel.querySelector('#verba-deep-message-long-press-copy-enabled')?.addEventListener('change', event => {
+        settings.messageLongPressCopyEnabled = event.target.checked;
+        const status = panel.querySelector('#verba-deep-message-long-press-copy-status');
+        if (status) status.textContent = settings.messageLongPressCopyEnabled ? 'ON' : 'OFF';
+        if (!settings.messageLongPressCopyEnabled) {
+            messageCopyHoldShown = false;
+            suppressMessageCopyClickUntil = 0;
+            cancelMessageCopyHold();
+            document.querySelector('#verba-deep-request-overlay .verba-deep-copy-modal')
+                ?.closest('#verba-deep-request-overlay')
+                ?.remove();
+        }
         saveSettings();
     });
     [

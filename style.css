@@ -3479,6 +3479,36 @@
     min-height: 68px !important;
 }
 
+#verba-deep-settings .verba-deep-settings-search {
+    display: grid;
+    gap: 5px;
+    margin: 7px 0;
+    padding: 7px;
+    border: 1px solid color-mix(in srgb, var(--verba-deep-border) 78%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--verba-deep-surface) 92%, transparent);
+}
+
+#verba-deep-settings .verba-deep-settings-search[hidden] {
+    display: none !important;
+}
+
+#verba-deep-settings .verba-deep-settings-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px;
+    align-items: stretch;
+}
+
+#verba-deep-settings #verba-deep-settings-search-clear {
+    min-width: 48px;
+    margin: 0;
+}
+
+#verba-deep-settings .verba-deep-settings-search-match {
+    box-shadow: inset 3px 0 0 var(--verba-deep-accent);
+}
+
 @media (max-width: 600px) {
     #verba-deep-settings > .inline-drawer > .inline-drawer-content {
         font-size: .84em;
@@ -3541,4 +3571,3 @@
 .verba-deep-name-history-candidates .verba-deep-check-row {
     min-height: 29px;
 }
-

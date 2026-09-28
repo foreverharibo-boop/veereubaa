@@ -1,7 +1,7 @@
 {
-  "version": "0.6.3",
-  "baselineVersion": "0.6.2",
-  "passed": 46,
+  "version": "0.6.5",
+  "baselineVersion": "0.6.4",
+  "passed": 48,
   "failed": 0,
   "tests": [
     {
@@ -233,6 +233,16 @@
       "test": "translation-layer-separation.mjs",
       "exit": 0,
       "output": "PASS: ordinary translation, active flavor composition and optional review remain separate.\n"
+    },
+    {
+      "test": "message-long-press-copy-setting.mjs",
+      "exit": 0,
+      "output": "PASS: output blank-area long-press copy is enabled by default, user-toggleable, race-gated, and immediately cleaned up when disabled.\n"
+    },
+    {
+      "test": "settings-search.mjs",
+      "exit": 0,
+      "output": "PASS: settings search is placed below screen composition, searches groups/options/help, opens matches, restores state, and can itself be hidden.\n"
     }
   ],
   "syntaxChecked": [

@@ -26,6 +26,6 @@ assert.match(index, /function setAllSettingsVisibility\(/);
 assert.match(style, /\[data-verba-deep-ui-hidden="true"\][\s\S]*?display:\s*none\s*!important/);
 
 const visibilityBlock = index.slice(index.indexOf('const SETTINGS_VISIBILITY_DEFINITIONS = ['), index.indexOf('const DEFAULT_SETTINGS_VISIBILITY'));
-assert.equal((visibilityBlock.match(/\{ key:/g) || []).length, 25);
+assert.equal((visibilityBlock.match(/\{ key:/g) || []).length, 26);
 
-console.log('PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 긴르바 저장/UI/분할 경로에 연결됨.');
+console.log('PASS: 태그 내부 번역 토글과 26개 화면 표시 설정이 베에르으바아 저장/UI/분할 경로에 연결됨.');
