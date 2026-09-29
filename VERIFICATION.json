@@ -1,7 +1,7 @@
 {
-  "version": "0.6.8",
-  "baselineVersion": "0.6.7",
-  "passed": 48,
+  "version": "0.6.9",
+  "baselineVersion": "0.6.8",
+  "passed": 49,
   "failed": 0,
   "tests": [
     {
@@ -225,6 +225,11 @@
       "output": "PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 베에르으바아 저장/UI/분할 경로에 연결됨.\n"
     },
     {
+      "test": "tagged-content-untranslated-repair.mjs",
+      "exit": 0,
+      "output": "PASS: 태그 미번역은 로컬 감지 후 문제 구간만 1회 복구하고 정상 결과에는 추가 요청이 없음.\n"
+    },
+    {
       "test": "taste-audit-wiring.mjs",
       "exit": 0,
       "output": "PASS: real output entry point makes zero audit calls when OFF and applies a mock audit when deliberately enabled; UI shows disabled without resetting saved preferences.\n"
@@ -267,9 +272,7 @@
   "liveApiTested": false,
   "liveSillyTavernTested": false,
   "unchangedModules": [
-    "core.js",
     "translation-composer.js",
-    "minimal-output.js",
     "taste-audit.js",
     "base-editor.js"
   ]

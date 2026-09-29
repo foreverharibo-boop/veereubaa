@@ -9,6 +9,7 @@ const source = index.slice(start, end);
 
 let localCleanupCalls = 0;
 let postRepairCalls = 0;
+let taggedChecks = 0;
 const warnings = [];
 const segmented = {
     protectedText: 'source',
@@ -33,6 +34,7 @@ const env = {
     requestScopedOutputTranslations: async () => new Map([['s1', '최초 BAD 번역본']]),
     normalizeTaggedOutputTranslations: (_segmented, translations) => translations,
     normalizeLocallyRecoverableProtectedTokens: () => { localCleanupCalls += 1; },
+    repairUntranslatedTaggedContentOnce: async () => { taggedChecks += 1; return { detected: 0, repaired: 0 }; },
     findBannedWords: text => String(text).includes('BAD') ? ['BAD'] : [],
     repairSegmentsByOutputScope: async () => { postRepairCalls += 1; },
     findUntranslatedSegments: () => [],
@@ -53,9 +55,10 @@ const translateOutputText = Function(
 const result = await translateOutputText('source');
 assert.equal(result.translation, '최초 BAD 번역본');
 assert.equal(localCleanupCalls, 1, 'deterministic local cleanup remains active');
+assert.equal(taggedChecks, 1, 'the tag-only local check remains active');
 assert.equal(postRepairCalls, 0, 'every post-translation AI repair stays dormant');
 assert.ok(warnings.some(args => String(args[0]).includes('금지어 의심이 남았지만')));
 assert.match(index, /if \(POST_TRANSLATION_AI_REPAIR_ENABLED\)[\s\S]*repairProtectedTokenIntegrity/);
 assert.match(index, /if \(POST_TRANSLATION_AI_REPAIR_ENABLED\)[\s\S]*runExperimentalQualityAudit/);
 
-console.log('PASS: local cleanup remains active while every post-translation AI repair path is preserved but dormant.');
+console.log('PASS: local cleanup and the tag-only check remain active while general post-translation AI repair stays dormant.');

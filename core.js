@@ -754,6 +754,17 @@ export function findUntranslatedSegments(segments, translations, settings = {}, 
     return invalid;
 }
 
+/**
+ * Returns only visible paired-tag text that still has a strong untranslated
+ * foreign-text signal. This is intentionally separate from the general
+ * post-translation audit so tagged-content recovery can stay always-on while
+ * every broader AI quality/repair path remains disabled.
+ */
+export function findUntranslatedTaggedContentSegments(segments, translations, settings = {}, speakerScopes = null) {
+    return findUntranslatedSegments(segments, translations, settings, speakerScopes)
+        .filter(segment => segment.type === 'tagged_content');
+}
+
 const STRUCTURED_METADATA_LABELS = {
     date: '날짜',
     weather: '날씨',

@@ -33,6 +33,7 @@ import {
     findBannedWords,
     findProtectedTokenIntegrityProblems,
     findTranslationPromptConflicts,
+    findUntranslatedTaggedContentSegments,
     findUntranslatedSegments,
     ensureBilingualDialogueFormat,
     hasForeignText,
@@ -51,7 +52,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.8';
+const EXTENSION_VERSION = '0.6.9';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -4615,6 +4616,83 @@ async function repairSegmentsByOutputScope({
         }
     }
 }
+
+/**
+ * Always-on, narrowly scoped recovery for visible natural language inside
+ * paired tags. The local detector is synchronous and cheap; an AI request is
+ * made only when a strong untranslated-text signal remains after the primary
+ * translation. All affected tag rows are repaired together in one request.
+ * A failed or still-invalid repair never replaces the first translation.
+ */
+async function repairUntranslatedTaggedContentOnce({
+    segmented,
+    translations,
+    speakerScopes,
+    speakerIdentity,
+    options,
+}) {
+    const invalid = findUntranslatedTaggedContentSegments(
+        segmented.segments,
+        translations,
+        settings,
+        speakerScopes,
+    );
+    if (!invalid.length) return { detected: 0, repaired: 0 };
+
+    const originals = new Map(invalid.map(segment => [segment.id, translations.get(segment.id)]));
+    try {
+        const prompt = buildUntranslatedRepairPrompt(
+            invalid,
+            translations,
+            settings,
+            speakerIdentity,
+            nameTokensForSegments(segmented, invalid),
+            options.tuning || null,
+            'tagged_content',
+        );
+        const repaired = await requestSegments(prompt, invalid, {
+            ...options,
+            parallelRequest: false,
+            stage: 'tagged-content-untranslated-repair',
+        });
+
+        const candidates = new Map(translations);
+        for (const segment of invalid) {
+            const replacement = String(repaired.get(segment.id) || '');
+            if (replacement.trim()) candidates.set(
+                segment.id,
+                normalizeStructuredMetadataTranslation(replacement),
+            );
+        }
+        normalizeLocallyRecoverableProtectedTokens(segmented, candidates, settings, speakerScopes);
+
+        const stillUntranslated = new Set(findUntranslatedTaggedContentSegments(
+            invalid,
+            candidates,
+            settings,
+            speakerScopes,
+        ).map(segment => segment.id));
+        const damaged = new Set(findProtectedTokenIntegrityProblems(invalid, candidates).map(segment => segment.id));
+        let accepted = 0;
+        for (const segment of invalid) {
+            const replacement = String(candidates.get(segment.id) || '');
+            if (!replacement.trim() || stillUntranslated.has(segment.id) || damaged.has(segment.id)) {
+                translations.set(segment.id, originals.get(segment.id));
+                continue;
+            }
+            translations.set(segment.id, replacement);
+            accepted += 1;
+        }
+        console.info(`[베에르으바아] 태그 미번역 복구: 감지 ${invalid.length}구간 · 적용 ${accepted}구간`);
+        return { detected: invalid.length, repaired: accepted };
+    } catch (error) {
+        for (const segment of invalid) translations.set(segment.id, originals.get(segment.id));
+        if (isAbort(error, options.signal)) throw error;
+        console.warn('[베에르으바아] 태그 미번역 1회 복구 실패 — 최초 번역을 유지합니다.', error);
+        return { detected: invalid.length, repaired: 0, error };
+    }
+}
+
 async function repairProtectedTokenIntegrity(segmented, translations, options = {}) {
     const speakerIdentity = options.speakerIdentity || {};
     const speakerScopes = options.speakerScopes || {};
@@ -4933,6 +5011,16 @@ async function translateOutputText(source, options = {}) {
     // bilingual-dialogue and excess-name cleanup active even while all later
     // AI repair requests are dormant.
     normalizeLocallyRecoverableProtectedTokens(segmented, translations, settings, speakerScopes);
+
+    // General AI post-audits remain disabled. This one narrow recovery runs
+    // only when visible paired-tag text is strongly detected as untranslated.
+    await repairUntranslatedTaggedContentOnce({
+        segmented,
+        translations,
+        speakerScopes,
+        speakerIdentity,
+        options,
+    });
 
     if (POST_TRANSLATION_AI_REPAIR_ENABLED) {
         for (let repairAttempt = 0; repairAttempt < 5; repairAttempt += 1) {
