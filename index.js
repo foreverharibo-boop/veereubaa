@@ -42,6 +42,7 @@ import {
     isPredominantlyKorean,
     normalizeStructuredMetadataTranslation,
     normalizeLocallyRecoverableProtectedTokens,
+    normalizeBilingualMappedTranslation,
     parseSegmentResponse,
     parseSelectionCandidateResponse,
     replaceOutsideProtected,
@@ -52,7 +53,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.12';
+const EXTENSION_VERSION = '0.6.14';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
@@ -6017,9 +6018,15 @@ async function translateMessage(messageId, options = {}) {
                     true,
                 );
             }
-            const finalTranslation = translationWithLockedSegments(
+            const lockedTranslation = translationWithLockedSegments(
                 translated,
                 snapshot.previousRecord?.lockedSegments,
+            );
+            const finalTranslation = normalizeBilingualMappedTranslation(
+                lockedTranslation.translation,
+                lockedTranslation.sourceMap,
+                settings,
+                source,
             );
             if (options.automatic && !isTranslationExtensionActive(EXTENSION_KEY)) {
                 throw outputAbortReason(
@@ -9315,9 +9322,10 @@ Your previous response echoed the existing Korean wording for these ids: ${JSON.
                 replacement.replacement,
             );
         }
+        const normalized = normalizeBilingualMappedTranslation(updated, sourceMap, settings, state.source);
         const context = liveContext();
-        applyTranslation(state.messageId, state.message, state.source, updated, context.chat, {
-            sourceMap,
+        applyTranslation(state.messageId, state.message, state.source, normalized.translation, context.chat, {
+            sourceMap: normalized.sourceMap,
             lockedSegments: [],
         });
         clearTransientTranslationSelections();
@@ -9600,16 +9608,17 @@ Your previous replacement was empty or unchanged. Return a genuinely different K
         const updated = snapshot.translation.slice(0, snapshot.start)
             + replacement
             + snapshot.translation.slice(snapshot.end);
-        const context = liveContext();
-        const message = context.chat?.[snapshot.messageId];
         const sourceMap = sourceMapAfterSelection(
             snapshot.sourceMap,
             snapshot.start,
             snapshot.end,
             replacement,
         );
-        applyTranslation(snapshot.messageId, message, snapshot.source, updated, context.chat, {
-            sourceMap,
+        const normalized = normalizeBilingualMappedTranslation(updated, sourceMap, settings, snapshot.source);
+        const context = liveContext();
+        const message = context.chat?.[snapshot.messageId];
+        applyTranslation(snapshot.messageId, message, snapshot.source, normalized.translation, context.chat, {
+            sourceMap: normalized.sourceMap,
             lockedSegments: [],
         });
         clearTransientTranslationSelections();
