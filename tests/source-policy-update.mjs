@@ -7,6 +7,15 @@ const defs = index.slice(index.indexOf('const RELATION_TEMPERATURE_OPTIONS'), in
 const defaults = Function(defs + '\nreturn DEFAULT_SETTINGS;')();
 const matrix = fs.readFileSync(new URL('./compressed-prompts.mjs', import.meta.url), 'utf8');
 const {builders, identity} = Function(matrix.slice(matrix.indexOf('const identity ='), matrix.indexOf('const baseline =')) + '\nreturn {builders,identity};')();
+const plainOutputPrompt = builders.full(core, {
+ ...defaults,
+ developerMode: false,
+ developerMadKoreanOutputEnabled: false,
+ developerHongjinFlavorEnabled: false,
+});
+assert.match(plainOutputPrompt, /NAME-ATTACHED PARTICLES:/);
+assert.match(plainOutputPrompt, /following a proper name independently from the name itself/);
+assert.doesNotMatch(builders.input(core, defaults), /NAME-ATTACHED PARTICLES:/);
 let routes = 0;
 for (const flags of [{}, {developerCompressedPromptEnabled:true}, {developerExtremeCompressedPromptEnabled:true}]) {
  for (const mad of [false,true]) for (const hongjin of [false,true]) {

@@ -1,8 +1,8 @@
 {
-  "version": "0.6.10",
-  "baselineVersion": "0.6.9",
+  "version": "0.6.12",
+  "baselineVersion": "0.6.11",
   "passed": 49,
-  "failed": 0,
+  "failed": 5,
   "tests": [
     {
       "test": "auto-input-setting.mjs",
@@ -270,6 +270,15 @@
   "context": "one nearest preceding user message, raw active source only",
   "aiAuditEnabled": false,
   "quotedNarrativeBilingualGuardEnabled": true,
+  "nameOnlyDialogueLocalRestorationEnabled": true,
+  "nameAttachedParticlePromptEnabled": true,
+  "baselineFailuresUnchanged": [
+    "extreme-compressed-prompts.mjs",
+    "local-speaker-attribution.mjs",
+    "mad-recomposition.mjs",
+    "subject-pronoun-omission.mjs",
+    "voice-intensity-flexibility.mjs"
+  ],
   "liveApiTested": false,
   "liveSillyTavernTested": false,
   "unchangedModules": [
