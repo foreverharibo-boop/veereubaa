@@ -1,7 +1,7 @@
 {
-  "version": "0.6.14",
-  "baselineVersion": "0.6.13",
-  "passed": 49,
+  "version": "0.6.15",
+  "baselineVersion": "0.6.14",
+  "passed": 50,
   "failed": 5,
   "tests": [
     {
@@ -22,7 +22,7 @@
     {
       "test": "bilingual-dialogue-local-format.mjs",
       "exit": 0,
-      "output": "PASS: bilingual dialogue is detected from user prompts and enforced locally; quoted narrative words and phrases remain narration while real short dialogue remains eligible.\n"
+      "output": "PASS: bilingual dialogue is detected from user prompts and enforced locally.\n"
     },
     {
       "test": "chuseok-galbwae.mjs",
@@ -48,6 +48,11 @@
       "test": "diagnostics.mjs",
       "exit": 0,
       "output": "PASS: diagnostic classification, redaction, bounded raw responses, request ON/OFF, cancellation, last-record UI/copy gates\n"
+    },
+    {
+      "test": "extreme-compressed-prompts.mjs",
+      "exit": 1,
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: DEEPSEEK HONGJIN VOICE PASS — hidden\n    at ok (file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/extreme-compressed-prompts.mjs:38:41)\n    at has (file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/extreme-compressed-prompts.mjs:39:47)\n    at file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/extreme-compressed-prompts.mjs:80:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     },
     {
       "test": "flavor-preset-restore.mjs",
@@ -95,6 +100,11 @@
       "output": "PASS: audit reuses active custom taste prose, current settings, identity and original source.\n"
     },
     {
+      "test": "local-speaker-attribution.mjs",
+      "exit": 1,
+      "output": "file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/local-speaker-attribution.mjs:5\n    inferLocalTargetDialogueScopes,\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module '../core.js' does not provide an export named 'inferLocalTargetDialogueScopes'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.19.0\n"
+    },
+    {
       "test": "mad-final-gate.mjs",
       "exit": 0,
       "output": "PASS: combined MAD/Hongjin scopes and exclusive/minimal/free-engine exclusions.\n"
@@ -105,9 +115,19 @@
       "output": "PASS: source-grounded MAD review handles narration and retains draft on request failure.\n"
     },
     {
+      "test": "mad-recomposition.mjs",
+      "exit": 1,
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: output: DeepSeek workflow occurs once\n\n0 !== 1\n\n    at file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/mad-recomposition.mjs:44:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 1,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+    },
+    {
       "test": "mad-targeted-repair.mjs",
       "exit": 0,
       "output": "PASS: invalid ids/empty/layout/banned/token results and cancellation never commit partial edits.\n"
+    },
+    {
+      "test": "message-long-press-copy-setting.mjs",
+      "exit": 0,
+      "output": "PASS: output blank-area long-press copy is enabled by default, user-toggleable, race-gated, and immediately cleaned up when disabled.\n"
     },
     {
       "test": "minimal-output.mjs",
@@ -135,6 +155,11 @@
       "output": "PASS: 베에르으바아 uses isolated verba-deep extension, DOM, storage, command, token, and global namespaces.\n"
     },
     {
+      "test": "notice-ui.mjs",
+      "exit": 0,
+      "output": "PASS: all notice routes unified, safe text, shared independent dock, quick-reply/composer anchor, resize/keyboard observers, finite timeouts, close/cancel separation, and unchanged return action wiring.\n"
+    },
+    {
       "test": "output-action.mjs",
       "exit": 0,
       "output": "PASS: /verba-deep routing/cancellation/retry, duplicate guards, errors, popup creation/options/dismissal/placement (DOM adapter). API calls: 0; live SillyTavern browser: not tested.\n"
@@ -157,7 +182,7 @@
     {
       "test": "post-translation-ai-repair-disabled.mjs",
       "exit": 0,
-      "output": "PASS: local cleanup remains active while every post-translation AI repair path is preserved but dormant.\n"
+      "output": "PASS: local cleanup and the tag-only check remain active while general post-translation AI repair stays dormant.\n"
     },
     {
       "test": "previous-user-context.mjs",
@@ -195,14 +220,19 @@
       "output": "PASS: safe syntax recovery, exact text preservation, truncated-row salvage, malformed/ambiguous rejection, missing-only retry, intermediate recovered logs and debug OFF/reset (mock AI).\nPASS: unexpected prose blank lines, protected layout, source-map offsets and one-call cleanup with debug ON/OFF.\n"
     },
     {
+      "test": "settings-search.mjs",
+      "exit": 0,
+      "output": "PASS: settings search highlights matching words, temporarily reveals hidden groups, opens matches, and restores text/layout/open state when cleared.\n"
+    },
+    {
       "test": "source-ellipsis.mjs",
       "exit": 0,
-      "output": "PASS: 1260 ellipsis assertions plus parser/assembly/candidate/selection/protected-content integration; local mean 0.492 ms for 24800 characters. No API calls.\n"
+      "output": "PASS: 1260 ellipsis assertions plus parser/assembly/candidate/selection/protected-content integration; local mean 0.377 ms for 24800 characters. No API calls.\n"
     },
     {
       "test": "source-layout.mjs",
       "exit": 0,
-      "output": "PASS: 490 layout assertions plus protected layout/candidate checks; 28500 chars, mean 0.554 ms/local pass (container, not phone).\n"
+      "output": "PASS: 490 layout assertions plus protected layout/candidate checks; 28500 chars, mean 0.674 ms/local pass (container, not phone).\n"
     },
     {
       "test": "source-map-selection.mjs",
@@ -220,6 +250,11 @@
       "output": "PASS: dormant audit can classify speakers when explicitly enabled; unknown/failure never grants Hongjin voice. Ordinary MAD routing unchanged.\n"
     },
     {
+      "test": "subject-pronoun-omission.mjs",
+      "exit": 1,
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Mad Korean: OMIT ONLY WHEN MORE NATURAL:\n    at file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/subject-pronoun-omission.mjs:52:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+    },
+    {
       "test": "tagged-content-toggle.mjs",
       "exit": 0,
       "output": "PASS: 태그 내부 번역 토글과 25개 화면 표시 설정이 베에르으바아 저장/UI/분할 경로에 연결됨.\n"
@@ -227,7 +262,7 @@
     {
       "test": "tagged-content-untranslated-repair.mjs",
       "exit": 0,
-      "output": "PASS: 태그 미번역은 로컬 감지 후 문제 구간만 1회 복구하고 정상 결과에는 추가 요청이 없음.\n"
+      "output": "[베에르으바아] 태그 미번역 복구(최소 프롬프트): 감지 1구간 · 적용 1구간\nPASS: 태그 미번역은 로컬 감지 후 문제 구간만 1회 복구하고 정상 결과에는 추가 요청이 없음.\n"
     },
     {
       "test": "taste-audit-wiring.mjs",
@@ -240,50 +275,49 @@
       "output": "PASS: ordinary translation, active flavor composition and optional review remain separate.\n"
     },
     {
-      "test": "message-long-press-copy-setting.mjs",
-      "exit": 0,
-      "output": "PASS: output blank-area long-press copy is enabled by default, user-toggleable, race-gated, and immediately cleaned up when disabled.\n"
-    },
-    {
-      "test": "settings-search.mjs",
-      "exit": 0,
-      "output": "PASS: settings search highlights matching words, temporarily reveals hidden groups, opens matches, and restores text/layout/open state when cleared.\n"
+      "test": "voice-intensity-flexibility.mjs",
+      "exit": 1,
+      "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: The input did not match the regular expression /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\\n]+may be freely adjusted/u. Input:\n\n'TOP PRIORITY — NO MISOGYNY\\n' +\n  \"- Across the entire translated output, never use misogynistic slurs, woman-hating labels, gendered degradation, or wording that reduces women to sex objects or an inferior class. This covers narration, inner thought, metadata, and every character, USER, and NPC's dialogue.\\n\" +\n  '- This rule overrides source-word fidelity and every style permission: Mad Korean, Hongjin flavor, transcreation strength, profanity frequency, vulgarity, teasing, playfulness, and age voice. Neither joking intimacy, affection, fictional characterization, nor rough narration grants an exception.\\n' +\n  '- Person-directed forms including 년/네 년/이년/저년/미친년/독한 년/씨발년/시발년/썅년/개년/김치녀/된장녀/맘충/보지년/걸레년/창녀/암캐/계집/계집애 are forbidden, also with spaces, particles, intervening punctuation, or spelling evasion. In particular, “네 년” is a slur, not an allowed spaced variant. Calendar/elapsed-time year units such as 2026년/몇 년 remain allowed.\\n' +\n  '- If the source contains abuse, preserve its target, intent, force, and scene consequence in non-gendered wording rather than reproducing the prohibited expression. Before returning, inspect every translated field and rewrite any violation without adding commentary.\\n' +\n  'END TOP PRIORITY\\n' +\n  'MAD KOREAN EXCLUSIVE ENGINE — FACT-LOCKED KOREAN REAUTHORING\\n' +\n  '- This is the only E→K writing engine for TARGET-CHARACTER DIALOGUE. Produce the final Korean directly in one pass; never draft a literal translation first and never apply this mode to K→E input.\\n' +\n  '- Ignore every saved/custom base instruction, one-time request, global/dialogue prompt, ordinary fine-tuning option, and other developer experiment EXCEPT KIM HONG-JIN FLAVOR when it is enabled for target-character dialogue. Their saved values remain untouched and their text is absent from this request.\\n' +\n  '\\n' +\n  'SCENE FACTS AND OUTPUT CONTRACT\\n' +\n  '- Preserve who does/says/feels what to whom, ownership, referents, chronology, causality, negation, quantity, tense/aspect, point of view, setting, names, numbers, relationship, dialogue intent, emotional direction, consent/refusal, intensity and explicitness. These are facts; sentence structure and vocabulary are not.\\n' +\n  '- Follow the Korean web-novel author role and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Produce final Korean directly in one pass, without a literal draft, commentary or an extra response.\\n' +\n  '- Translate all visible natural language, including information panels. Preserve protected structure and required output format. Resolve Korean particles grammatically; never leave “(이)는/이(가)/은(는)” editing notation.\\n' +\n  '\\n' +\n  'FACT, REFERENT, AND FORCE LOCK\\n' +\n  '- Preserve every actor→action→target and owner→object relation. Check pronouns, recipients, body parts, sensory channels, and movement direction. Taste is not smell; a forearm is not an elbow; support is not restraint; a rolling motion is not pounding.\\n' +\n  '- Stability words such as secure/anchor/support/prevent slipping do not create escape or resistance. Use restraint language only when the source contains an actual attempt to leave or physical restraint.\\n' +\n  '- Preserve intensity both ways. Gentle stays gentle; firm stays firm; rough or explicit stays equally rough or explicit. Natural prose is neither censorship nor escalation.\\n' +\n  \"- Preserve the source's specificity. Do not turn generic bedding into goose down, a fee into a contractual penalty, or mild movement into struggling.\\n\" +\n  '- Follow PRIMARY CAST REFERENCES below for names, pronouns, subject re-anchoring, and omission; keep actor, listener, and owner clear.\\n' +\n  '\\n' +\n  'KOREAN-ORIGINAL COMPOSITION — SHARED WRITING STANDARD\\n' +\n  '- You are a contemporary Korean web-novel author skilled in lifelike everyday dialogue and vivid, natural narration. Write both as original Korean fiction.\\n' +\n  '- SCENE-FIRST RECOMPOSITION: source text is scene evidence, not a wording template. MANDATORY REAUTHORING: discard the source sentence structure and expression system; reconstruct the entire passage in original Korean. Rebuild vocabulary, phrasing, syntax and rhythm from scene facts and speech intent, not from source wording. This is a required writing method, not optional polishing. Do not preserve lexical, clause or sentence alignment out of loyalty to the source. Preserve exact names, locked spellings and factually precise terms; do not force correct terms to change merely to look different. Translationese is unacceptable: do not dress source syntax in Korean words.\\n' +\n  '- Within each editable id, freely split/merge sentences and replace vocabulary, phrasing, figurative vehicles and rhythm. Preserve event order, causality, sensory facts, interiority, emotional progression, viewpoint, tense and uncertainty, not the original verbal packaging. Never move facts between ids, import context into a selected excerpt, drop information or invent events/actions. Preserve protected layout, narration/dialogue boundaries, configured voices and required output format. Natural Korean flow takes priority over resemblance to the source.\\n' +\n  'NATURAL COLLOCATIONS AND SOURCE IMAGERY:\\n' +\n  '- Treat words, idiom forms, figurative vehicles and rhetorical devices as replaceable expression. Preserve source meaning, facts, emotions, implications and the function of meaningful imagery, not the source image itself. Replace a metaphor with a context-native Korean equivalent or direct wording when that conveys the same meaning and effect more naturally. An actual described object/action, quoted wording used as evidence, or plot-relevant image remains factual information, not disposable decoration.\\n' +\n  '- Replacing an existing figurative vehicle is not inventing a decorative metaphor. Do not add a new joke, accusation, event or motive; rebuild the existing joke from its purpose and wordplay effects between these people. Ordinary descriptions need no extra poetic image.\\n' +\n  '- For dialogue, identify the speech act (teasing, deflecting, warning, requesting, masking embarrassment, etc.) and write spoken Korean this speaker would naturally use with this listener to perform it. Discard the source vocabulary even when that changes every word. Legal, corporate or scientific wording used as a joke need not survive as technical terminology; preserve its contextual premise and purpose. Keep accurate terminology when factual explanation or the exact term is itself important.\\n' +\n  '- Check subject–predicate, verb–object, modifier–noun and experiencer compatibility. Convey abstract reactions as natural Korean actions/states without inventing gestures or changing physical action. Keep register, target of abuse and configured profanity/vulgarity/teasing; references follow PRIMARY CAST REFERENCES.\\n' +\n  'END IDIOMATIC EXPRESSION\\n' +\n  \"- EVERYDAY DIALOGUE: use words this speaker would actually say aloud to this listener. When a label merely expresses exasperation or teasing, react to the person's behavior instead of assigning a stiff abstract judgment. Preserve dialogue intent, subtext, timing, personality and configured register; keep genuine diagnoses/titles as facts. Let arguing, teasing, deflecting and requesting sound like conversation, not an explanatory essay. Casualness does not mean forced memes, extra profanity or universal 반말; configured voice controls the roughness.\\n\" +\n  '- EVERYDAY NARRATION: choose familiar, precise words that make the scene immediately imaginable. Do not inflate ordinary actions with abstract nouns, stacked modifiers or strained metaphors. Connect continuous actions, break at a change or reaction, and use names/pronouns to keep the actor clear. Do not invent action or lose meaningful detail.\\n' +\n  '- SOURCE ELLIPSIS FIDELITY: keep each source hesitation/trailing-dot sequence exactly, including the dot count and character form: \"...\" stays \"...\", \"…\" stays \"…\", and \"……\" stays \"……\". Do not lengthen, shorten, normalize, omit, duplicate, or invent an ellipsis to dramatize the Korean. Stuttering/restarts, commas, sleepy speech, and sentence breaks do not authorize trailing dots: \"W-what time is it?\" can be \"지, 지금 몇 시야?\", not \"지, 지금 몇 시야……?\"; \"So,\" does not supply \"그럼……\". Before returning, compare ellipsis sequences in each target with its source in order; preserve the same sequence count and exact characters, including zero when none exist. Place each at its corresponding pause in the translated passage; for selected fragments, preserve only pauses belonging to that fragment, never import surrounding ones. This also applies with the optional voice add-on enabled. It does not require matching the total number of sentence-ending periods after sentence restructuring; do not modify decimals, URLs, code, or protected tokens.\\n' +\n  '- NATURAL VOCATIVES: rebuild teasing/insulting addresses as idiomatic Korean phrases, not stacked translated labels. Do not append 인간/사람 to an insult unless human identity itself matters. Keep the same referent, meaningful size/trait, and force; do not soften into affection. Added profanity requires the active voice exception. This addresses dialogue wording, not valid surrounding narration.\\n' +\n  \"- SUBJECT OR VOCATIVE: in dialogue, choose whether a name, affectionate nickname, or title works more naturally as a grammatical subject or as direct address. If particles or honorific agreement make the connection awkward, separate an actual listener's name/address from the clause and rebuild the rest as spoken Korean. Preserve the actor and listener; never turn a reference to a third person into direct address.\\n\" +\n  '- Keep affectionate address and playful honorifics when supported by the source or authorized voice and natural in context. Do not add formal particles such as 께서 merely to match 시/계시 or make the grammar look ceremonious; neither 께서 nor playful honorifics are banned. Preserve configured 반말/존댓말 and established relationships.\\n' +\n  '- Do not place a comma after every name, omit subjects wholesale, or invent a nickname or action. Use separation only when it sounds more natural aloud; omission must still meet the applicable subject/possessive rule, and ellipsis fidelity remains unchanged.\\n' +\n  '- NATURAL INSULT REFERENC'... 16049 more characters\n\n    at file:///workspace/scratch/f39caf9e86ae/toast-inspect-veereubaa/veereubaa-main/tests/voice-intensity-flexibility.mjs:34:12\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\n    at async node:internal/modules/esm/loader:643:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 'TOP PRIORITY — NO MISOGYNY\\n' +\n    \"- Across the entire translated output, never use misogynistic slurs, woman-hating labels, gendered degradation, or wording that reduces women to sex objects or an inferior class. This covers narration, inner thought, metadata, and every character, USER, and NPC's dialogue.\\n\" +\n    '- This rule overrides source-word fidelity and every style permission: Mad Korean, Hongjin flavor, transcreation strength, profanity frequency, vulgarity, teasing, playfulness, and age voice. Neither joking intimacy, affection, fictional characterization, nor rough narration grants an exception.\\n' +\n    '- Person-directed forms including 년/네 년/이년/저년/미친년/독한 년/씨발년/시발년/썅년/개년/김치녀/된장녀/맘충/보지년/걸레년/창녀/암캐/계집/계집애 are forbidden, also with spaces, particles, intervening punctuation, or spelling evasion. In particular, “네 년” is a slur, not an allowed spaced variant. Calendar/elapsed-time year units such as 2026년/몇 년 remain allowed.\\n' +\n    '- If the source contains abuse, preserve its target, intent, force, and scene consequence in non-gendered wording rather than reproducing the prohibited expression. Before returning, inspect every translated field and rewrite any violation without adding commentary.\\n' +\n    'END TOP PRIORITY\\n' +\n    'MAD KOREAN EXCLUSIVE ENGINE — FACT-LOCKED KOREAN REAUTHORING\\n' +\n    '- This is the only E→K writing engine for TARGET-CHARACTER DIALOGUE. Produce the final Korean directly in one pass; never draft a literal translation first and never apply this mode to K→E input.\\n' +\n    '- Ignore every saved/custom base instruction, one-time request, global/dialogue prompt, ordinary fine-tuning option, and other developer experiment EXCEPT KIM HONG-JIN FLAVOR when it is enabled for target-character dialogue. Their saved values remain untouched and their text is absent from this request.\\n' +\n    '\\n' +\n    'SCENE FACTS AND OUTPUT CONTRACT\\n' +\n    '- Preserve who does/says/feels what to whom, ownership, referents, chronology, causality, negation, quantity, tense/aspect, point of view, setting, names, numbers, relationship, dialogue intent, emotional direction, consent/refusal, intensity and explicitness. These are facts; sentence structure and vocabulary are not.\\n' +\n    '- Follow the Korean web-novel author role and SCENE-FIRST RECOMPOSITION below. Apply configured voice settings without inventing a new personality. Produce final Korean directly in one pass, without a literal draft, commentary or an extra response.\\n' +\n    '- Translate all visible natural language, including information panels. Preserve protected structure and required output format. Resolve Korean particles grammatically; never leave “(이)는/이(가)/은(는)” editing notation.\\n' +\n    '\\n' +\n    'FACT, REFERENT, AND FORCE LOCK\\n' +\n    '- Preserve every actor→action→target and owner→object relation. Check pronouns, recipients, body parts, sensory channels, and movement direction. Taste is not smell; a forearm is not an elbow; support is not restraint; a rolling motion is not pounding.\\n' +\n    '- Stability words such as secure/anchor/support/prevent slipping do not create escape or resistance. Use restraint language only when the source contains an actual attempt to leave or physical restraint.\\n' +\n    '- Preserve intensity both ways. Gentle stays gentle; firm stays firm; rough or explicit stays equally rough or explicit. Natural prose is neither censorship nor escalation.\\n' +\n    \"- Preserve the source's specificity. Do not turn generic bedding into goose down, a fee into a contractual penalty, or mild movement into struggling.\\n\" +\n    '- Follow PRIMARY CAST REFERENCES below for names, pronouns, subject re-anchoring, and omission; keep actor, listener, and owner clear.\\n' +\n    '\\n' +\n    'KOREAN-ORIGINAL COMPOSITION — SHARED WRITING STANDARD\\n' +\n    '- You are a contemporary Korean web-novel author skilled in lifelike everyday dialogue and vivid, natural narration. Write both as original Korean fiction.\\n' +\n    '- SCENE-FIRST RECOMPOSITION: source text is scene evidence, not a wording template. MANDATORY REAUTHORING: discard the source sentence structure and expression system; reconstruct the entire passage in original Korean. Rebuild vocabulary, phrasing, syntax and rhythm from scene facts and speech intent, not from source wording. This is a required writing method, not optional polishing. Do not preserve lexical, clause or sentence alignment out of loyalty to the source. Preserve exact names, locked spellings and factually precise terms; do not force correct terms to change merely to look different. Translationese is unacceptable: do not dress source syntax in Korean words.\\n' +\n    '- Within each editable id, freely split/merge sentences and replace vocabulary, phrasing, figurative vehicles and rhythm. Preserve event order, causality, sensory facts, interiority, emotional progression, viewpoint, tense and uncertainty, not the original verbal packaging. Never move facts between ids, import context into a selected excerpt, drop information or invent events/actions. Preserve protected layout, narration/dialogue boundaries, configured voices and required output format. Natural Korean flow takes priority over resemblance to the source.\\n' +\n    'NATURAL COLLOCATIONS AND SOURCE IMAGERY:\\n' +\n    '- Treat words, idiom forms, figurative vehicles and rhetorical devices as replaceable expression. Preserve source meaning, facts, emotions, implications and the function of meaningful imagery, not the source image itself. Replace a metaphor with a context-native Korean equivalent or direct wording when that conveys the same meaning and effect more naturally. An actual described object/action, quoted wording used as evidence, or plot-relevant image remains factual information, not disposable decoration.\\n' +\n    '- Replacing an existing figurative vehicle is not inventing a decorative metaphor. Do not add a new joke, accusation, event or motive; rebuild the existing joke from its purpose and wordplay effects between these people. Ordinary descriptions need no extra poetic image.\\n' +\n    '- For dialogue, identify the speech act (teasing, deflecting, warning, requesting, masking embarrassment, etc.) and write spoken Korean this speaker would naturally use with this listener to perform it. Discard the source vocabulary even when that changes every word. Legal, corporate or scientific wording used as a joke need not survive as technical terminology; preserve its contextual premise and purpose. Keep accurate terminology when factual explanation or the exact term is itself important.\\n' +\n    '- Check subject–predicate, verb–object, modifier–noun and experiencer compatibility. Convey abstract reactions as natural Korean actions/states without inventing gestures or changing physical action. Keep register, target of abuse and configured profanity/vulgarity/teasing; references follow PRIMARY CAST REFERENCES.\\n' +\n    'END IDIOMATIC EXPRESSION\\n' +\n    \"- EVERYDAY DIALOGUE: use words this speaker would actually say aloud to this listener. When a label merely expresses exasperation or teasing, react to the person's behavior instead of assigning a stiff abstract judgment. Preserve dialogue intent, subtext, timing, personality and configured register; keep genuine diagnoses/titles as facts. Let arguing, teasing, deflecting and requesting sound like conversation, not an explanatory essay. Casualness does not mean forced memes, extra profanity or universal 반말; configured voice controls the roughness.\\n\" +\n    '- EVERYDAY NARRATION: choose familiar, precise words that make the scene immediately imaginable. Do not inflate ordinary actions with abstract nouns, stacked modifiers or strained metaphors. Connect continuous actions, break at a change or reaction, and use names/pronouns to keep the actor clear. Do not invent action or lose meaningful detail.\\n' +\n    '- SOURCE ELLIPSIS FIDELITY: keep each source hesitation/trailing-dot sequence exactly, including the dot count and character form: \"...\" stays \"...\", \"…\" stays \"…\", and \"……\" stays \"……\". Do not lengthen, shorten, normalize, omit, duplicate, or invent an ellipsis to dramatize the Korean. Stuttering/restarts, commas, sleepy speech, and sentence breaks do not authorize trailing dots: \"W-what time is it?\" can be \"지, 지금 몇 시야?\", not \"지, 지금 몇 시야……?\"; \"So,\" does not supply \"그럼……\". Before returning, compare ellipsis sequences in each target with its source in order; preserve the same sequence count and exact characters, including zero when none exist. Place each at its corresponding pause in the translated passage; for selected fragments, preserve only pauses belonging to that fragment, never import surrounding ones. This also applies with the optional voice add-on enabled. It does not require matching the total number of sentence-ending periods after sentence restructuring; do not modify decimals, URLs, code, or protected tokens.\\n' +\n    '- NATURAL VOCATIVES: rebuild teasing/insulting addresses as idiomatic Korean phrases, not stacked translated labels. Do not append 인간/사람 to an insult unless human identity itself matters. Keep the same referent, meaningful size/trait, and force; do not soften into affection. Added profanity requires the active voice exception. This addresses dialogue wording, not valid surrounding narration.\\n' +\n    \"- SUBJECT OR VOCATIVE: in dialogue, choose whether a name, affectionate nickname, or title works more naturally as a grammatical subject or as direct address. If particles or honorific agreement make the connection awkward, separate an actual listener's name/address from the clause and rebuild the rest as spoken Korean. Preserve the actor and listener; never turn a reference to a third person into direct address.\\n\" +\n    '- Keep affectionate address and playful honorifics when supported by the source or authorized voice and natural in context. Do not add formal particles such as 께서 merely to match 시/계시 or make the grammar look ceremonious; neither 께서 nor playful honorifics are banned. Preserve configured 반말/존댓말 and established relationships.\\n' +\n    '- Do not place a comma after every name, omit subjects wholesale, or invent a nickname or action. Use separation only when it sounds more natural aloud; omission must still meet the applicable subject/possessive rule, and ellipsis fidelity remains unchanged.\\n' +\n    '- NATURAL INSULT REFERENC'... 16049 more characters,\n  expected: /surface verbal intensity (?:is flexible|is free)|Surface verbal intensity may change|Surface roughness[^\\n]+may be freely adjusted/u,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
     }
   ],
   "syntaxChecked": [
-    "base-editor.js",
-    "core.js",
-    "custom-translator-defaults.js",
-    "diagnostics.js",
-    "google-free.js",
     "index.js",
-    "minimal-output.js",
-    "output-splitting.js",
-    "pair-coordinator.js",
-    "previous-user-context.js",
-    "prompt-editor.js",
-    "response-parser.js",
-    "taste-audit.js",
-    "timing.js",
-    "translation-composer.js"
+    "notice-ui.js"
   ],
-  "context": "one nearest preceding user message, raw active source only",
+  "context": "Toast/composer dock UI-only update; all translation modules and prompts byte-identical to uploaded source. Browser tests use real Chromium with ST composer/quick-reply DOM fixtures, not a running SillyTavern instance.",
   "aiAuditEnabled": false,
   "quotedNarrativeBilingualGuardEnabled": true,
   "nameOnlyDialogueLocalRestorationEnabled": true,
   "nameAttachedParticlePromptEnabled": true,
-  "baselineFailuresUnchanged": [
-    "extreme-compressed-prompts.mjs",
-    "local-speaker-attribution.mjs",
-    "mad-recomposition.mjs",
-    "subject-pronoun-omission.mjs",
-    "voice-intensity-flexibility.mjs"
-  ],
+  "baselineFailuresUnchanged": true,
   "liveApiTested": false,
   "liveSillyTavernTested": false,
   "unchangedModules": [
+    "core.js",
+    "minimal-output.js",
+    "prompt-builders.js",
+    "response-parser.js",
     "translation-composer.js",
-    "taste-audit.js",
-    "base-editor.js"
-  ]
+    "timing.js"
+  ],
+  "noticeUiBrowserTest": {
+    "browser": "Chromium",
+    "results": [
+      {
+        "width": 1280,
+        "passed": true,
+        "checks": "QR visible/hidden/removed/added/resized, keyboard resize, close vs cancel, production return action (both), shared dock, overflow, XSS-safe text, all default timeouts"
+      },
+      {
+        "width": 390,
+        "passed": true,
+        "checks": "QR visible/hidden/removed/added/resized, keyboard resize, close vs cancel, production return action (both), shared dock, overflow, XSS-safe text, all default timeouts"
+      },
+      {
+        "width": 320,
+        "passed": true,
+        "checks": "QR visible/hidden/removed/added/resized, keyboard resize, close vs cancel, production return action (both), shared dock, overflow, XSS-safe text, all default timeouts"
+      }
+    ]
+  }
 }
