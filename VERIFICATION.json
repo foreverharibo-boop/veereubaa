@@ -1,7 +1,7 @@
 {
-  "version": "0.6.16",
-  "baselineVersion": "0.6.15",
-  "passed": 50,
+  "version": "0.6.18",
+  "baselineVersion": "0.6.17",
+  "passed": 51,
   "failed": 5,
   "tests": [
     {
@@ -284,7 +284,7 @@
     "index.js",
     "notice-ui.js"
   ],
-  "context": "UI-only compact cards and synchronous console preview. All current tests rerun; existing 5 deep-translation test failures unchanged. Browser fixtures are not a live SillyTavern server and lack Korean fonts; exact text widths vary by device.",
+  "context": "Configurable translation transport retries; default 5 additional retries, 0 unlimited; jittered fallback delays capped at 20 seconds; Retry-After/RetryInfo priority; permanent errors stop. All tests executed; changed timing tests rerun. Browser checks use fixtures, not live SillyTavern or provider requests.",
   "aiAuditEnabled": false,
   "quotedNarrativeBilingualGuardEnabled": true,
   "nameOnlyDialogueLocalRestorationEnabled": true,
@@ -364,6 +364,31 @@
         "passed": true,
         "checks": "QR visible/hidden/removed/added/resized, keyboard resize, close vs cancel, production return action (both), shared dock, overflow, XSS-safe text, all default timeouts"
       }
+    ]
+  },
+  "configurableRetryVerification": {
+    "test": "configurable-server-retries.mjs",
+    "passed": true,
+    "cases": [
+      "limits 1/2/5/12",
+      "unlimited recovery after eight retries",
+      "unlimited cancellation",
+      "permanent-error stop",
+      "server hints including 180 seconds",
+      "saved setting",
+      "finite and unlimited toast counters"
+    ],
+    "browserWidths": [
+      1280,
+      390,
+      320
+    ],
+    "browserPassed": true,
+    "liveSillyTavernTested": false,
+    "liveApiTested": false,
+    "syntaxChecked": [
+      "index.js",
+      "retry-policy.js"
     ]
   }
 }
