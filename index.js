@@ -1,4 +1,4 @@
-import { createNoticeUI } from './notice-ui.js';
+import { createNoticeUI, createNoticePreview } from './notice-ui.js';
 import { previousUserSource, appendPreviousUserContext } from './previous-user-context.js';
 import { runTasteQualityAudit } from './taste-audit.js';
 import { extension_settings, getContext } from '../../../../scripts/extensions.js';
@@ -54,8 +54,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.15';
+const EXTENSION_VERSION = '0.6.16';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
+globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const TOUCH_SELECTION_QUIET_MS = 2000;
