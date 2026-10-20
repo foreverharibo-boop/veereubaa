@@ -1,5 +1,5 @@
 import { POST_TRANSLATION_AI_REPAIR_ENABLED } from '../minimal-output.js';
-const Function = (...args) => globalThis.Function('POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, POST_TRANSLATION_AI_REPAIR_ENABLED);
+const Function = (...args) => globalThis.Function('verbaServer', 'POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, { hasPendingGeneration: () => false }, POST_TRANSLATION_AI_REPAIR_ENABLED);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as core from '../core.js';
@@ -30,7 +30,7 @@ let requests=[];
 const requestSegments=async(prompt,segments,options)=>{
  requests.push({prompt,segments,options});return new Map(segments.map(s=>[s.id,translateSegment(s)]));
 };
-const env={settings,outputSplitCount,runOutputBatches,requestSegments,
+const env={reviewFinalEnglish: async () => {},settings,outputSplitCount,runOutputBatches,requestSegments,
  buildOutputPrompt:core.buildOutputPrompt,buildScopedOutputPrompt:core.buildScopedOutputPrompt,
  madKoreanExclusiveMode:()=>settings.developerMadKoreanOutputEnabled===true,
  isAbort:(error,signal)=>signal?.aborted||error.name==='AbortError',SCOPED_PARALLEL_REQUEST_LIMIT:2,console};
