@@ -1,3 +1,4 @@
+import { createAutomaticOutputLifecycle } from './automatic-output.js';
 import { reviewEnglishLeftovers } from './english-review.js';
 import { nameLockEntryMarkup, bindNameLockEntry } from './name-lock-entry.js';
 import { createNoticeUI, createNoticePreview } from './notice-ui.js';
@@ -58,7 +59,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.25';
+const EXTENSION_VERSION = '0.6.26';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -737,6 +738,11 @@ const pendingOutputs = new Map();
 const pendingSelectionTranslations = new Set();
 const pendingSentInputs = new WeakMap();
 const automaticTranslationTimers = new Map();
+const automaticOutputLifecycle = createAutomaticOutputLifecycle({
+    getChat: () => liveContext().chat,
+    signature: message => messageSource(message).trim() ? messageVersionSignature(message) : '',
+    visibility: () => document.visibilityState || 'unknown',
+});
 const swipeTranslationJobs = new Map();
 const renderedTranslationCache = new Map();
 const lastRenderedTranslationByMessage = new Map();
@@ -955,6 +961,7 @@ function createDebugDiagnostic(stage = 'unknown', error = null, displayMessage =
             sourceLength: source.length,
             hasStoredTranslation: Boolean(currentRecord(latest.message)),
         } : null,
+        automaticOutput: automaticOutputLifecycle.diagnostics(),
         settingsState: {
             autoInput: Boolean(settings.autoInput),
             autoOutput: settings.autoOutput !== false,
@@ -5941,6 +5948,7 @@ async function translateMessage(messageId, options = {}) {
         ));
     }
 
+    if (options.automatic) automaticOutputLifecycle.started(id);
     const outputJobStartedAt = performance.now();
     const outputJobSlot = activeProfileSlot();
     const timing = outputTiming.begin({
@@ -10814,6 +10822,7 @@ function bindAutoOutputSetting(panel) {
     input.addEventListener('change', () => {
         settings.autoOutput = input.checked;
         if (settings.autoOutput === false) {
+            automaticOutputLifecycle.discard();
             for (const timer of automaticTranslationTimers.values()) clearTimeout(timer);
             automaticTranslationTimers.clear();
         }
@@ -12895,10 +12904,16 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
         if (!swipeTranslationJobs.has(id)) clearStaleCurrentTranslation(id);
         return;
     }
-    const timer = setTimeout(() => {
+    const chatReference = liveContext().chat;
+    let ticket;
+    const run = () => {
+        if (automaticTranslationTimers.get(id) !== ticket) return;
         automaticTranslationTimers.delete(id);
         if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (settings.autoOutput === false) return;
+        if (liveContext().chat !== chatReference) return;
+        if (automaticOutputLifecycle.busy() && !automaticOutputLifecycle.isComplete(id)) return;
+        if (translationOptions.completedSignal && !automaticOutputLifecycle.isComplete(id)) return;
 
         // A regenerated/revised message can briefly overlap SillyTavern's swipe
         // settling job. Older Verba Deep builds simply returned here, which could
@@ -12919,8 +12934,17 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
         clearStaleCurrentTranslation(id);
         translateMessage(id, { automatic: true, ...translationOptions });
         refreshRetranslateButton();
-    }, delay);
-    automaticTranslationTimers.set(id, timer);
+    };
+    automaticOutputLifecycle.trace('translation-scheduled', id);
+    if (translationOptions.completedSignal && delay === 0) {
+        // Leave the event callback before starting work, without a background-throttled timer.
+        ticket = {};
+        automaticTranslationTimers.set(id, ticket);
+        queueMicrotask(run);
+    } else {
+        ticket = setTimeout(run, delay);
+        automaticTranslationTimers.set(id, ticket);
+    }
 }
 
 function scheduleSwipeTranslation(messageId, previousSignature = '', hold = null) {
@@ -12949,6 +12973,10 @@ function scheduleSwipeTranslation(messageId, previousSignature = '', hold = null
 
     const check = () => {
         if (swipeTranslationJobs.get(id) !== job) return;
+        if (automaticOutputLifecycle.busy() && !automaticOutputLifecycle.isComplete(id)) {
+            job.timer = setTimeout(check, 180);
+            return;
+        }
         const message = liveContext().chat?.[id];
         if (repairSwipeTranslationIndexes(message)) scheduleChatSave(liveContext().chat);
         const slot = currentSwipeSlot(message);
@@ -13191,6 +13219,7 @@ function resetAssistantSourceObservation({ warmup = true } = {}) {
 
 function scheduleFreshMountedAssistantTranslations(delay = 180) {
     if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+    if (automaticOutputLifecycle.busy()) return;
     if (!assistantObservationReady) return;
 
     const context = liveContext();
@@ -13222,7 +13251,7 @@ function scheduleFreshMountedAssistantTranslations(delay = 180) {
 
         // chat[] can update before the actual message node is mounted. Keep a
         // newly-appended assistant pending instead of consuming its opportunity.
-        if (!document.querySelector(`.mes[mesid="${id}"]`)) continue;
+        if (!document.querySelector(`.mes[mesid="${id}"]`) && !automaticOutputLifecycle.isComplete(id)) continue;
 
         const record = currentRecord(message, id);
         if (record) {
@@ -13272,6 +13301,7 @@ function scheduleFreshMountedAssistantTranslations(delay = 180) {
 
 function schedulePotentialAssistantRevision(payload = null, delay = 180, options = {}) {
     if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+    if (automaticOutputLifecycle.busy()) return;
     let id = normalizedMessageId(payload);
     if (id < 0) id = latestAssistantMessage()?.id ?? -1;
     if (id < 0) return;
@@ -13285,7 +13315,7 @@ function schedulePotentialAssistantRevision(payload = null, delay = 180, options
 
     const source = messageSource(message);
     if (!source.trim() || isPredominantlyKorean(source) || !hasForeignText(source)) return;
-    if (!document.querySelector(`.mes[mesid="${id}"]`)) return;
+    if (!document.querySelector(`.mes[mesid="${id}"]`) && !automaticOutputLifecycle.isComplete(id)) return;
 
     const existingRecord = currentRecord(message, id);
     if (existingRecord) {
@@ -13306,6 +13336,7 @@ function schedulePotentialAssistantRevision(payload = null, delay = 180, options
 
 function scheduleRecentInsteadRevisionTranslations(delay = 180) {
     if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
+    if (automaticOutputLifecycle.busy()) return;
     if (!assistantObservationReady) return;
 
     const context = liveContext();
@@ -13332,7 +13363,7 @@ function scheduleRecentInsteadRevisionTranslations(delay = 180) {
         if (appendedSinceBaseline) pendingFallbackAssistantIds.add(id);
 
         const mounted = Boolean(document.querySelector(`.mes[mesid="${id}"]`));
-        if (!mounted) return;
+        if (!mounted && !automaticOutputLifecycle.isComplete(id)) return;
 
         const sourceChangedWhileMounted = Boolean(
             previousSignature
@@ -13371,49 +13402,66 @@ function scheduleRecentInsteadRevisionTranslations(delay = 180) {
     assistantObservedChatLength = Math.max(assistantObservedChatLength, chat.length);
 }
 
-function handleCompletedAssistantMessage(payload, delay = 80) {
+function startCompletedAutomaticOutput(id) {
+    if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) return;
+    if (!automaticOutputLifecycle.isComplete(id)) return;
+    const message = liveContext().chat?.[id];
+    const record = currentRecord(message);
+    if (record) {
+        restoreCurrentDisplay(id, message, record);
+        return;
+    }
+    if (pendingOutputs.has(id)) return;
+    if (failedOutputSignatures.get(id) === messageVersionSignature(message)) return;
+    pendingFallbackAssistantIds.delete(id);
+    const swipeJob = swipeTranslationJobs.get(id);
+    if (swipeJob) {
+        swipeJob.rendered = true;
+        if (swipeJob.timer) clearTimeout(swipeJob.timer);
+        // Swipe transitions keep their existing stability and source checks.
+        swipeJob.check();
+        return;
+    }
+    scheduleAutomaticTranslation(id, 0, { completedSignal: true });
+}
+
+function handleCompletedAssistantMessage(payload) {
     let id = normalizedMessageId(payload);
     if (id < 0) id = latestAssistantMessage()?.id ?? -1;
     if (id < 0) return;
-
-    pendingFallbackAssistantIds.delete(id);
-
-    const swipeJob = swipeTranslationJobs.get(id);
-    if (swipeJob) {
-        // MESSAGE_RECEIVED is emitted once the generated swipe has been stored,
-        // while CHARACTER_MESSAGE_RENDERED may be skipped or delayed by some
-        // SillyTavern mobile rendering paths. Either event means the source can
-        // now be checked for a stable completed value.
-        swipeJob.rendered = true;
-        if (swipeJob.timer) clearTimeout(swipeJob.timer);
-        swipeJob.timer = setTimeout(swipeJob.check, delay);
-        return;
-    }
-
-    scheduleAutomaticTranslation(id, Math.max(80, delay));
+    if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) return;
+    automaticOutputLifecycle.complete(id);
+    startCompletedAutomaticOutput(id);
 }
 
 function handleGenerationEnded() {
-    for (const [id, swipeJob] of swipeTranslationJobs.entries()) {
-        swipeJob.rendered = true;
-        if (swipeJob.timer) clearTimeout(swipeJob.timer);
-        swipeJob.timer = setTimeout(swipeJob.check, 100);
+    const ready = automaticOutputLifecycle.end();
+    if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) {
+        automaticOutputLifecycle.discard();
+        return;
     }
-
-    const latest = latestAssistantMessage();
-    if (latest && !swipeTranslationJobs.has(latest.id)) {
-        scheduleAutomaticTranslation(latest.id, 120);
-    }
-
-    if (latest) schedulePotentialAssistantRevision(latest.id, 140, { allowUntranslated: true });
+    for (const id of ready) startCompletedAutomaticOutput(id);
     setTimeout(() => {
         scheduleRecentInsteadRevisionTranslations(160);
         scheduleFreshMountedAssistantTranslations(160);
     }, 260);
-    setTimeout(() => {
-        scheduleRecentInsteadRevisionTranslations(160);
-        scheduleFreshMountedAssistantTranslations(160);
-    }, 620);
+}
+
+function resumeAutomaticOutputs() {
+    automaticOutputLifecycle.trace('page-resumed');
+    if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) return;
+    // Only versions completed in this session: opening a chat must not translate old history.
+    for (const id of automaticOutputLifecycle.ready()) startCompletedAutomaticOutput(id);
+}
+
+function setupAutomaticOutputLifecycle() {
+    document.addEventListener('visibilitychange', () => {
+        automaticOutputLifecycle.trace(document.hidden ? 'page-hidden' : 'page-visible');
+        if (!document.hidden) resumeAutomaticOutputs();
+    });
+    document.addEventListener('freeze', () => automaticOutputLifecycle.trace('page-frozen'));
+    document.addEventListener('resume', resumeAutomaticOutputs);
+    window.addEventListener('pageshow', resumeAutomaticOutputs);
 }
 
 /**
@@ -13543,6 +13591,7 @@ function setupEvents() {
     if (!source?.on) return;
 
     if (types.GENERATION_STARTED) {
+        source.on(types.GENERATION_STARTED, (type, options, dryRun) => automaticOutputLifecycle.start(type, options, dryRun));
         source.on(types.GENERATION_STARTED, translateInputBeforeGeneration);
         source.makeLast?.(types.GENERATION_STARTED, translateInputBeforeGeneration);
     }
@@ -13552,16 +13601,18 @@ function setupEvents() {
     if (types.MESSAGE_RECEIVED) {
         source.on(types.MESSAGE_RECEIVED, payload => {
             clearTransientTranslationSelections();
-            handleCompletedAssistantMessage(payload, 80);
+            handleCompletedAssistantMessage(payload);
         });
     }
     if (types.CHARACTER_MESSAGE_RENDERED) {
-        source.on(types.CHARACTER_MESSAGE_RENDERED, payload => handleCompletedAssistantMessage(payload, 120));
+        source.on(types.CHARACTER_MESSAGE_RENDERED, payload => handleCompletedAssistantMessage(payload));
     }
+    if (types.GENERATION_STOPPED) source.on(types.GENERATION_STOPPED, () => automaticOutputLifecycle.stop());
     if (types.MESSAGE_SWIPED) source.on(types.MESSAGE_SWIPED, handleSwipe);
     if (types.GENERATION_ENDED) source.on(types.GENERATION_ENDED, handleGenerationEnded);
     if (types.CHAT_CHANGED) {
         source.on(types.CHAT_CHANGED, () => {
+            automaticOutputLifecycle.reset();
             // Locks and bundles are one-shot editing state. Clear tracked
             // records before caches are discarded, and also clear any stale
             // values loaded with the newly opened chat.
@@ -13677,6 +13728,7 @@ function initialize() {
     setupMessageCopyHold();
     setupSelection();
     setupEvents();
+    setupAutomaticOutputLifecycle();
     setupObserver();
     setTimeout(() => {
         scheduleRecentInsteadRevisionTranslations(220);
