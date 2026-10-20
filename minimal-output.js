@@ -4,7 +4,8 @@ import { assembleTranslation, findProtectedTokenIntegrityProblems, findUntransla
 
 // Keep every post-translation AI repair path available for later restoration,
 // while returning the first complete model result after local deterministic
-// cleanup. Change only this flag to true to restore the dormant AI repairs.
+// cleanup. The independent final English review does not use this flag.
+// Change only this flag to true to restore the dormant AI repairs.
 export const POST_TRANSLATION_AI_REPAIR_ENABLED = false;
 
 export function minimalOutputEnabled(settings = {}) {
@@ -45,7 +46,7 @@ ${JSON.stringify(payload)}`;
 }
 
 // Prompt content is independent of the developer split setting.
-export async function translateMinimalOutput(segmented, settings, options, { requestSegments, buildSourceMap }) {
+export async function translateMinimalOutput(segmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish }) {
     const config = {
         customTranslatorEnabled: settings.customTranslatorEnabled,
         customTranslatorTemplates: settings.customTranslatorTemplates,
@@ -151,6 +152,8 @@ export async function translateMinimalOutput(segmented, settings, options, { req
             console.warn('[베에르으바아] 태그 미번역 1회 복구 실패(최소 프롬프트) — 최초 번역을 유지합니다.', error);
         }
     }
+
+    await reviewEnglish?.({ segmented, translations, speakerIdentity: options.speakerIdentity || {}, options });
 
     const translation = assembleTranslation(segmented, translations, {
         allowDamagedProtected: !POST_TRANSLATION_AI_REPAIR_ENABLED,
