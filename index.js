@@ -58,7 +58,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.24';
+const EXTENSION_VERSION = '0.6.25';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -4378,7 +4378,14 @@ async function classifyOutputDialogueSpeakers(segmented, speakerIdentity, option
         // Conservative fallback is NOT cached. A later retranslation may
         // successfully classify the speakers.
         console.warn('[베에르으바아] 대사 화자 분류 실패 — 캐릭터 전용 프롬프트를 보수적으로 제외합니다.', error);
-        debugCaptureError?.(error, 'speaker-attribution');
+        if (settings.debugMode) {
+            try {
+                storeDebugDiagnostic(createDebugDiagnostic('speaker-attribution', error));
+            } catch (diagnosticError) {
+                // Diagnostic UI/storage must never prevent the fallback above.
+                console.warn('[베에르으바아] 화자 분류 진단 기록 실패', diagnosticError);
+            }
+        }
     }
 
     return scopes;
