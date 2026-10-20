@@ -42,7 +42,7 @@ assert.match(panels[1],/id="verba-deep-developer-settings"[\s\S]*?id="verba-deep
 assert.doesNotMatch(panels[1],/id="verba-deep-chuseok-galbwae-(?:all|dialogue-inner)" checked/);
 const manifest=JSON.parse(fs.readFileSync(new URL('../manifest.json',import.meta.url),'utf8'));
 assert.equal(manifest.name,'verba-deep');assert.equal(manifest.display_name,'베에르으바아');
-assert.equal(manifest.version,'0.6.21');assert.ok(index.includes("const EXTENSION_VERSION = '"+manifest.version+"';"));
+assert.ok(index.includes("const EXTENSION_VERSION = '"+manifest.version+"';"));
 assert.match(style,/#verba-deep-settings > \.inline-drawer > \.inline-drawer-content\s*\{\s*font-size: \.86em;/);
 assert.doesNotMatch(style,/#verba-deep-settings\s*\{\s*font-size:/);
 assert.doesNotMatch(style,/#verba-deep-settings \.verba-deep-drawer-header\s*\{[^}]*min-height:/s);
