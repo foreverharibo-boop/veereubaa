@@ -60,7 +60,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.30';
+const EXTENSION_VERSION = '0.6.31';
 // This client-only fix uses the existing server translation engine unchanged.
 const SERVER_ENGINE_VERSION = '0.6.29';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -867,10 +867,28 @@ function applyServerTranslationProgress(state) {
     updateServerRetryIndicator();
 }
 
+function serverTranslationSettingsMarkup() {
+    return `
+                    <details class="verba-deep-tool-details">
+                        <summary>서버 번역 <small>선택 설치 · 실험 기능</small></summary>
+                        <div class="verba-deep-tool-details-content">
+                            <label class="verba-deep-check-row" for="verba-deep-server-translation">
+                                <input type="checkbox" id="verba-deep-server-translation" ${settings.serverTranslation === true ? 'checked' : ''}>
+                                <span>서버에서 번역</span>
+                            </label>
+                            <div class="verba-deep-help">별도 서버 플러그인을 설치한 경우 사용해요. 설치하지 않으면 기존 브라우저 번역을 그대로 이용합니다. 서버는 계속 켜져 있어야 합니다.</div>
+                            <div class="verba-deep-help">새 답변의 백그라운드 수신은 채팅 완성 API를 지원합니다. 다른 확장이 답변을 수정하면 최종 원문과 일치하는 번역만 사용합니다. 서버 재시작 시 진행 중인 작업은 복구되지 않습니다.</div>
+                            <button type="button" id="verba-deep-server-check" class="menu_button">서버 연결 확인</button>
+                            <div id="verba-deep-server-status" class="verba-deep-help" aria-live="polite">${settings.serverTranslation === true ? '서버 번역 켜짐' : '기존 브라우저 번역'}</div>
+                        </div>
+                    </details>`;
+}
+
 function bindServerTranslationSetting(panel) {
     const input = panel.querySelector('#verba-deep-server-translation');
     const status = panel.querySelector('#verba-deep-server-status');
     const check = panel.querySelector('#verba-deep-server-check');
+    if (!input || !status || !check) return;
     input.addEventListener('change', async () => {
         if (!input.checked) { settings.serverTranslation = false; saveSettings(); status.textContent = '기존 브라우저 번역 · 진행 중인 서버 작업은 계속됩니다.'; return; }
         input.disabled = true;
@@ -10735,11 +10753,12 @@ function developerChuseokGalbwaeMarkup() {
 
 function developerSettingsMarkup() {
     return `
-        <details id="verba-deep-developer-settings" class="verba-deep-tool-details verba-deep-developer-settings" open>
+        <details id="verba-deep-developer-settings" class="verba-deep-tool-details verba-deep-developer-settings">
             <summary>개발자 모드 <small>${settings.developerMode ? '품질 검수 실험실' : '번호 입력'}</small></summary>
             <div class="verba-deep-tool-details-content">
                 ${settings.developerMode ? `
                     <div class="verba-deep-developer-enabled-note">개발자 모드가 활성화되어 있어요.</div>
+                    ${serverTranslationSettingsMarkup()}
                     ${developerChuseokGalbwaeMarkup()}
                     <details id="verba-deep-developer-minimal-prompt-lab" class="verba-deep-tool-details verba-deep-developer-lab">
                         <summary>🧪 최소 프롬프트 실험 <small>출력·전체 재번역</small></summary>
@@ -10891,7 +10910,9 @@ function refreshSettingsPanelForDeveloperMode() {
     const replacement = holder.firstElementChild;
     if (!replacement) return;
 
+    replacement.open = current.open;
     current.replaceWith(replacement);
+    bindServerTranslationSetting(panel);
     syncDeveloperQualityControls(panel);
     renderQualityAuditStatus();
 }
@@ -11285,19 +11306,7 @@ function injectSettingsPanel() {
                         </div>
                     </details>
 
-                    <details class="verba-deep-tool-details">
-                        <summary>서버 번역 <small>선택 설치 · 실험 기능</small></summary>
-                        <div class="verba-deep-tool-details-content">
-                            <label class="verba-deep-check-row" for="verba-deep-server-translation">
-                                <input type="checkbox" id="verba-deep-server-translation" ${settings.serverTranslation === true ? 'checked' : ''}>
-                                <span>서버에서 번역</span>
-                            </label>
-                            <div class="verba-deep-help">별도 서버 플러그인을 설치한 경우 사용해요. 설치하지 않으면 기존 브라우저 번역을 그대로 이용합니다. 서버는 계속 켜져 있어야 합니다.</div>
-                            <div class="verba-deep-help">새 답변의 백그라운드 수신은 채팅 완성 API를 지원합니다. 다른 확장이 답변을 수정하면 최종 원문과 일치하는 번역만 사용합니다. 서버 재시작 시 진행 중인 작업은 복구되지 않습니다.</div>
-                            <button type="button" id="verba-deep-server-check" class="menu_button">서버 연결 확인</button>
-                            <div id="verba-deep-server-status" class="verba-deep-help" aria-live="polite">${settings.serverTranslation === true ? '서버 번역 켜짐' : '기존 브라우저 번역'}</div>
-                        </div>
-                    </details>
+
 </section>
 
                 <details id="verba-deep-profile-settings-group" class="verba-deep-tool-details">
