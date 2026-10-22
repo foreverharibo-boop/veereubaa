@@ -13178,7 +13178,9 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
         }
         if (repairSwipeTranslationIndexes(message)) scheduleChatSave(liveContext().chat);
         clearStaleCurrentTranslation(id);
-        translateMessage(id, { automatic: true, ...translationOptions });
+        // Keep the local coordination counter out of server request options.
+        const { sceneCleanupWaitCount, ...forwardOptions } = translationOptions;
+        translateMessage(id, { automatic: true, ...forwardOptions });
         refreshRetranslateButton();
     };
     automaticOutputLifecycle.trace('translation-scheduled', id);
