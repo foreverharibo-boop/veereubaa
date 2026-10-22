@@ -6007,6 +6007,7 @@ async function translateMessage(messageId, options = {}) {
     if (!message || message.is_user || !isNameReplacementMessage(message)) return;
     const source = messageSource(message);
     if (!source.trim()) return;
+    traceSourceForMessage(id,'translation-entered');
 
     if (options.automatic && isPredominantlyKorean(source)) {
         console.log(`[베에르으바아] 한국어 중심 출력 자동 제외 #${id}`);
@@ -6037,6 +6038,7 @@ async function translateMessage(messageId, options = {}) {
     }
 
     if (options.automatic) automaticOutputLifecycle.started(id);
+    executionTrace.trace('output-started',id,{reason:options.force?'manual-retranslation':options.automatic?'automatic':'manual'});
     const outputJobStartedAt = performance.now();
     const outputJobSlot = activeProfileSlot();
     const timing = outputTiming.begin({
@@ -6063,7 +6065,9 @@ async function translateMessage(messageId, options = {}) {
     let toast = showProgress(options.force ? '아웃풋 전체를 다시 번역 중입니다…' : '아웃풋을 번역 중입니다…');
     const work = (async () => {
         try {
+            executionTrace.trace('bilingual-precheck-started',id);
             await planBilingualDialogueVerdicts(segmentSource(source), { signal: controller.signal, timing });
+            executionTrace.trace('translation-requested',id);
             const translated = await translateOutputText(source, {
                 previousUserSource: previousUserSource(chatReference, id, messageSource),
                 signal: controller.signal,
@@ -6076,10 +6080,12 @@ async function translateMessage(messageId, options = {}) {
                 speakerIdentity: outputSpeakerIdentity(message),
                 stage: options.force ? 'output-retranslation' : 'output-translation',
             });
+            executionTrace.trace('model-result-received',id);
             if (controller.signal.aborted) throw controller.signal.reason || abortError();
             outputTiming.applying(timing);
             const latestContext = liveContext();
             const latest = latestContext.chat?.[id];
+            traceSourceForMessage(id,'before-apply');
             const latestSource = messageSource(latest);
             const chatChanged = latestContext.chat !== snapshot.chatReference;
             const swipeChanged = currentSwipeId(latest) !== snapshot.swipeId;
@@ -6089,6 +6095,7 @@ async function translateMessage(messageId, options = {}) {
             // finalization without changing the actual active swipe or source text.
             // Object identity alone must NOT invalidate a completed translation.
             if (chatChanged || swipeChanged || sourceChanged) {
+                if(sourceChanged)sourceChangeTracer.compare(id,source,latestSource,'model-result-versus-current-source');
                 const canRetryLatest = !chatChanged
                     && latest
                     && !latest.is_user
@@ -6096,7 +6103,8 @@ async function translateMessage(messageId, options = {}) {
                     && latestSource.trim();
                 const staleRetryCount = Math.max(0, Number(options.staleRetryCount) || 0);
                 const willRetryLatest = canRetryLatest && staleRetryCount < 2;
-
+                executionTrace.trace('translation-stale',id,{sourceChanged,swipeChanged,chatChanged,
+                    beforeLength:source.length,afterLength:latestSource.length,retryScheduled:willRetryLatest});
                 if (willRetryLatest) {
                     // Give SillyTavern a short settling window before translating
                     // the newest source. Repeated late finalization is allowed one
@@ -6131,6 +6139,7 @@ async function translateMessage(messageId, options = {}) {
                     true,
                 );
             }
+            executionTrace.trace('translation-apply-started',id);
             const applied = applyTranslation(
                 id,
                 latest,
@@ -6146,6 +6155,7 @@ async function translateMessage(messageId, options = {}) {
             clearTransientTranslationSelections();
 
             if (applied?.renderResult?.status === 'failed') {
+                executionTrace.trace('translation-render-failed',id);
                 // The translated text is preserved in Verba Deep storage, but the
                 // user must not see the progress toast simply disappear while
                 // the visible message remains unchanged.
@@ -6156,6 +6166,7 @@ async function translateMessage(messageId, options = {}) {
 
             failedOutputSignatures.delete(id);
             outputJobSuccess = true;
+            executionTrace.trace('translation-applied',id,{success:true});
             notify(options.force ? '전체 재번역을 적용했어요.' : '번역을 적용했어요.', 'success');
         } catch (error) {
             if (isAbort(error, controller.signal)) {
@@ -6180,17 +6191,20 @@ async function translateMessage(messageId, options = {}) {
                     }
                     outputJobSuperseded = true;
                     outputJobSuccess = false;
+                    executionTrace.trace('translation-aborted',id,{reason:'intentional-abort'});
                     failedOutputSignatures.delete(id);
                 } else {
                     outputJobSuccess = false;
                     failedOutputSignatures.set(id, `${snapshot.swipeId ?? 'none'}:${snapshot.sourceHash}`);
                     const reasonMessage = String(reason?.message || error?.message || '알 수 없는 이유');
+                    executionTrace.trace('translation-aborted',id,{reason:'unexpected-abort'});
                     console.warn('[베에르으바아] 출력 번역 중단', reason || error);
                     reportError('output-aborted', reason || error, `출력 번역 중단: ${reasonMessage}`);
                 }
             } else {
                 outputJobSuccess = false;
                 failedOutputSignatures.set(id, `${snapshot.swipeId ?? 'none'}:${snapshot.sourceHash}`);
+                executionTrace.trace('translation-failed',id,{reason:'request-or-processing-error'});
                 console.error('[베에르으바아] 출력 번역 실패', error);
                 reportError(options.force ? 'output-retranslation' : 'output-translation', error, `출력 번역 실패: ${errorText(error)}`);
             }
@@ -6209,6 +6223,8 @@ async function translateMessage(messageId, options = {}) {
             }
             clearProgress(toast);
             if (pendingOutputs.get(id)?.controller === controller) pendingOutputs.delete(id);
+            executionTrace.trace('output-finalized',id,{success:outputJobSuccess===true,
+                reason:outputJobSuperseded?'replaced':controller.signal.aborted?'aborted':outputJobSuccess?'applied':'failed'});
             refreshRetranslateButton();
             outputTiming.finish(timing, controller.signal.aborted || outputJobSuperseded ? '취소·전환' : outputJobSuccess ? '완료' : '실패');
             renderOutputTiming();
