@@ -13029,6 +13029,7 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
     const run = () => {
         if (automaticTranslationTimers.get(id) !== ticket) return;
         automaticTranslationTimers.delete(id);
+        executionTrace.trace('translation-dispatch-attempt',id);
         if (!isTranslationExtensionActive(EXTENSION_KEY)) return;
         if (settings.autoOutput === false) return;
         if (liveContext().chat !== chatReference) return;
@@ -13056,6 +13057,7 @@ function scheduleAutomaticTranslation(messageId, delay = 100, translationOptions
         refreshRetranslateButton();
     };
     automaticOutputLifecycle.trace('translation-scheduled', id);
+    executionTrace.trace('translation-scheduled',id,{delayMs:Math.max(0,Number(delay)||0)});
     if (translationOptions.completedSignal && delay === 0) {
         // Leave the event callback before starting work, without a background-throttled timer.
         ticket = {};
@@ -13549,12 +13551,16 @@ function handleCompletedAssistantMessage(payload) {
     let id = normalizedMessageId(payload);
     if (id < 0) id = latestAssistantMessage()?.id ?? -1;
     if (id < 0) return;
+    traceSourceForMessage(id,'message-received');
+    executionTrace.trace('assistant-message-received',id);
     if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) return;
     automaticOutputLifecycle.complete(id);
     startCompletedAutomaticOutput(id);
 }
 
 function handleGenerationEnded() {
+    traceLatestAssistantSource('generation-ended');
+    executionTrace.trace('generation-ended');
     const ready = automaticOutputLifecycle.end();
     if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) {
         automaticOutputLifecycle.discard();
@@ -13568,6 +13574,8 @@ function handleGenerationEnded() {
 }
 
 function resumeAutomaticOutputs() {
+    executionTrace.heartbeat();
+    traceLatestAssistantSource('page-resumed');
     automaticOutputLifecycle.trace('page-resumed');
     if (!isTranslationExtensionActive(EXTENSION_KEY) || settings.autoOutput === false) return;
     // Only versions completed in this session: opening a chat must not translate old history.
@@ -13576,12 +13584,22 @@ function resumeAutomaticOutputs() {
 
 function setupAutomaticOutputLifecycle() {
     document.addEventListener('visibilitychange', () => {
+        executionTrace.page(document.hidden ? 'hidden' : 'visible');
         automaticOutputLifecycle.trace(document.hidden ? 'page-hidden' : 'page-visible');
         if (!document.hidden) resumeAutomaticOutputs();
     });
-    document.addEventListener('freeze', () => automaticOutputLifecycle.trace('page-frozen'));
-    document.addEventListener('resume', resumeAutomaticOutputs);
-    window.addEventListener('pageshow', resumeAutomaticOutputs);
+    document.addEventListener('freeze', () => {
+        executionTrace.page('freeze');
+        automaticOutputLifecycle.trace('page-frozen');
+    });
+    document.addEventListener('resume', () => {
+        executionTrace.page('resume');
+        resumeAutomaticOutputs();
+    });
+    window.addEventListener('pageshow', () => {
+        executionTrace.page('resume');
+        resumeAutomaticOutputs();
+    });
 }
 
 /**
@@ -13711,7 +13729,10 @@ function setupEvents() {
     if (!source?.on) return;
 
     if (types.GENERATION_STARTED) {
-        source.on(types.GENERATION_STARTED, (type, options, dryRun) => automaticOutputLifecycle.start(type, options, dryRun));
+        source.on(types.GENERATION_STARTED, (type, options, dryRun) => {
+            automaticOutputLifecycle.start(type,options,dryRun);
+            if(!dryRun)executionTrace.trace('generation-started',null);
+        });
         source.on(types.GENERATION_STARTED, translateInputBeforeGeneration);
         source.makeLast?.(types.GENERATION_STARTED, translateInputBeforeGeneration);
     }
@@ -13732,6 +13753,14 @@ function setupEvents() {
     if (types.GENERATION_ENDED) source.on(types.GENERATION_ENDED, handleGenerationEnded);
     if (types.CHAT_CHANGED) {
         source.on(types.CHAT_CHANGED, () => {
+            sourceChangeTracer.reset();
+            executionTrace.clear();
+            if(fullSourceSnapshotsEnabled){
+                fullSourceSnapshotsEnabled=false;
+                lastDebugDiagnostic=null;
+                const input=document.querySelector('#verba-deep-debug-full-source');
+                if(input)input.checked=false;
+            }
             automaticOutputLifecycle.reset();
             // Locks and bundles are one-shot editing state. Clear tracked
             // records before caches are discarded, and also clear any stale
@@ -13794,12 +13823,14 @@ function setupEvents() {
     }
     if (types.MESSAGE_EDITED) {
         source.on(types.MESSAGE_EDITED, payload => {
+            traceSourceForMessage(normalizedMessageId(payload),'message-edited');
             const id = normalizedMessageId(payload);
             scheduleAutomaticTranslation(id, 80);
         });
     }
     if (types.MESSAGE_UPDATED) {
         source.on(types.MESSAGE_UPDATED, payload => {
+            traceSourceForMessage(normalizedMessageId(payload),'message-updated');
             restoreTranslationAfterMessageUpdate(payload);
             schedulePotentialAssistantRevision(payload, 160, { allowUntranslated: true });
             setTimeout(
@@ -13819,6 +13850,7 @@ function setupObserver() {
         if (uiRefreshTimer !== null) return;
         uiRefreshTimer = setTimeout(() => {
             uiRefreshTimer = null;
+            traceLatestAssistantSource('dom-updated');
             injectSettingsPanel();
             injectInputAction();
             refreshTranslationClasses();
@@ -13832,6 +13864,8 @@ function setupObserver() {
 
 function initialize() {
     registerTranslationExtension(EXTENSION_KEY);
+    executionTrace.start();
+    traceLatestAssistantSource('startup');
     clearTransientTranslationSelections();
     registerVerbaDeepSlashCommand();
     registerVerbaDeepProfileSlashCommand();
