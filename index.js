@@ -60,7 +60,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.31';
+const EXTENSION_VERSION = '0.6.32';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
