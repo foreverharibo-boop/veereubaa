@@ -921,6 +921,8 @@ function bindServerTranslationSetting(panel) {
             settings.serverTranslation = false;
             fullSourceSnapshotsEnabled = false;
             sourceChangeTracer.reset();
+            // A previous error snapshot can also contain opt-in full text.
+            lastDebugDiagnostic = null;
             const detail = panel.querySelector('#verba-deep-debug-full-source');
             if (detail) { detail.checked = false; detail.disabled = true; }
             saveSettings();
@@ -12663,6 +12665,8 @@ function injectSettingsPanel() {
         fullSourceSnapshotsEnabled = Boolean(event.target.checked)
             && settings.debugMode === true && settings.serverTranslation === true;
         sourceChangeTracer.reset();
+        // Do not leave a previous error report holding full snapshots after opt-out.
+        if (!fullSourceSnapshotsEnabled) lastDebugDiagnostic = null;
         traceLatestAssistantSource(fullSourceSnapshotsEnabled ? 'full-text-enabled' : 'full-text-disabled');
         syncDebugCopyButton();
         notify(fullSourceSnapshotsEnabled
@@ -13848,6 +13852,7 @@ function setupEvents() {
     if (types.GENERATION_ENDED) source.on(types.GENERATION_ENDED, handleGenerationEnded);
     if (types.CHAT_CHANGED) {
         source.on(types.CHAT_CHANGED, () => {
+            if (fullSourceSnapshotsEnabled) lastDebugDiagnostic = null;
             sourceChangeTracer.reset();
             automaticOutputLifecycle.reset();
             // Locks and bundles are one-shot editing state. Clear tracked
