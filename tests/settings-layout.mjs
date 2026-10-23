@@ -14,6 +14,8 @@ const render=Function('dev','escapeHtml','normalizedServerRetryLimit','POST_TRAN
     const settings=structuredClone(DEFAULT_SETTINGS);settings.developerMode=dev;
     const EXTENSION_VERSION='0.6.24',lastQualityAuditSummary='',lastDebugDiagnostic=null;
     const outputTiming={latest:()=>null},outputTimingText=()=>'',normalizedPromptPresets=()=>[],normalizedPromptPresetBackups=()=>[],promptPresetSelectMarkup=()=>'',baseTranslationEditorMarkup=()=>'';
+    const sourceChangeTracer={diagnostics:()=>({fullTextEnabled:false})};
+    const executionTrace={diagnostics:()=>({})};
     const normalizedProfileRaceTimeoutMinutes=()=>5,normalizedProfileRaceStaggerSeconds=()=>35,normalizedProfileFailureTimeoutSeconds=()=>120,normalizedProfileFailureTimeoutMinutes=()=>2;
 `+between('function tuningChoiceMarkup(', 'function normalizeTranslationRuleOrder(')
  +between('function generalFlavorSettingsMarkup(', 'function syncDeveloperQualityControls(')
