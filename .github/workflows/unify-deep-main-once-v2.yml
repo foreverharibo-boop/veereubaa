@@ -32,12 +32,13 @@ jobs:
           PY
           bash /tmp/deep-unify.sh
 
-      - name: Update isolated diagnostic test dependencies
+      - name: Update isolated regression fixtures
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
           from pathlib import Path
+
           path=Path('tests/diagnostics.mjs')
           text=path.read_text()
           old="""const api = Function('settings', 'document', 'copyText', 'debugDiagnosticText',
@@ -60,6 +61,17 @@ jobs:
           if text.count(old_assert)!=1:
               raise SystemExit(f'diagnostic reset assertion count={text.count(old_assert)}')
           path.write_text(text.replace(old_assert,new_assert,1))
+
+          path=Path('tests/display-resume.mjs')
+          text=path.read_text()
+          old="""const env={EXTENSION_KEY:'verba',STATE_KEY:'verba',SOURCE_VIEW_KEY:'sourceView',settings:{autoOutput:true},
+           automaticOutputLifecycle:lifecycle,isTranslationExtensionActive:()=>owner,liveContext:()=>({chat}),"""
+          new="""const env={EXTENSION_KEY:'verba',STATE_KEY:'verba',SOURCE_VIEW_KEY:'sourceView',settings:{autoOutput:true},
+           executionTrace:{heartbeat(){}},traceLatestAssistantSource(){},
+           automaticOutputLifecycle:lifecycle,isTranslationExtensionActive:()=>owner,liveContext:()=>({chat}),"""
+          if text.count(old)!=1:
+              raise SystemExit(f'display resume fixture anchor count={text.count(old)}')
+          path.write_text(text.replace(old,new,1))
           PY
 
       - name: Run all Deep regressions
