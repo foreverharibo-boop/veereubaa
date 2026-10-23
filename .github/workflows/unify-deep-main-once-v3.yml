@@ -1,0 +1,72 @@
+name: Unify Deep server translation into main v3
+on:
+  push:
+    branches:
+      - codex/server-translation-experimental
+    paths:
+      - .github/workflows/unify-deep-main-once-v3.yml
+      - tools/unify-deep-main-v3.py
+permissions:
+  contents: write
+jobs:
+  unify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/server-translation-experimental
+          fetch-depth: 0
+
+      - name: Apply verified Deep integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          source=Path('.github/workflows/unify-deep-main-once.yml').read_text()
+          marker='      - name: Merge main and import verified shared runtime\n'
+          start=source.index(marker)
+          run=source.index('        run: |\n',start)+len('        run: |\n')
+          end=source.index('\n      - name: Run Deep regressions\n',run)
+          Path('/tmp/deep-unify.sh').write_text(textwrap.dedent(source[run:end]))
+          PY
+          bash /tmp/deep-unify.sh
+          python3 tools/unify-deep-main-v3.py
+
+      - name: Run current Deep regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check index.js
+          node --check source-change-tracer.js
+          node --check browser-execution-diagnostics.js
+          retired="$(node -e "const x=require('./TEST-MIGRATION.json'); console.log(Object.keys(x.findings||{}).join('\\n'))")"
+          for test_file in tests/*.mjs; do
+            base="$(basename "$test_file")"
+            if grep -Fxq "$base" <<<"$retired"; then
+              echo "==> SKIP documented legacy test: $test_file"
+              continue
+            fi
+            echo "==> $test_file"
+            node "$test_file"
+          done
+
+      - name: Commit clean integrated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/check-extreme-baselines.yml \
+            .github/workflows/inspect-main-unification.yml \
+            .github/workflows/scan-output-fixtures.yml \
+            .github/workflows/unify-deep-main-once.yml \
+            .github/workflows/unify-deep-main-once-v2.yml \
+            .github/workflows/unify-deep-main-once-v3.yml \
+            tools/unify-deep-main-v3.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Merge optional server translation into Deep main (v0.6.44)"
+          git push origin HEAD:codex/server-translation-experimental
