@@ -1,0 +1,78 @@
+name: Unify Deep server translation into main v2
+on:
+  push:
+    branches:
+      - codex/server-translation-experimental
+    paths:
+      - .github/workflows/unify-deep-main-once-v2.yml
+permissions:
+  contents: write
+jobs:
+  unify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/server-translation-experimental
+          fetch-depth: 0
+      - name: Apply verified Deep integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          source=Path('.github/workflows/unify-deep-main-once.yml').read_text()
+          marker='      - name: Merge main and import verified shared runtime\n'
+          start=source.index(marker)
+          run=source.index('        run: |\n',start)+len('        run: |\n')
+          end=source.index('\n      - name: Run Deep regressions\n',run)
+          Path('/tmp/deep-unify.sh').write_text(textwrap.dedent(source[run:end]))
+          PY
+          bash /tmp/deep-unify.sh
+
+      - name: Update isolated diagnostic test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          path=Path('tests/diagnostics.mjs')
+          text=path.read_text()
+          old="""const api = Function('settings', 'document', 'copyText', 'debugDiagnosticText',
+              'verbaServer', 'createDebugDiagnostic', 'pendingOutputs', 'automaticTranslationTimers', 'swipeTranslationJobs', 'serverRetryStates',
+              'let lastDebugDiagnostic = null;\\n' + storeSource + copySource + '\\nreturn { storeDebugDiagnostic, copyDebugDiagnostic, latest: () => lastDebugDiagnostic };')(
+              settings, { querySelector: () => button }, async value => copies.push(JSON.parse(value)), JSON.stringify,
+              { refreshDiagnostics: async () => {} }, () => ({ automaticOutput: { events: [...lifecycleEvents] } }), outputJobs, new Map(), new Map(), retries);"""
+          new="""const api = Function('settings', 'document', 'copyText', 'debugDiagnosticText',
+              'verbaServer', 'createDebugDiagnostic', 'pendingOutputs', 'automaticTranslationTimers', 'swipeTranslationJobs', 'serverRetryStates',
+              'executionTrace', 'traceLatestAssistantSource',
+              'let lastDebugDiagnostic = null;\\n' + storeSource + copySource + '\\nreturn { storeDebugDiagnostic, copyDebugDiagnostic, latest: () => lastDebugDiagnostic };')(
+              settings, { querySelector: () => button }, async value => copies.push(JSON.parse(value)), JSON.stringify,
+              { refreshDiagnostics: async () => {} }, () => ({ automaticOutput: { events: [...lifecycleEvents] } }), outputJobs, new Map(), new Map(), retries,
+              { heartbeat() {} }, () => {});"""
+          if text.count(old)!=1:
+              raise SystemExit(f'diagnostic fixture anchor count={text.count(old)}')
+          path.write_text(text.replace(old,new,1))
+          PY
+
+      - name: Run all Deep regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check index.js
+          node --check source-change-tracer.js
+          node --check browser-execution-diagnostics.js
+          for test_file in tests/*.mjs; do
+            echo "==> $test_file"
+            node "$test_file"
+          done
+
+      - name: Commit integrated Deep branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git commit -m "Merge server translation into Deep main-ready build (v0.6.44)"
+          git push origin HEAD:codex/server-translation-experimental
