@@ -32,12 +32,36 @@ jobs:
           PY
           bash /tmp/deep-unify.sh
 
-      - name: Update isolated regression fixtures
+      - name: Preserve minimal-mode isolation and update test fixtures
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
           from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count=text.count(old)
+              if count!=1:
+                  raise SystemExit(f'{label}: expected one anchor, found {count}')
+              return text.replace(old,new,1)
+
+          # Minimal mode is an intentionally isolated single-pass engine. It must
+          # return before bilingual-intent planning or any other helper request.
+          path=Path('index.js')
+          text=path.read_text()
+          old="""    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);
+    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });
+    if (minimalOutputEnabled(settings)) {
+        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });
+    }
+    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"""
+          new="""    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);
+    if (minimalOutputEnabled(settings)) {
+        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });
+    }
+    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });
+    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"""
+          path.write_text(replace_once(text,old,new,'minimal mode before bilingual planning'))
 
           path=Path('tests/diagnostics.mjs')
           text=path.read_text()
@@ -53,14 +77,11 @@ jobs:
               settings, { querySelector: () => button }, async value => copies.push(JSON.parse(value)), JSON.stringify,
               { refreshDiagnostics: async () => {} }, () => ({ automaticOutput: { events: [...lifecycleEvents] } }), outputJobs, new Map(), new Map(), retries,
               { heartbeat() {} }, () => {});"""
-          if text.count(old)!=1:
-              raise SystemExit(f'diagnostic fixture anchor count={text.count(old)}')
-          text=text.replace(old,new,1)
+          text=replace_once(text,old,new,'diagnostic fixture dependencies')
           old_assert="assert.ok(index.includes('if (!settings.debugMode) lastDebugDiagnostic = null;'));"
           new_assert="assert.match(index, /if \\(!settings\\.debugMode\\) \\{[\\s\\S]*?lastDebugDiagnostic = null;/);"
-          if text.count(old_assert)!=1:
-              raise SystemExit(f'diagnostic reset assertion count={text.count(old_assert)}')
-          path.write_text(text.replace(old_assert,new_assert,1))
+          text=replace_once(text,old_assert,new_assert,'diagnostic reset assertion')
+          path.write_text(text)
 
           path=Path('tests/display-resume.mjs')
           text=path.read_text()
@@ -69,9 +90,7 @@ jobs:
           new="""const env={EXTENSION_KEY:'verba',STATE_KEY:'verba',SOURCE_VIEW_KEY:'sourceView',settings:{autoOutput:true},
            executionTrace:{heartbeat(){}},traceLatestAssistantSource(){},
            automaticOutputLifecycle:lifecycle,isTranslationExtensionActive:()=>owner,liveContext:()=>({chat}),"""
-          if text.count(old)!=1:
-              raise SystemExit(f'display resume fixture anchor count={text.count(old)}')
-          path.write_text(text.replace(old,new,1))
+          path.write_text(replace_once(text,old,new,'display resume fixture dependencies'))
           PY
 
       - name: Run all current Deep regressions
