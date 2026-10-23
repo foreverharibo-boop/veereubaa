@@ -18,4 +18,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -RFn --include='*.mjs' -E 'translateOutputText|planRepeatedRoleTermLocks|NORMAL_PATH|normal path reached' tests || true
+          grep -RnE --include='*.mjs' 'translateOutputText|planRepeatedRoleTermLocks|NORMAL_PATH|normal path reached' tests || true
