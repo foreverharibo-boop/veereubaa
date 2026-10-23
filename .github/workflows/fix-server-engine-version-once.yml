@@ -1,0 +1,51 @@
+name: Fix Deep server engine expectation once
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/fix-server-engine-version-once.yml
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Align extension with the unchanged shared server engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          path=Path('index.js')
+          text=path.read_text()
+          old="const SERVER_ENGINE_VERSION = '0.6.44';"
+          new="const SERVER_ENGINE_VERSION = '0.6.43';"
+          if text.count(old)!=1:
+              raise SystemExit(f'expected one server-engine version anchor, found {text.count(old)}')
+          text=text.replace(old,new,1)
+          if "serverTranslation: false" not in text:
+              raise SystemExit('server translation default is not OFF')
+          path.write_text(text)
+          PY
+          node --check index.js
+          node tests/server-source-compat.mjs
+          node tests/settings-layout.mjs
+          node tests/namespace-isolation.mjs
+          node tests/bilingual-intent.mjs
+      - name: Commit the correction and remove this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/fix-server-engine-version-once.yml
+          rmdir .github/workflows .github 2>/dev/null || true
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Align Deep client with Verba Server engine 0.6.43"
+          git push origin HEAD:main
