@@ -54,7 +54,12 @@ jobs:
               { heartbeat() {} }, () => {});"""
           if text.count(old)!=1:
               raise SystemExit(f'diagnostic fixture anchor count={text.count(old)}')
-          path.write_text(text.replace(old,new,1))
+          text=text.replace(old,new,1)
+          old_assert="assert.ok(index.includes('if (!settings.debugMode) lastDebugDiagnostic = null;'));"
+          new_assert="assert.match(index, /if \\(!settings\\.debugMode\\) \\{[\\s\\S]*?lastDebugDiagnostic = null;/);"
+          if text.count(old_assert)!=1:
+              raise SystemExit(f'diagnostic reset assertion count={text.count(old_assert)}')
+          path.write_text(text.replace(old_assert,new_assert,1))
           PY
 
       - name: Run all Deep regressions
