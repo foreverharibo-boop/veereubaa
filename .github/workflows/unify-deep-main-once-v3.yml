@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/unify-deep-main-once-v3.yml
       - tools/unify-deep-main-v3.py
+      - tests/namespace-isolation.mjs
 permissions:
   contents: write
 jobs:
