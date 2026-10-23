@@ -19,12 +19,15 @@ const segmented = {
     tokens: [],
 };
 const env = {
+    verbaServer: { hasPendingGeneration: () => false },
+    reviewFinalEnglish: async () => {},
     settings: {},
     POST_TRANSLATION_AI_REPAIR_ENABLED: false,
     normalizedCharacterNameLocks: () => [],
     segmentSource: () => segmented,
     minimalOutputEnabled: () => false,
     translateMinimalOutput: () => { throw new Error('minimal path must stay off'); },
+    planBilingualDialogueVerdicts: async () => {},
     planRepeatedRoleTermLocks: async () => [],
     assembleTranslation: (_segmented, translations, options) => {
         assert.equal(options.allowDamagedProtected, true);

@@ -57,10 +57,12 @@ const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const body = index.slice(index.indexOf('async function translateOutputText('), index.indexOf('function inputIdentitySpellingContext('));
 let minimal = true;
 const env = {
+    verbaServer: { hasPendingGeneration: () => false },
     settings: {}, normalizedCharacterNameLocks: () => [], segmentSource,
     minimalOutputEnabled: () => minimal,
     translateMinimalOutput: async prepared => prepared,
     requestSegments: () => {}, buildSourceMap: () => [], reviewFinalEnglish: () => {},
+    planBilingualDialogueVerdicts: async () => {},
     planRepeatedRoleTermLocks: async prepared => {
         assert.equal(prepared.source, 'Dana waited. "Hi, Dana."');
         throw Error('normal path reached with resolved names');

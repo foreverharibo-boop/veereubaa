@@ -1,5 +1,5 @@
 import { POST_TRANSLATION_AI_REPAIR_ENABLED } from '../minimal-output.js';
-const Function = (...args) => globalThis.Function('POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, POST_TRANSLATION_AI_REPAIR_ENABLED);
+const Function = (...args) => globalThis.Function('verbaServer', 'POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, { hasPendingGeneration: () => false }, POST_TRANSLATION_AI_REPAIR_ENABLED);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as core from '../core.js';
@@ -30,7 +30,7 @@ let requests=[];
 const requestSegments=async(prompt,segments,options)=>{
  requests.push({prompt,segments,options});return new Map(segments.map(s=>[s.id,translateSegment(s)]));
 };
-const env={settings,outputSplitCount,runOutputBatches,requestSegments,
+const env={reviewFinalEnglish: async () => {},settings,outputSplitCount,runOutputBatches,requestSegments,
  buildOutputPrompt:core.buildOutputPrompt,buildScopedOutputPrompt:core.buildScopedOutputPrompt,
  madKoreanExclusiveMode:()=>settings.developerMadKoreanOutputEnabled===true,
  isAbort:(error,signal)=>signal?.aborted||error.name==='AbortError',SCOPED_PARALLEL_REQUEST_LIMIT:2,console};
@@ -78,6 +78,7 @@ let planned=0,classified=0,audited=0;
 const fullEnv={...env, ...core, minimalOutputEnabled,translateMinimalOutput,
  POST_TRANSLATION_AI_REPAIR_ENABLED:false,
  normalizedCharacterNameLocks:()=>[{source:'Hong-jin',target:'홍진'}],
+ planBilingualDialogueVerdicts:async()=>{},
  planRepeatedRoleTermLocks:async s=>{planned++;assert.equal(s.segments.length,segmented.segments.length);return [];},
  classifyOutputDialogueSpeakers:async()=>{classified++;return scopes;},requestScopedOutputTranslations:route,
  repairRepeatedRoleTermConsistency:async()=>{},repairProtectedTokenIntegrity:async()=>{},
@@ -126,9 +127,9 @@ for(const value of ['1','2','3']){
 assert.equal(saved,3);
 const disable=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
 Function('settings',disable)(settings);assert.equal(outputSplitCount(settings),3);assert.equal(settings.developerOutputSplitCount,3);
-const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary',defs+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
-assert.ok(!markup(settings,String,()=>'', '', '').includes('verba-deep-developer-output-split-count'));
-settings.developerMode=true;assert.ok(!markup(settings,String,()=>'', '', '').includes('verba-deep-developer-output-split-count'));
+const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup',defs+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
+assert.ok(!markup(settings,String,()=>'', '', ()=> '').includes('verba-deep-developer-output-split-count'));
+settings.developerMode=true;assert.ok(!markup(settings,String,()=>'', '', ()=> '').includes('verba-deep-developer-output-split-count'));
 const generalMarkup=Function('settings',between('function generalSplitSettingsMarkup(', 'function generalRelationshipSettingsMarkup(')+'\nreturn generalSplitSettingsMarkup();');
 for (const dev of [false,true]) assert.match(generalMarkup({...settings,developerMode:dev}), /value="3" selected/);
 console.log('PASS: independent 1/2/3 split gate, full coverage, unchanged normal/compact/extreme prompts, scope isolation, whole-output planning/checks, minimal combinations, 3-request concurrency, order, cancellation/failure and UI.');

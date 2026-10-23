@@ -200,12 +200,13 @@ const message = { is_user: false, mes: 'source' };
 const context = { chat: [message] };
 let applied = true;
 let seenTrace, seenReference;
-const lifecycleEnv = { previousUserSource,
+const lifecycleEnv = { previousUserSource, automaticOutputLifecycle: { started() {} },
     minimalOutputEnabled, outputSplitCount,
     EXTENSION_KEY: 'verba-deep',
     isTranslationExtensionActive: () => true,
     activateTranslationExtension: () => 'verba-deep',
     settings: env.settings, outputTiming: recorder, performance: env.performance, AbortController,
+    executionTrace: { trace() {}, heartbeat() {} }, traceSourceForMessage: () => {},
     liveContext: () => context, isNameReplacementMessage: () => true, messageSource: m => m?.mes || '',
     isPredominantlyKorean: () => false, hasForeignText: () => true, currentRecord: () => null,
     failedOutputSignatures: new Map(), pendingOutputs: new Map(), activeProfileSlot: () => 'A',
@@ -279,6 +280,9 @@ const element = id => {
 let copied = '';
 const uiEnv = {
     settings: env.settings, outputTiming: recorder, outputTimingText,
+    sourceChangeTracer: { diagnostics: () => ({ fullTextEnabled: false }), reset() {} },
+    executionTrace: { start() {}, clear() {}, setEnabled() {}, heartbeat() {}, trace() {}, diagnostics: () => ({}) },
+    traceLatestAssistantSource: () => {},
     document: { querySelector: element }, panel: { querySelector: element },
     saveSettings: () => {}, notify: () => {}, copyText: async v => { copied = v; },
     copyDebugDiagnostic: async () => {}, EXTENSION_VERSION: 'test', console,

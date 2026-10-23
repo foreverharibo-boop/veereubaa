@@ -1,4 +1,4 @@
-const Function = (...args) => globalThis.Function('POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, POST_TRANSLATION_AI_REPAIR_ENABLED);
+const Function = (...args) => globalThis.Function('verbaServer', 'POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, { hasPendingGeneration: () => false }, POST_TRANSLATION_AI_REPAIR_ENABLED);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { minimalOutputEnabled, buildMinimalOutputPrompt, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMinimalOutput } from '../minimal-output.js';
@@ -46,8 +46,8 @@ for(const count of [1,2,3]){
 
 // Actual entry point must branch before any optional planning, classification,
 // banned-word repair or quality audit, even when all those options are enabled.
-const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planRepeatedRoleTermLocks','reviewFinalEnglish',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\nreturn translateOutputText;');
-const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});
+const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planBilingualDialogueVerdicts','planRepeatedRoleTermLocks','reviewFinalEnglish',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\nreturn translateOutputText;');
+const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,async()=>{},()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});
 calls=[];await run('He waited.');assert.equal(calls.length,1);
 settings.developerMode=false;await assert.rejects(run('He waited.'),/NORMAL_PATH/);settings.developerMode=true;
 settings.developerMinimalPromptEnabled=false;await assert.rejects(run('He waited.'),/NORMAL_PATH/);settings.developerMinimalPromptEnabled=true;
@@ -120,10 +120,10 @@ console.log('PASS: minimal-only prompt and actual entry path, lock/enable gates,
 // Real developer markup and delegated toggle, including escaped user text.
 const defs=between('const RELATION_TEMPERATURE_OPTIONS','const baseContext =');
 const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary',defs+'\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
+const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup',defs+'\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
 settings.developerMinimalPrompt='</textarea><script>TEST</script>';
-assert.match(markup(settings,escapeHtml,()=>'', '', ''), /&lt;\/textarea&gt;/);
-assert.ok(!markup({...settings,developerMode:false},escapeHtml,()=>'', '', '').includes('id="verba-deep-developer-minimal-prompt"'));
+assert.match(markup(settings,escapeHtml,()=>'', '', ()=> ''), /&lt;\/textarea&gt;/);
+assert.ok(!markup({...settings,developerMode:false},escapeHtml,()=>'', '', ()=> '').includes('id="verba-deep-developer-minimal-prompt"'));
 class Input {}
 let saves=0;
 const change=Function('target','settings','HTMLInputElement','saveSettings','document','renderCurrentAppliedRules',between("        if (target.id === 'verba-deep-developer-minimal-prompt-enabled'", "        if (target.id === 'verba-deep-developer-compressed-prompt-enabled'"));

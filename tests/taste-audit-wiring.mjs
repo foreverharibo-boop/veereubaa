@@ -6,12 +6,12 @@ const slice=(a,b)=>index.slice(index.indexOf(a),index.indexOf(b,index.indexOf(a)
 const segmented={protectedText:'He waited.',segments:[{id:'n',type:'narration',text:'He waited.'}],nameTokens:[]};
 for(const enabled of [false,true]) for(const hongjin of [false,true]) {
  let requests=0, forcedClassification=0;
- const env={settings:{developerMadKoreanOutputEnabled:true,developerHongjinFlavorEnabled:hongjin},galbwaeExclusiveMode:()=>false,googleFreeEngineEnabled:()=>false,POST_TRANSLATION_AI_REPAIR_ENABLED:enabled,
- normalizedCharacterNameLocks:()=>[],segmentSource:()=>segmented,minimalOutputEnabled:()=>false,planRepeatedRoleTermLocks:async()=>[],
+ const env={settings:{developerMadKoreanOutputEnabled:true,developerHongjinFlavorEnabled:hongjin},verbaServer:{hasPendingGeneration:()=>false},galbwaeExclusiveMode:()=>false,googleFreeEngineEnabled:()=>false,POST_TRANSLATION_AI_REPAIR_ENABLED:enabled,
+ normalizedCharacterNameLocks:()=>[],segmentSource:()=>segmented,minimalOutputEnabled:()=>false,planBilingualDialogueVerdicts:async()=>{},planRepeatedRoleTermLocks:async()=>[],
  requestScopedOutputTranslations:async()=>new Map([['n','기다렸다.']]),classifyOutputDialogueSpeakers:async(_s,_i,o)=>{if(o.forceTasteAuditSpeakerIsolation)forcedClassification++;return {};},normalizeLocallyRecoverableProtectedTokens:()=>{},normalizeTaggedOutputTranslations:(_,x)=>x,
  repairUntranslatedTaggedContentOnce:async()=>({detected:0,repaired:0}),
  findBannedWords:()=>[],findUntranslatedSegments:()=>[],repairRepeatedRoleTermConsistency:async()=>{},repairProtectedTokenIntegrity:async()=>{},
- repairKoreanParticleAlternatives:x=>x,repairIndivisibleIdentityNames:x=>x,runExperimentalQualityAudit:async()=>{},runTasteQualityAudit,
+ repairKoreanParticleAlternatives:x=>x,repairIndivisibleIdentityNames:x=>x,runExperimentalQualityAudit:async()=>{},runTasteQualityAudit,reviewFinalEnglish:async()=>{},
  requestSegments:async(p,rows,o)=>{requests++;assert.equal(o.stage,'taste-mad-audit');return new Map([['n','그는 기다렸다.']]);},
  assembleTranslation:(_,map)=>map.get('n'),buildSourceMap:()=>[],console:{warn:()=>{}}};
  const translate=Function(...Object.keys(env),slice('async function translateOutputText(','function inputIdentitySpellingContext(')+'\nreturn translateOutputText;')(...Object.values(env));

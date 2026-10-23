@@ -14,6 +14,9 @@ const render=Function('dev','escapeHtml','normalizedServerRetryLimit','POST_TRAN
     const settings=structuredClone(DEFAULT_SETTINGS);settings.developerMode=dev;
     const EXTENSION_VERSION='0.6.24',lastQualityAuditSummary='',lastDebugDiagnostic=null;
     const outputTiming={latest:()=>null},outputTimingText=()=>'',normalizedPromptPresets=()=>[],normalizedPromptPresetBackups=()=>[],promptPresetSelectMarkup=()=>'',baseTranslationEditorMarkup=()=>'';
+    const sourceChangeTracer={diagnostics:()=>({fullTextEnabled:false})};
+    const executionTrace={diagnostics:()=>({})};
+    const serverTranslationSettingsMarkup=()=>'';
     const normalizedProfileRaceTimeoutMinutes=()=>5,normalizedProfileRaceStaggerSeconds=()=>35,normalizedProfileFailureTimeoutSeconds=()=>120,normalizedProfileFailureTimeoutMinutes=()=>2;
 `+between('function tuningChoiceMarkup(', 'function normalizeTranslationRuleOrder(')
  +between('function generalFlavorSettingsMarkup(', 'function syncDeveloperQualityControls(')
@@ -40,6 +43,9 @@ for(const html of panels){
 assert.doesNotMatch(panels[0],/id="verba-deep-chuseok-galbwae-(?:all|dialogue-inner)"/);
 assert.match(panels[1],/id="verba-deep-developer-settings"[\s\S]*?id="verba-deep-chuseok-galbwae-all"[\s\S]*?id="verba-deep-chuseok-galbwae-dialogue-inner"/);
 assert.doesNotMatch(panels[1],/id="verba-deep-chuseok-galbwae-(?:all|dialogue-inner)" checked/);
+assert.match(index,/function serverTranslationSettingsMarkup\(\)/);
+assert.match(index,/id="verba-deep-server-translation"/);
+assert.match(index,/선택 설치 · 기본 OFF/);
 const manifest=JSON.parse(fs.readFileSync(new URL('../manifest.json',import.meta.url),'utf8'));
 assert.equal(manifest.name,'verba-deep');assert.equal(manifest.display_name,'베에르으바아');
 assert.ok(index.includes("const EXTENSION_VERSION = '"+manifest.version+"';"));
@@ -47,4 +53,4 @@ assert.match(style,/#verba-deep-settings > \.inline-drawer > \.inline-drawer-con
 assert.doesNotMatch(style,/#verba-deep-settings\s*\{\s*font-size:/);
 assert.doesNotMatch(style,/#verba-deep-settings \.verba-deep-drawer-header\s*\{[^}]*min-height:/s);
 if(process.argv.includes('--html')) console.log(JSON.stringify(panels));
-else console.log('PASS: complete settings markup, default outer drawer sizing, hidden visible version, compact inner UI, exact adjacent placement, unique IDs and version; developer ON/OFF.');
+else console.log('PASS: complete settings markup, optional server translation source, default outer drawer sizing, hidden visible version, compact inner UI, exact adjacent placement, unique IDs and version; developer ON/OFF.');
