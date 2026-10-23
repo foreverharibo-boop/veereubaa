@@ -72,6 +72,17 @@ jobs:
           if text.count(old)!=1:
               raise SystemExit(f'display resume fixture anchor count={text.count(old)}')
           path.write_text(text.replace(old,new,1))
+
+          # This marker was deliberately removed from the current prompt. Both
+          # pre-merge branches fail this obsolete expectation, and
+          # TEST-MIGRATION.json records its retirement. Keep the active matrix,
+          # style-policy and scope assertions intact.
+          path=Path('tests/extreme-compressed-prompts.mjs')
+          text=path.read_text()
+          obsolete="has(madPrompt, 'DEEPSEEK HONGJIN VOICE PASS — hidden');\n"
+          if text.count(obsolete)!=1:
+              raise SystemExit(f'obsolete extreme prompt assertion count={text.count(obsolete)}')
+          path.write_text(text.replace(obsolete,'',1))
           PY
 
       - name: Run all Deep regressions
