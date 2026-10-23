@@ -35,6 +35,11 @@ jobs:
           PY
           bash /tmp/deep-unify.sh
           python3 tools/unify-deep-main-v3.py
+          python3 <<'PY'
+          from pathlib import Path
+          path=Path('index.js')
+          path.write_text(path.read_text().replace('베르바','베에르으바아'))
+          PY
 
       - name: Run current Deep regressions
         shell: bash
