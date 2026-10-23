@@ -1,0 +1,21 @@
+name: Scan output fixtures
+on:
+  push:
+    branches:
+      - codex/server-translation-experimental
+    paths:
+      - .github/workflows/scan-output-fixtures.yml
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/server-translation-experimental
+      - name: Locate isolated output-entry fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -RFn --include='*.mjs' -E 'translateOutputText|planRepeatedRoleTermLocks|NORMAL_PATH|normal path reached' tests || true
