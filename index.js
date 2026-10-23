@@ -1,6 +1,6 @@
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.47';
+import { createServerClient } from './server-client.js?v=0.6.48';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -64,7 +64,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.47';
+const EXTENSION_VERSION = '0.6.48';
 // This client-only fix uses the existing server translation engine unchanged.
 const SERVER_ENGINE_VERSION = '0.6.43';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
