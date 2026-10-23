@@ -1,0 +1,35 @@
+name: Check extreme prompt baselines
+on:
+  push:
+    branches:
+      - codex/server-translation-experimental
+    paths:
+      - .github/workflows/check-extreme-baselines.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone both branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch main https://github.com/foreverharibo-boop/veereubaa.git main-tree
+          git clone --depth 1 --branch codex/server-translation-experimental https://github.com/foreverharibo-boop/veereubaa.git experiment-tree
+      - name: Main baseline
+        continue-on-error: true
+        shell: bash
+        run: node main-tree/tests/extreme-compressed-prompts.mjs
+      - name: Experiment baseline
+        continue-on-error: true
+        shell: bash
+        run: node experiment-tree/tests/extreme-compressed-prompts.mjs
+      - name: Locate expected marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '--- main ---'
+          grep -RFn --exclude='extreme-compressed-prompts.mjs' 'DEEPSEEK HONGJIN VOICE PASS' main-tree || true
+          echo '--- experimental ---'
+          grep -RFn --exclude='extreme-compressed-prompts.mjs' 'DEEPSEEK HONGJIN VOICE PASS' experiment-tree || true
