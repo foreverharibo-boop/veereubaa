@@ -13,6 +13,7 @@ async function applyCase({before,after,oldSwipe=0,newSwipe=0,changeChat=false,tr
   settings:{autoOutput:true,translationEngine:'google-free'},liveContext:()=>({chat}),isNameReplacementMessage:()=>true,
   messageSource:m=>m?.mes||'',currentSwipeId:m=>m?.swipe_id??null,isPredominantlyKorean:()=>false,hasForeignText:()=>true,currentRecord:()=>null,
   pendingOutputs:new Map(),failedOutputSignatures:new Map(),automaticOutputLifecycle:{started:noop},performance,AbortController,
+  executionTrace:{trace:noop,heartbeat:noop},traceSourceForMessage:noop,
   activeProfileSlot:()=> 'A',minimalOutputEnabled:()=>false,outputSplitCount:()=>1,hashText:x=>x,showProgress:noop,clearProgress:noop,
   outputTiming:{begin:()=>({}),applying:noop,finish:noop},previousUserSource:()=>'',recentDialogueEndingRepeatHints:()=>[],outputSpeakerIdentity:()=>({}),
   translateOutputText:()=>response,translationWithLockedSegments:r=>r,normalizeBilingualMappedTranslation:(translation,sourceMap)=>({translation,sourceMap}),
