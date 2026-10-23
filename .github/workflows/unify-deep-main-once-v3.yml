@@ -7,6 +7,7 @@ on:
       - .github/workflows/unify-deep-main-once-v3.yml
       - tools/unify-deep-main-v3.py
       - tests/namespace-isolation.mjs
+      - tests/output-timing.mjs
 permissions:
   contents: write
 jobs:
