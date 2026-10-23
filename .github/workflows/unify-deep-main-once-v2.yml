@@ -95,6 +95,15 @@ jobs:
            executionTrace:{heartbeat(){}},traceLatestAssistantSource(){},
            automaticOutputLifecycle:lifecycle,isTranslationExtensionActive:()=>owner,liveContext:()=>({chat}),"""
           path.write_text(replace_once(text,old,new,'display resume fixture dependencies'))
+
+          path=Path('tests/minimal-output.mjs')
+          text=path.read_text()
+          old="const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planRepeatedRoleTermLocks','reviewFinalEnglish',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\\nreturn translateOutputText;');"
+          new="const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planBilingualDialogueVerdicts','planRepeatedRoleTermLocks','reviewFinalEnglish',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\\nreturn translateOutputText;');"
+          text=replace_once(text,old,new,'minimal route helper parameters')
+          old="const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});"
+          new="const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,async()=>{},()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});"
+          path.write_text(replace_once(text,old,new,'minimal route helper arguments'))
           PY
 
       - name: Run all current Deep regressions
