@@ -10,6 +10,15 @@ def replace_once(path, old, new, label):
     file.write_text(text.replace(old, new, 1))
 
 
+def replace_exact_count(path, old, new, expected, label):
+    file = Path(path)
+    text = file.read_text()
+    count = text.count(old)
+    if count != expected:
+        raise SystemExit(f'{label}: expected {expected} anchors, found {count}')
+    file.write_text(text.replace(old, new))
+
+
 def replace_many(path, replacements):
     for old, new, label in replacements:
         replace_once(path, old, new, label)
@@ -138,17 +147,14 @@ replace_many('tests/output-splitting.mjs', [
         "const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup',defs+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\\nreturn developerSettingsMarkup();');",
         'split markup server settings dependency',
     ),
-    (
-        "markup(settings,String,()=>'', '', '')",
-        "markup(settings,String,()=>'', '', ()=> '')",
-        'split markup disabled call',
-    ),
-    (
-        "markup(settings,String,()=>'', '', '')",
-        "markup(settings,String,()=>'', '', ()=> '')",
-        'split markup enabled call',
-    ),
 ])
+replace_exact_count(
+    'tests/output-splitting.mjs',
+    "markup(settings,String,()=>'', '', '')",
+    "markup(settings,String,()=>'', '', ()=> '')",
+    2,
+    'split markup calls',
+)
 
 replace_once(
     'tests/taste-audit-wiring.mjs',
