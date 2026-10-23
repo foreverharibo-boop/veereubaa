@@ -10,6 +10,19 @@ def replace_once(path, old, new, label):
     file.write_text(text.replace(old, new, 1))
 
 
+def replace_once_or_already(path, old, new, label):
+    file = Path(path)
+    text = file.read_text()
+    old_count = text.count(old)
+    new_count = text.count(new)
+    if old_count == 1:
+        file.write_text(text.replace(old, new, 1))
+        return
+    if old_count == 0 and new_count == 1:
+        return
+    raise SystemExit(f'{label}: expected one old anchor or one applied anchor, found old={old_count}, new={new_count}')
+
+
 def replace_exact_count(path, old, new, expected, label):
     file = Path(path)
     text = file.read_text()
@@ -156,7 +169,7 @@ replace_exact_count(
     'split markup calls',
 )
 
-replace_once(
+replace_once_or_already(
     'tests/taste-audit-wiring.mjs',
     """ normalizedCharacterNameLocks:()=>[],segmentSource:()=>segmented,minimalOutputEnabled:()=>false,planRepeatedRoleTermLocks:async()=>[],""",
     """ normalizedCharacterNameLocks:()=>[],segmentSource:()=>segmented,minimalOutputEnabled:()=>false,planBilingualDialogueVerdicts:async()=>{},planRepeatedRoleTermLocks:async()=>[],""",
