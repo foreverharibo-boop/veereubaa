@@ -65,7 +65,9 @@ jobs:
               "    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });\n"
               "    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"
           )
-          path.write_text(replace_once(text,old,new,'minimal mode before bilingual planning'))
+          text=replace_once(text,old,new,'minimal mode before bilingual planning')
+          text=replace_once(text,"const SERVER_ENGINE_VERSION = '0.6.43';","const SERVER_ENGINE_VERSION = '0.6.44';",'Deep server engine version')
+          path.write_text(text)
 
           path=Path('tests/diagnostics.mjs')
           text=path.read_text()
@@ -103,7 +105,13 @@ jobs:
           text=replace_once(text,old,new,'minimal route helper parameters')
           old="const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});"
           new="const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,async()=>{},()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});"
-          path.write_text(replace_once(text,old,new,'minimal route helper arguments'))
+          text=replace_once(text,old,new,'minimal route helper arguments')
+          old="const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary',defs+'\\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\\nreturn developerSettingsMarkup();');"
+          new="const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup',defs+'\\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\\nreturn developerSettingsMarkup();');"
+          text=replace_once(text,old,new,'minimal markup server settings dependency')
+          text=replace_once(text,"markup(settings,escapeHtml,()=>'', '', '')","markup(settings,escapeHtml,()=>'', '', ()=> '')",'minimal markup enabled call')
+          text=replace_once(text,"markup({...settings,developerMode:false},escapeHtml,()=>'', '', '')","markup({...settings,developerMode:false},escapeHtml,()=>'', '', ()=> '')",'minimal markup disabled call')
+          path.write_text(text)
           PY
 
       - name: Run all current Deep regressions
