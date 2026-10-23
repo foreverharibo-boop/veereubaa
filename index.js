@@ -66,7 +66,7 @@ import {
 const EXTENSION_KEY = 'verba-deep';
 const EXTENSION_VERSION = '0.6.44';
 // This client-only fix uses the existing server translation engine unchanged.
-const SERVER_ENGINE_VERSION = '0.6.44';
+const SERVER_ENGINE_VERSION = '0.6.43';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
