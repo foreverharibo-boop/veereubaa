@@ -64,7 +64,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.44';
+const EXTENSION_VERSION = '0.6.45';
 // This client-only fix uses the existing server translation engine unchanged.
 const SERVER_ENGINE_VERSION = '0.6.43';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -255,6 +255,7 @@ const CUSTOM_TRANSLATOR_SIMPLE_MARKER = '[사용자 추가 지침]';
 
 const SETTINGS_VISIBILITY_DEFINITIONS = [
     { key: 'settingsSearch', label: '설정 검색', selector: '#verba-deep-settings-search' },
+    { key: 'serverTranslation', label: '서버 번역', selector: '#verba-deep-server-settings' },
     { key: 'profiles', label: '연결 프로필', selector: '#verba-deep-profile-settings-group' },
     { key: 'input', label: '자동번역 (답변·인풋)', selector: '#verba-deep-input-settings-group' },
     { key: 'profileStats', label: '프로필 성능 기록', selector: '#verba-deep-profile-stats' },
@@ -908,7 +909,7 @@ function applyServerTranslationProgress(state) {
 
 function serverTranslationSettingsMarkup() {
     return `
-                    <details class="verba-deep-tool-details">
+                    <details id="verba-deep-server-settings" class="verba-deep-tool-details">
                         <summary>서버 번역 <small>선택 설치 · 기본 OFF</small></summary>
                         <div class="verba-deep-tool-details-content">
                             <label class="verba-deep-check-row" for="verba-deep-server-translation">
@@ -10894,7 +10895,6 @@ function developerSettingsMarkup() {
             <div class="verba-deep-tool-details-content">
                 ${settings.developerMode ? `
                     <div class="verba-deep-developer-enabled-note">개발자 모드가 활성화되어 있어요.</div>
-                    ${serverTranslationSettingsMarkup()}
                     ${developerChuseokGalbwaeMarkup()}
                     <details id="verba-deep-developer-minimal-prompt-lab" class="verba-deep-tool-details verba-deep-developer-lab">
                         <summary>🧪 최소 프롬프트 실험 <small>출력·전체 재번역</small></summary>
@@ -11048,7 +11048,6 @@ function refreshSettingsPanelForDeveloperMode() {
 
     replacement.open = current.open;
     current.replaceWith(replacement);
-    bindServerTranslationSetting(panel);
     syncDeveloperQualityControls(panel);
     renderQualityAuditStatus();
 }
@@ -11444,6 +11443,8 @@ function injectSettingsPanel() {
 
 
 </section>
+
+                ${serverTranslationSettingsMarkup()}
 
                 <details id="verba-deep-profile-settings-group" class="verba-deep-tool-details">
                     <summary>번역 엔진·연결 프로필 <small>A/B/C · 재시도</small></summary>

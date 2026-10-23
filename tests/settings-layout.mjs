@@ -16,9 +16,9 @@ const render=Function('dev','escapeHtml','normalizedServerRetryLimit','POST_TRAN
     const outputTiming={latest:()=>null},outputTimingText=()=>'',normalizedPromptPresets=()=>[],normalizedPromptPresetBackups=()=>[],promptPresetSelectMarkup=()=>'',baseTranslationEditorMarkup=()=>'';
     const sourceChangeTracer={diagnostics:()=>({fullTextEnabled:false})};
     const executionTrace={diagnostics:()=>({})};
-    const serverTranslationSettingsMarkup=()=>'';
     const normalizedProfileRaceTimeoutMinutes=()=>5,normalizedProfileRaceStaggerSeconds=()=>35,normalizedProfileFailureTimeoutSeconds=()=>120,normalizedProfileFailureTimeoutMinutes=()=>2;
-`+between('function tuningChoiceMarkup(', 'function normalizeTranslationRuleOrder(')
+`+between('function serverTranslationSettingsMarkup(', 'function bindServerTranslationSetting(')
+ +between('function tuningChoiceMarkup(', 'function normalizeTranslationRuleOrder(')
  +between('function generalFlavorSettingsMarkup(', 'function syncDeveloperQualityControls(')
  +between('function customTranslatorInstructionPlaceholder(', 'function injectSettingsPanel(')
  +'const panel={};'+between('    panel.innerHTML = `', '    host.append(panel);')
@@ -26,6 +26,11 @@ const render=Function('dev','escapeHtml','normalizedServerRetryLimit','POST_TRAN
 const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const panels=[false,true].map(dev=>render(dev,escapeHtml,normalizedServerRetryLimit,POST_TRANSLATION_AI_REPAIR_ENABLED));
 for(const html of panels){
+    assert.match(html, /id="verba-deep-server-settings"/);
+    assert.ok(html.indexOf('id="verba-deep-server-settings"') < html.indexOf('id="verba-deep-developer-settings"'));
+    assert.match(html, /data-verba-deep-visibility-key="serverTranslation"/);
+    assert.doesNotMatch(html, /id="verba-deep-server-translation" checked/);
+    assert.doesNotMatch(html, /id="verba-deep-server-settings"[^>]* open/);
     assert.match(html,/<div><b>베에르으바아<\/b><\/div>/);
     assert.match(html,/id="verba-deep-settings-visibility"[\s\S]*?표시할 기능 선택/);
     assert.match(html,/id="verba-deep-settings-visibility"[\s\S]*?id="verba-deep-settings-search"[\s\S]*?id="verba-deep-profile-settings-group"/);
