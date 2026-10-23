@@ -11,7 +11,7 @@ for(const enabled of [false,true]) for(const hongjin of [false,true]) {
  requestScopedOutputTranslations:async()=>new Map([['n','기다렸다.']]),classifyOutputDialogueSpeakers:async(_s,_i,o)=>{if(o.forceTasteAuditSpeakerIsolation)forcedClassification++;return {};},normalizeLocallyRecoverableProtectedTokens:()=>{},normalizeTaggedOutputTranslations:(_,x)=>x,
  repairUntranslatedTaggedContentOnce:async()=>({detected:0,repaired:0}),
  findBannedWords:()=>[],findUntranslatedSegments:()=>[],repairRepeatedRoleTermConsistency:async()=>{},repairProtectedTokenIntegrity:async()=>{},
- repairKoreanParticleAlternatives:x=>x,repairIndivisibleIdentityNames:x=>x,runExperimentalQualityAudit:async()=>{},runTasteQualityAudit,
+ repairKoreanParticleAlternatives:x=>x,repairIndivisibleIdentityNames:x=>x,runExperimentalQualityAudit:async()=>{},runTasteQualityAudit,reviewFinalEnglish:async()=>{},
  requestSegments:async(p,rows,o)=>{requests++;assert.equal(o.stage,'taste-mad-audit');return new Map([['n','그는 기다렸다.']]);},
  assembleTranslation:(_,map)=>map.get('n'),buildSourceMap:()=>[],console:{warn:()=>{}}};
  const translate=Function(...Object.keys(env),slice('async function translateOutputText(','function inputIdentitySpellingContext(')+'\nreturn translateOutputText;')(...Object.values(env));
