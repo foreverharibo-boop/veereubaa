@@ -44,7 +44,7 @@ jobs:
           path=Path('tests/output-timing.mjs')
           text=path.read_text()
           old="    sourceChangeTracer: { diagnostics: () => ({ fullTextEnabled: false }), reset() {} },\n    document: { querySelector: element }, panel: { querySelector: element },"
-          new="    sourceChangeTracer: { diagnostics: () => ({ fullTextEnabled: false }), reset() {} },\n    executionTrace: { clear() {}, setEnabled() {}, diagnostics: () => ({}) },\n    document: { querySelector: element }, panel: { querySelector: element },"
+          new="    sourceChangeTracer: { diagnostics: () => ({ fullTextEnabled: false }), reset() {} },\n    executionTrace: { start() {}, clear() {}, setEnabled() {}, heartbeat() {}, trace() {}, diagnostics: () => ({}) },\n    document: { querySelector: element }, panel: { querySelector: element },"
           if text.count(old) != 1:
               raise SystemExit(f'output timing execution trace fixture: expected one anchor, found {text.count(old)}')
           path.write_text(text.replace(old,new,1))
