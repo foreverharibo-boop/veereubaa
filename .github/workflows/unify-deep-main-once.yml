@@ -1,0 +1,220 @@
+name: Unify Deep server translation into main
+on:
+  push:
+    branches:
+      - codex/server-translation-experimental
+    paths:
+      - .github/workflows/unify-deep-main-once.yml
+permissions:
+  contents: write
+jobs:
+  unify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/server-translation-experimental
+          fetch-depth: 0
+      - name: Merge main and import verified shared runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+          if [ "$merge_status" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U | sort)"
+            expected="README.md
+          index.js
+          manifest.json
+          source-change-tracer.js"
+            if [ "$conflicts" != "$expected" ]; then
+              echo "Unexpected conflicts:"
+              printf '%s\n' "$conflicts"
+              exit 1
+            fi
+          fi
+          git checkout --ours README.md index.js manifest.json source-change-tracer.js
+          git add README.md index.js manifest.json source-change-tracer.js
+
+          rm -rf /tmp/verba-main
+          git clone --depth 1 --single-branch --branch main https://github.com/foreverharibo-boop/verba.git /tmp/verba-main
+          cp /tmp/verba-main/source-change-tracer.js ./source-change-tracer.js
+          cp /tmp/verba-main/browser-execution-diagnostics.js ./browser-execution-diagnostics.js
+          cp /tmp/verba-main/install-server.sh ./install-server.sh
+          chmod +x install-server.sh
+          cp /tmp/verba-main/tests/automatic-output.mjs ./tests/automatic-output.mjs
+          cp /tmp/verba-main/tests/main-background-diagnostics.mjs ./tests/main-background-diagnostics.mjs
+          rm -rf server-plugin
+
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          def function_slice(text, name):
+              starts=[]
+              for prefix in (f'function {name}(', f'async function {name}('):
+                  pos=text.find(prefix)
+                  if pos>=0: starts.append(pos)
+              if not starts: raise SystemExit(f'Missing function {name}')
+              start=min(starts)
+              candidates=[p for p in (text.find('\nfunction ',start+1),text.find('\nasync function ',start+1)) if p>start]
+              end=min(candidates) if candidates else len(text)
+              return start,end,text[start:end]
+
+          def replace_function(text,name,body):
+              start,end,_=function_slice(text,name)
+              return text[:start]+body+text[end:]
+
+          def replace_once(text,old,new,label):
+              count=text.count(old)
+              if count!=1: raise SystemExit(f'{label}: expected one anchor, found {count}')
+              return text.replace(old,new,1)
+
+          def deepify(text):
+              return (text
+                  .replace('[베르바]','[베에르으바아]')
+                  .replace('VERBA_DEBUG_DIAGNOSTIC','VERBA_DEEP_DEBUG_DIAGNOSTIC')
+                  .replace('VERBA_MAX_TOKENS','VERBA_DEEP_MAX_TOKENS')
+                  .replace('verbaProtectedRecovery','verbaDeepProtectedRecovery')
+                  .replace('verbaVersion','verbaDeepVersion')
+                  .replace("'VERBA_","'VERBA_DEEP_")
+                  .replace('verba-', 'verba-deep-'))
+
+          root=Path('.')
+          index_path=root/'index.js'
+          index=index_path.read_text()
+          verba=(Path('/tmp/verba-main')/'index.js').read_text()
+
+          index=re.sub(r"import \{ createServerClient \} from './server-client\.js\?v=[^']+';",
+                       "import { createServerClient } from './server-client.js?v=0.6.44';",index,count=1)
+          index=re.sub(r"import \{ createAutomaticOutputLifecycle \} from './automatic-output\.js\?v=[^']+';",
+                       "import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';",index,count=1)
+          index=re.sub(r"import \{ createSourceChangeTracer \} from './source-change-tracer\.js\?v=[^']+';",
+                       "import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';",index,count=1)
+          browser_import="import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';"
+          if browser_import not in index:
+              marker="import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';"
+              index=replace_once(index,marker,marker+'\n'+browser_import,'browser diagnostics import')
+          index=re.sub(r"const EXTENSION_VERSION = '[^']+';","const EXTENSION_VERSION = '0.6.44';",index,count=1)
+          index=re.sub(r"const SERVER_ENGINE_VERSION = '[^']+';","const SERVER_ENGINE_VERSION = '0.6.43';",index,count=1)
+
+          # Share the exact verified diagnostic runtime while retaining Deep settings and engine code.
+          source_start=verba.index('// Diagnostic-only runtime. It remains dormant unless debug mode is enabled.')
+          source_end=verba.index('let lastPromptConflicts = [];',source_start)
+          diagnostic_block=verba[source_start:source_end]
+          target_start=index.index('// Experimental diagnostics only: observe source writes without storing chat content.')
+          target_end=index.index('let lastPromptConflicts = [];',target_start)
+          index=index[:target_start]+diagnostic_block+index[target_end:]
+
+          # Server settings and diagnostic functions are generic apart from IDs/namespaces.
+          for name in ['serverTranslationSettingsMarkup','bindServerTranslationSetting','recentDiagnosticEvents','createDebugDiagnostic','copyDebugDiagnostic']:
+              try:
+                  _,_,body=function_slice(verba,name)
+              except SystemExit:
+                  if name=='recentDiagnosticEvents':
+                      continue
+                  raise
+              body=deepify(body)
+              if name=='recentDiagnosticEvents' and f'function {name}(' not in index:
+                  anchor='function createDebugDiagnostic('
+                  pos=index.index(anchor)
+                  index=index[:pos]+body+'\n\n'+index[pos:]
+              else:
+                  index=replace_function(index,name,body)
+
+          # Use the already tested main automatic-output flow, transformed only for Deep codes/log names.
+          for name in [
+              'scheduleAutomaticTranslation','scheduleSwipeTranslation','scheduleFreshMountedAssistantTranslations',
+              'startCompletedAutomaticOutput','handleCompletedAssistantMessage','handleGenerationEnded',
+              'resumeAutomaticOutputs','setupAutomaticOutputLifecycle',
+          ]:
+              _,_,body=function_slice(verba,name)
+              index=replace_function(index,name,deepify(body))
+
+          # Preserve Deep's translation pipeline and add the same browser execution evidence around it.
+          index=replace_once(index,
+              "    let source = messageSource(message);\n    if (!source.trim()) return;\n    traceSourceForMessage(id, 'translation-started');",
+              "    let source = messageSource(message);\n    if (!source.trim()) {\n        executionTrace.trace('translation-skipped', id, { reason: 'empty-source' });\n        return;\n    }\n    traceSourceForMessage(id, 'translation-entered');",
+              'translation entry trace')
+          index=replace_once(index,
+              "        try {\n            let translated = await translateOutputText(source, {",
+              "        try {\n            executionTrace.trace('translation-requested', id);\n            let translated = await translateOutputText(source, {",
+              'translation requested trace')
+          index=replace_once(index,
+              "            const latest = latestContext.chat?.[id];\n            traceSourceForMessage(id, 'server-result-arrived');",
+              "            const latest = latestContext.chat?.[id];\n            executionTrace.trace('translation-response-received', id);\n            traceSourceForMessage(id, 'before-result-apply');",
+              'translation response trace')
+          index=replace_once(index,
+              "            outputJobSuccess = true;\n            notify(options.force ? '전체 재번역을 적용했어요.' : '번역을 적용했어요.', 'success');",
+              "            outputJobSuccess = true;\n            executionTrace.trace('translation-applied', id);\n            notify(options.force ? '전체 재번역을 적용했어요.' : '번역을 적용했어요.', 'success');",
+              'translation applied trace')
+
+          # Copy the final debug control block from Verba and transform only DOM IDs and visible logger name.
+          v_start=verba.index("    const debugModeInput = panel.querySelector('#verba-debug-mode');")
+          v_end=verba.index("    panel.querySelector('#verba-reset-profile-stats')",v_start)
+          d_start=index.index("    const debugModeInput = panel.querySelector('#verba-deep-debug-mode');")
+          d_end=index.index("    panel.querySelector('#verba-deep-reset-profile-stats')",d_start)
+          index=index[:d_start]+deepify(verba[v_start:v_end])+index[d_end:]
+
+          # Replace only the full-source UI row with the verified persistent wording/behavior.
+          v_ui_start=verba.index('                            <input type="checkbox" id="verba-debug-full-source"')
+          v_ui_end=verba.index('                        <button type="button" id="verba-copy-last-debug"',v_ui_start)
+          d_ui_start=index.index('                            <input type="checkbox" id="verba-deep-debug-full-source"')
+          d_ui_end=index.index('                        <button type="button" id="verba-deep-copy-last-debug"',d_ui_start)
+          index=index[:d_ui_start]+deepify(verba[v_ui_start:v_ui_end])+index[d_ui_end:]
+
+          index_path.write_text(index)
+
+          manifest_path=root/'manifest.json'
+          manifest=json.loads(manifest_path.read_text())
+          manifest['version']='0.6.44'
+          manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+
+          readme_path=root/'README.md'
+          readme=readme_path.read_text()
+          note="""## v0.6.44 · 메인 통합 및 공용 Git 서버 플러그인\n\n- 서버 번역·백그라운드 복구·릴레이 연동·외부 확장 태그 정리를 메인에 통합했습니다. 서버 번역은 기본 OFF이며, 플러그인이 없거나 설정을 끄면 기존 브라우저 번역만 사용합니다.\n- Verba Server는 베르바 메인 저장소를 `plugins/verba-server`에 한 번만 Git 설치하며, 이후 SillyTavern 자동 업데이트 또는 `node plugins.js update`로 갱신됩니다.\n- 긴르바의 번역 엔진·프롬프트·설정은 그대로 유지하고, 서버 운반·진단·완료 스와이프 처리는 베르바와 같은 검증된 공용 동작을 사용합니다.\n\n"""
+          if '## v0.6.44 · 메인 통합 및 공용 Git 서버 플러그인' not in readme:
+              first=readme.find('\n')+1
+              readme=readme[:first]+'\n'+note+readme[first:]
+          readme_path.write_text(readme)
+
+          server_doc=(Path('/tmp/verba-main')/'SERVER.md').read_text()
+          server_doc=server_doc.replace('# 선택형 서버 번역 · 실험판','# 선택형 서버 번역')
+          server_doc=server_doc.replace('extensions/verba/install-server.sh','extensions/veereubaa/install-server.sh')
+          server_doc=server_doc.replace('cd ~/SillyTavern/data/default-user/extensions/verba','cd ~/SillyTavern/data/default-user/extensions/veereubaa')
+          shared="""\n> 긴르바의 설치 스크립트도 공용 `foreverharibo-boop/verba` 메인 저장소를 서버 플러그인으로 설치합니다. 서버 플러그인은 베르바·긴르바가 함께 쓰므로 한 번만 설치하세요.\n\n"""
+          first=server_doc.find('\n')+1
+          server_doc=server_doc[:first]+shared+server_doc[first:]
+          (root/'SERVER.md').write_text(server_doc)
+          PY
+
+          test ! -e server-plugin
+          cmp install-server.sh /tmp/verba-main/install-server.sh
+          rm -f .github/workflows/inspect-main-unification.yml
+
+      - name: Run Deep regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check index.js
+          node --check source-change-tracer.js
+          node --check browser-execution-diagnostics.js
+          for test_file in tests/*.mjs; do
+            echo "==> $test_file"
+            node "$test_file"
+          done
+
+      - name: Commit integrated Deep branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git commit -m "Merge server translation into Deep main-ready build (v0.6.44)"
+          git push origin HEAD:codex/server-translation-experimental
