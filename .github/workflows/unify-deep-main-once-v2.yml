@@ -49,18 +49,22 @@ jobs:
           # return before bilingual-intent planning or any other helper request.
           path=Path('index.js')
           text=path.read_text()
-          old="""    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);
-    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });
-    if (minimalOutputEnabled(settings)) {
-        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });
-    }
-    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"""
-          new="""    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);
-    if (minimalOutputEnabled(settings)) {
-        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });
-    }
-    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });
-    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"""
+          old=(
+              "    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);\n"
+              "    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });\n"
+              "    if (minimalOutputEnabled(settings)) {\n"
+              "        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });\n"
+              "    }\n"
+              "    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"
+          )
+          new=(
+              "    const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);\n"
+              "    if (minimalOutputEnabled(settings)) {\n"
+              "        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });\n"
+              "    }\n"
+              "    await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });\n"
+              "    const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {"
+          )
           path.write_text(replace_once(text,old,new,'minimal mode before bilingual planning'))
 
           path=Path('tests/diagnostics.mjs')
