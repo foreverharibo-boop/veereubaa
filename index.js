@@ -1,6 +1,6 @@
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.46';
+import { createServerClient } from './server-client.js?v=0.6.47';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -64,7 +64,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.46';
+const EXTENSION_VERSION = '0.6.47';
 // This client-only fix uses the existing server translation engine unchanged.
 const SERVER_ENGINE_VERSION = '0.6.43';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -6210,6 +6210,7 @@ async function translateMessage(messageId, options = {}) {
                 // status/result request is in flight. Refresh the source and its
                 // application snapshot together, only for verified cleanup in
                 // this same chat/swipe. Real edits keep the stale-result guard.
+                relayTranslation: message.extra?.silly_relay_translation,
                 refreshSource: () => {
                     const current = liveContext();
                     const latest = current.chat?.[id];
