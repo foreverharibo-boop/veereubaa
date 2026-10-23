@@ -1,4 +1,4 @@
-// bilingual-intent.js
+// ../peer/bilingual-intent.js
 var positiveCommands = [
   /(?:한\s*영|영\s*한)\s*병기(?:\s*(?:해|하라|해주세요|해줘|로\s*(?:출력|표기|번역)|적용|필수|요청|해야|하되))?/iu,
   /(?:원문|영어|영문)(?:\s*대사)?\s*[(/+·및과와]\s*(?:한국어|한글|번역)/iu,
@@ -176,7 +176,7 @@ async function resolveBilingualIntent(prompt, askOnce, signal = null) {
   return await awaitShared(job, signal);
 }
 
-// translation-composer.js
+// ../peer/translation-composer.js
 var COMPOSITION = /* @__PURE__ */ Symbol("translation composition");
 var GENERAL_KEYS = /* @__PURE__ */ new Set(["output", "input", "selection", "mad", "hongjin"]);
 var INTERNAL_SENTENCE = /@@VERBA|\b(?:JSON|NAME LOCK|TARGET CHARACTER|TARGET-CHARACTER|TARGET ADDRESSEE GENDER|USER\/NPC|CURRENT USER|PRIMARY CAST REFERENCES|K→E input|segment id|editable id|between ids|protected (?:layout|structure|tokens)|required output format|identity spelling context|inert data)\b|Ignore every saved\/custom base instruction|This is the only E→K writing engine|Never apply this block to|Translation direction is always|User prompts may affect|LEFT CONTEXT|RIGHT CONTEXT|EXISTING KOREAN CONTEXT|Return exactly three distinct|Return a new Korean replacement for only|Preserve (?:Markdown|macros)|tags, attributes, code|Metadata keeps its existing number\/layout rules|^Handle /iu;
@@ -237,7 +237,7 @@ ${custom}
 The current engine context, active setting scopes, protected structure and response contract supplied by this request remain authoritative; this block replaces translation prose only. A CUSTOM MAD or CUSTOM HONGJIN block is the active writing instruction for that enabled taste, not an excluded ordinary base prompt. CUSTOM HONGJIN applies only to confirmed TARGET dialogue; CUSTOM MAD follows the enabled MAD scope. Apply it only within the enabled taste and speaker scope.` : "", parts.internal].filter(Boolean).join("\n");
 }
 
-// response-parser.js
+// ../peer/response-parser.js
 function segmentNumberKey(id) {
   const match = typeof id === "string" && /^seg_([0-9]+)$/.exec(id);
   return match ? match[1].replace(/^0+(?=\d)/, "") : null;
@@ -471,7 +471,7 @@ function collectSegmentResponse(raw, expectedSegments = []) {
   return { partial, parseError, missingIds, repairs: [...new Set(repairs)], issues: [...new Set(issues)] };
 }
 
-// core.js
+// ../peer/core.js
 var PROTECTED_PATTERN = /```[\s\S]*?```|~~~[\s\S]*?~~~|<!--[\s\S]*?-->|<(thought|thinking|analysis|reasoning|scratchpad|start|starter)\b[^>]*>[\s\S]*?<\/\1\s*>|<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>|`[^`\n]+`|\{\{[\s\S]*?\}\}|https?:\/\/[^\s<]+|<\/?[\p{L}_][\p{L}\p{N}_.:-]*(?=[\s/>])(?:[^>"']|"[^"]*"|'[^']*')*>/giu;
 var PROTECTED_TOKEN_PATTERN = /@@VERBA_DEEP_(?:NAME_)?\d{4}@@/g;
 var PAIRED_TAG_SCANNER = /<\/?([\p{L}_][\p{L}\p{N}_.:-]*)(?=[\s/>])(?:[^>"']|"[^"]*"|'[^']*')*>/giu;
@@ -4656,7 +4656,7 @@ function boundReference(value, limit = 16e3) {
 ${text.slice(-half)}`;
 }
 
-// timing.js
+// ../peer/timing.js
 var PRIMARY = /^output-(?:translation|retranslation)(?::(?:narration|target_dialogue|other_dialogue|tagged_content))?$/;
 var LABELS = [
   ["banned", "\uAE08\uC9C0\uC5B4 \uBCF5\uAD6C"],
@@ -4811,7 +4811,7 @@ function summarize(job, status) {
   };
 }
 
-// output-splitting.js
+// ../peer/output-splitting.js
 function outputSplitCount(settings = {}) {
   const count = Number(settings.developerOutputSplitCount);
   return [2, 3].includes(count) ? count : 1;
@@ -4905,7 +4905,7 @@ function createSplitRequestQueue(limit = 3) {
   });
 }
 
-// diagnostics.js
+// ../peer/diagnostics.js
 var requestEvidence = /* @__PURE__ */ new WeakMap();
 var LIMIT = 1e4;
 function sanitizeDebugValue(value, limit = 6e3) {
@@ -5032,7 +5032,7 @@ function protectedRecoverySnapshot(invalid, segmented, translations) {
   return { problemSegmentCount: invalid.length, omittedSegments: Math.max(0, invalid.length - rows.length), segments: rows };
 }
 
-// minimal-output.js
+// ../peer/minimal-output.js
 var POST_TRANSLATION_AI_REPAIR_ENABLED = false;
 function minimalOutputEnabled(settings = {}) {
   return settings.developerMode === true && settings.developerMinimalPromptEnabled === true;
@@ -5162,7 +5162,7 @@ async function translateMinimalOutput(segmented, settings, options, { requestSeg
   return { translation, sourceMap: buildSourceMap(segmented, translations, translation) };
 }
 
-// google-free.js
+// ../peer/google-free.js
 var GOOGLE_FREE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
 var DEFAULT_MAX_ENCODED_CHARS = 4200;
 var PROTECTED_TOKEN_PATTERN2 = /@@VERBA_DEEP_(?:NAME_)?[A-Z0-9_]*\d{4}@@|@@VERBA_DEEP_[A-Z0-9_]+@@/gu;
@@ -5325,7 +5325,7 @@ var GOOGLE_FREE_LIMITS = Object.freeze({
   concurrency: 2
 });
 
-// retry-policy.js
+// ../peer/retry-policy.js
 function normalizedServerRetryLimit(value = 5) {
   if (value === null || String(value).trim() === "") return 5;
   const number = Number(value);
@@ -5351,7 +5351,7 @@ function googleRetryHintSeconds(error) {
   return null;
 }
 
-// previous-user-context.js
+// ../peer/previous-user-context.js
 function appendPreviousUserContext(prompt, source) {
   if (typeof source !== "string" || !source.trim()) return prompt;
   return `${prompt}
@@ -5363,7 +5363,7 @@ ${JSON.stringify(source)}
 END PREVIOUS USER REFERENCE`;
 }
 
-// english-review.js
+// ../peer/english-review.js
 var escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 var blank = (value) => " ".repeat(value.length);
 function englishReviewTargets(segmented, translations, identity = {}) {
@@ -5437,7 +5437,7 @@ async function reviewEnglishLeftovers({ segmented, translations, settings = {}, 
   }
 }
 
-// taste-audit.js
+// ../peer/taste-audit.js
 var galbwae = (settings) => settings.developerMode === true && (["all", "dialogueInner"].includes(settings.chuseokGalbwaeScope) || settings.chuseokGalbwaeEnabled === true && !["off", "all", "dialogueInner"].includes(settings.chuseokGalbwaeScope));
 function tasteAuditScope(segment, speakerScopes = {}) {
   if (segment.type === "tagged_content") return "tagged_content";
@@ -5519,7 +5519,7 @@ async function runTasteQualityAudit({ enabled = false, segmented, translations, 
   }
 }
 
-// engine-entry.js
+// ../peer/engine-entry.js
 var variant = "verba-deep";
 function createEngine(snapshot, transport, report = () => {
 }) {

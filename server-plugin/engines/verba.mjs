@@ -1,4 +1,4 @@
-// ../peer/bilingual-intent.js
+// bilingual-intent.js
 var positiveCommands = [
   /(?:한\s*영|영\s*한)\s*병기(?:\s*(?:해|하라|해주세요|해줘|로\s*(?:출력|표기|번역)|적용|필수|요청|해야|하되))?/iu,
   /(?:원문|영어|영문)(?:\s*대사)?\s*[(/+·및과와]\s*(?:한국어|한글|번역)/iu,
@@ -176,7 +176,7 @@ async function resolveBilingualIntent(prompt, askOnce, signal = null) {
   return await awaitShared(job, signal);
 }
 
-// ../peer/translation-composer.js
+// translation-composer.js
 var COMPOSITION = /* @__PURE__ */ Symbol("verba translation composition");
 function customTranslationInstruction(settings = {}, key) {
   const value = settings.customTranslatorTemplates?.[key];
@@ -213,7 +213,7 @@ function collectTranslationProse(settings, key, build) {
   return [...new Set(context.collected)].join("\n\n");
 }
 
-// ../peer/prompt-builders.js
+// prompt-builders.js
 function createPromptBuilders(h) {
   const j = JSON.stringify;
   const lines = (xs) => xs.filter(Boolean).join("\n");
@@ -512,7 +512,7 @@ ${values[k]}`).join("\n");
   };
 }
 
-// ../peer/response-parser.js
+// response-parser.js
 function segmentNumberKey(id) {
   const match = typeof id === "string" && /^seg_([0-9]+)$/.exec(id);
   return match ? match[1].replace(/^0+(?=\d)/, "") : null;
@@ -746,7 +746,7 @@ function collectSegmentResponse(raw, expectedSegments = []) {
   return { partial, parseError, missingIds, repairs: [...new Set(repairs)], issues: [...new Set(issues)] };
 }
 
-// ../peer/core.js
+// core.js
 var PROTECTED_PATTERN = /```[\s\S]*?```|~~~[\s\S]*?~~~|<!--[\s\S]*?-->|<(thought|thinking|analysis|reasoning|scratchpad|start|starter)\b[^>]*>[\s\S]*?<\/\1\s*>|<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>|`[^`\n]+`|\{\{[\s\S]*?\}\}|https?:\/\/[^\s<]+|<\/?[\p{L}_][\p{L}\p{N}_.:-]*(?=[\s/>])(?:[^>"']|"[^"]*"|'[^']*')*>/giu;
 var PROTECTED_TOKEN_PATTERN = /@@VERBA_(?:NAME_)?\d{4}@@/g;
 var PAIRED_TAG_SCANNER = /<\/?([\p{L}_][\p{L}\p{N}_.:-]*)(?=[\s/>])(?:[^>"']|"[^"]*"|'[^']*')*>/giu;
@@ -2455,7 +2455,7 @@ var promptBuilders = createPromptBuilders({
   bilingualDialogueBracketPair
 });
 
-// ../peer/timing.js
+// timing.js
 var PRIMARY = /^output-(?:translation|retranslation)(?::(?:narration|target_dialogue|other_dialogue|tagged_content))?$/;
 var LABELS = [
   ["banned", "\uAE08\uC9C0\uC5B4 \uBCF5\uAD6C"],
@@ -2609,7 +2609,7 @@ function summarize(job, status) {
   };
 }
 
-// ../peer/output-splitting.js
+// output-splitting.js
 function outputSplitCount(settings = {}) {
   const count = Number(settings.developerOutputSplitCount);
   return [2, 3].includes(count) ? count : 1;
@@ -2703,7 +2703,7 @@ function createSplitRequestQueue(limit = 3) {
   });
 }
 
-// ../peer/diagnostics.js
+// diagnostics.js
 var requestEvidence = /* @__PURE__ */ new WeakMap();
 var LIMIT = 1e4;
 function sanitizeDebugValue(value, limit = 6e3) {
@@ -2830,7 +2830,7 @@ function protectedRecoverySnapshot(invalid, segmented, translations) {
   return { problemSegmentCount: invalid.length, omittedSegments: Math.max(0, invalid.length - rows.length), segments: rows };
 }
 
-// ../peer/minimal-output.js
+// minimal-output.js
 var POST_TRANSLATION_AI_REPAIR_ENABLED = false;
 function minimalOutputEnabled(settings = {}) {
   return settings.developerMode === true && settings.developerMinimalPromptEnabled === true;
@@ -2985,7 +2985,7 @@ async function translateMinimalOutput(segmented, settings, options, { requestSeg
   return { translation, sourceMap: buildSourceMap(segmented, translations, translation) };
 }
 
-// ../peer/google-free.js
+// google-free.js
 var GOOGLE_FREE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
 var DEFAULT_MAX_ENCODED_CHARS = 4200;
 var PROTECTED_TOKEN_PATTERN2 = /@@VERBA_(?:NAME_)?[A-Z0-9_]*\d{4}@@|@@VERBA_[A-Z0-9_]+@@/gu;
@@ -3148,7 +3148,7 @@ var GOOGLE_FREE_LIMITS = Object.freeze({
   concurrency: 2
 });
 
-// ../peer/retry-policy.js
+// retry-policy.js
 function normalizedServerRetryLimit(value = 5) {
   if (value === null || String(value).trim() === "") return 5;
   const number = Number(value);
@@ -3174,7 +3174,7 @@ function googleRetryHintSeconds(error) {
   return null;
 }
 
-// ../peer/previous-user-context.js
+// previous-user-context.js
 function appendPreviousUserContext(prompt, source) {
   if (typeof source !== "string" || !source.trim()) return prompt;
   return `${prompt}
@@ -3186,7 +3186,7 @@ ${JSON.stringify(source)}
 END PREVIOUS USER REFERENCE`;
 }
 
-// ../peer/english-review.js
+// english-review.js
 var escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 var blank = (value) => " ".repeat(value.length);
 function englishReviewTargets(segmented, translations, identity = {}) {
@@ -3260,7 +3260,7 @@ async function reviewEnglishLeftovers({ segmented, translations, settings = {}, 
   }
 }
 
-// ../peer/taste-audit.js
+// taste-audit.js
 var galbwae = (settings) => settings.developerMode === true && (["all", "dialogueInner"].includes(settings.chuseokGalbwaeScope) || settings.chuseokGalbwaeEnabled === true && !["off", "all", "dialogueInner"].includes(settings.chuseokGalbwaeScope));
 function tasteAuditScope(segment, speakerScopes = {}) {
   if (segment.type === "tagged_content") return "tagged_content";
@@ -3342,7 +3342,7 @@ async function runTasteQualityAudit({ enabled = false, segmented, translations, 
   }
 }
 
-// ../peer/engine-entry.js
+// engine-entry.js
 var variant = "verba";
 function createEngine(snapshot, transport, report = () => {
 }) {
