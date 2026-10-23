@@ -1,4 +1,17 @@
-# 선택형 서버 번역 · 실험판
+# 선택형 서버 번역
+
+> 긴르바의 설치 스크립트도 공용 `foreverharibo-boop/verba` 메인 저장소를 서버 플러그인으로 설치합니다. 서버 플러그인은 베르바·긴르바가 함께 쓰므로 한 번만 설치하세요.
+
+
+## 권장 설치·업데이트 방식
+
+Verba Server는 SillyTavern 구조상 `SillyTavern/plugins/verba-server` 폴더에 있어야 하지만, 이제 그 폴더 자체가 Git 저장소입니다. 최초 한 번만 아래 설치 스크립트를 실행하세요.
+
+```bash
+bash "$HOME/SillyTavern/data/default-user/extensions/veereubaa/install-server.sh" "$HOME/SillyTavern"
+```
+
+기존의 복사 설치 폴더는 삭제하지 않고 `SillyTavern/.verba-server-backups`로 이동합니다. 이후에는 SillyTavern 시작 시 자동 업데이트되며, 수동으로는 SillyTavern 루트에서 `node plugins.js update`를 실행하면 됩니다. 서버 번역 설정이 OFF이면 플러그인이 설치되어 있어도 신규 서버 번역 작업을 만들지 않습니다.
 
 베르바 0.6.51 / 베에르으바아 0.6.29 엔진을 포함한 Verba Server 0.1.4입니다.
 자동 출력 번역의 완료 알림과 결과 수신 재개 수정은 베르바 확장 0.6.57 또는 베에르으바아 확장 0.6.35와 Verba Server 0.1.3을 함께 업데이트합니다. 번역 엔진 자체는 이전과 같습니다.
@@ -60,7 +73,7 @@
 2. 터먹스에서 해당 확장 폴더의 `install-server.sh`를 실행합니다. 예:
 
    ```bash
-   cd ~/SillyTavern/data/default-user/extensions/verba
+   cd ~/SillyTavern/data/default-user/extensions/veereubaa
    bash install-server.sh ~/SillyTavern
    ```
 
@@ -134,13 +147,13 @@ Silly-Pop 실험판 웹 확장 1.5.8 · 서버 2.4.6에서 **서버 번역 완�
 
 현재 방식은 화면의 최종 본문과 서버가 받은 원문이 정확히 같고 같은 채팅·설정일 때만 준비된 결과를 재사용합니다. 정규식이나 다른 확장이 원문을 바꾼 경우에는 복귀 후 새 번역이 필요할 수 있습니다.
 
-## Web 0.6.33: automatic admission correction
+## Web 0.6.55: automatic admission correction
 
 Prompt previews (dry runs) do not emit a matching generation-ended event in SillyTavern. They no longer leave an inactive frame over a real reply and prevent its automatic server translation job from being admitted. Quiet helper requests remain excluded. Diagnostics include bounded event/reason codes for admission and result reuse without storing message bodies, names, or credentials.
 
 Update the web extension on `codex/server-translation-experimental` and reload SillyTavern. Existing server 0.1.2, Relay server 1.0.6, and the APK need no update for this correction. This addresses a reproduced admission defect; it does not establish the cause of every late `output` job.
 
-## 웹 확장 0.6.34: 또또와 서버 번역 연결 수정
+## 웹 확장 0.6.56: 또또와 서버 번역 연결 수정
 
 또또가 전송 문장 객체를 복사하기 전에 원래 답변 요청을 식별하도록 이벤트 순서를 수정했습니다. 이후 또또가 반영한 프롬프트는 그대로 사용합니다. 또또가 전송 직전에 제거하는 내부 표식은 요청 비교에서 제외하며, 제거한 표식을 다시 넣지 않습니다. 보조 요청과 실제 내용이 다른 요청은 여전히 제외합니다.
 

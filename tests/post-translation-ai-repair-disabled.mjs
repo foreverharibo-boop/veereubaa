@@ -27,6 +27,7 @@ const env = {
     segmentSource: () => segmented,
     minimalOutputEnabled: () => false,
     translateMinimalOutput: () => { throw new Error('minimal path must stay off'); },
+    planBilingualDialogueVerdicts: async () => {},
     planRepeatedRoleTermLocks: async () => [],
     assembleTranslation: (_segmented, translations, options) => {
         assert.equal(options.allowDamagedProtected, true);

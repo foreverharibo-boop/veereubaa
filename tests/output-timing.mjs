@@ -281,6 +281,8 @@ let copied = '';
 const uiEnv = {
     settings: env.settings, outputTiming: recorder, outputTimingText,
     sourceChangeTracer: { diagnostics: () => ({ fullTextEnabled: false }), reset() {} },
+    executionTrace: { start() {}, clear() {}, setEnabled() {}, heartbeat() {}, trace() {}, diagnostics: () => ({}) },
+    traceLatestAssistantSource: () => {},
     document: { querySelector: element }, panel: { querySelector: element },
     saveSettings: () => {}, notify: () => {}, copyText: async v => { copied = v; },
     copyDebugDiagnostic: async () => {}, EXTENSION_VERSION: 'test', console,

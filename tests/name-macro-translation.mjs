@@ -62,6 +62,7 @@ const env = {
     minimalOutputEnabled: () => minimal,
     translateMinimalOutput: async prepared => prepared,
     requestSegments: () => {}, buildSourceMap: () => [], reviewFinalEnglish: () => {},
+    planBilingualDialogueVerdicts: async () => {},
     planRepeatedRoleTermLocks: async prepared => {
         assert.equal(prepared.source, 'Dana waited. "Hi, Dana."');
         throw Error('normal path reached with resolved names');
