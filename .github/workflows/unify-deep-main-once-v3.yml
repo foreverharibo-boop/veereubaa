@@ -8,6 +8,7 @@ on:
       - tools/unify-deep-main-v3.py
       - tests/namespace-isolation.mjs
       - tests/output-timing.mjs
+      - tests/server-source-compat.mjs
 permissions:
   contents: write
 jobs:
