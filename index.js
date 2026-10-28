@@ -1,6 +1,6 @@
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.48';
+import { createServerClient } from './server-client.js?v=0.6.49';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -64,9 +64,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.48';
+const EXTENSION_VERSION = '0.6.49';
 // This client-only fix uses the existing server translation engine unchanged.
-const SERVER_ENGINE_VERSION = '0.6.43';
+const SERVER_ENGINE_VERSION = '0.6.44';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -2583,7 +2583,7 @@ function renderCurrentAppliedRules() {
                     ? (DEVELOPER_HONGJIN_OPPA_FREQUENCY_OPTIONS.find(option => option.value === settings.developerHongjinOppaFrequency)?.label || '사용 안 함')
                     : '적용 안 함'],
                 ['E→K 프롬프트 전송', madKoreanExclusiveMode()
-                    ? `미친 한출 단독${settings.developerHongjinFlavorEnabled ? ' + 김홍진의 맛' : ''} · 나머지 설정 일시 제외${settings.developerMode && settings.developerExtremeCompressedPromptEnabled ? ' · 미친압축' : settings.developerMode && settings.developerCompressedPromptEnabled ? ' · 압축 테스트' : ''}`
+                    ? `미친 한출${settings.developerHongjinFlavorEnabled ? ' + 김홍진의 맛' : ''}${settings.koreanFlavorEnabled ? ' + 한캐의 맛' : ''} · 나머지 설정 일시 제외${settings.developerMode && settings.developerExtremeCompressedPromptEnabled ? ' · 미친압축' : settings.developerMode && settings.developerCompressedPromptEnabled ? ' · 압축 테스트' : ''}`
                     : (settings.developerMode && (settings.developerCompressedPromptEnabled || settings.developerExtremeCompressedPromptEnabled)
                         ? `기존 설정 전체 적용 · ${settings.developerExtremeCompressedPromptEnabled ? '미친압축' : '압축 테스트'}`
                         : '기존 설정 전체 적용')],
@@ -10716,7 +10716,7 @@ function generalFlavorSettingsMarkup() {
                             <div class="verba-deep-help verba-deep-hongjin-help">
                                 <span>사실·관계·강도는 유지하고 영문 구조를 버린 뒤, 처음부터 자연스러운 한국어로 씁니다.</span>
                                 <span>두 사람의 말투를 방향별로 고정할 수 있으며 NPC 대사에는 적용하지 않습니다.</span>
-                                <span><b>사용 중에는 김홍진의 맛만 함께 적용되고 나머지 프롬프트는 전송하지 않습니다. 기존 설정값은 유지됩니다.</b></span>
+                                <span><b>사용 중에는 켜 둔 김홍진의 맛·한캐의 맛도 함께 적용되고 나머지 프롬프트는 전송하지 않습니다. 기존 설정값은 유지됩니다.</b></span>
                             </div>
                         </div>
                     </details>
@@ -14116,3 +14116,4 @@ if (document.readyState === 'loading') {
 } else {
     setTimeout(initialize, 0);
 }
+
