@@ -236,7 +236,7 @@ export function maskProtectedForEnglishReview(value) {
 // A bilingual instruction alone must not exempt untranslated narration.
 export function englishReviewWindow(segment, translation, nameTokens = [], protectedTokens = [], settings = {}) {
     const text = maskRequestedBilingualSource(segment, translation, settings, value => restoreBilingualDetectionTokens(value, nameTokens, protectedTokens, 'source'));
-    if (segment?.type === 'tagged_content') return { text, start: 0 };
+    if (segment?.type === 'tagged_content' || segment?.type === 'code_content') return { text, start: 0 };
     const dialogue = { ...segment, type: 'dialogue_candidate' };
     const body = dialogueEnvelope(text).body;
     const pair = trailingParentheticalParts(body);
@@ -329,7 +329,7 @@ function allowsIntentionalForeignText(segment, settings = {}, speakerScopes = nu
 
     if (segment?.type === 'tagged_content') return false;
     return bilingualScopeRequested(settings, segment?.type === 'dialogue_candidate' ? 'dialogue'
-        : segment?.type === 'code_content' ? 'code' : 'narration');
+        : segment?.type === 'code_content' ? (segment.codeKind === 'fenced' ? 'fenced' : 'code') : 'narration');
 }
 
 function normalizedLatinWords(value) {
@@ -1506,7 +1506,7 @@ export function segmentSource(value, nameLocks = [], {
     const parts = [];
     let translatableIndex = 0;
 
-    const appendPiece = (piece, insideTaggedContent = false, tagContext = [], codeQuote = '') => {
+    const appendPiece = (piece, insideTaggedContent = false, tagContext = [], codeQuote = '', codeKind = '') => {
         const leading = piece.text.match(/^\s+/u)?.[0] || '';
         const afterLeading = piece.text.slice(leading.length);
         const trailing = afterLeading.match(/\s+$/u)?.[0] || '';
@@ -1537,6 +1537,7 @@ export function segmentSource(value, nameLocks = [], {
                 ...(insideTaggedContent && tagContext.length ? { tagContext: [...tagContext] } : {}),
                 text: content,
                 ...(codeQuote ? { codeQuote } : {}),
+                ...(codeKind ? { codeKind } : {}),
             });
             translatableIndex += 1;
         }
@@ -1562,7 +1563,7 @@ export function segmentSource(value, nameLocks = [], {
             }
 
             if (region.insideCode) {
-                appendPiece({ type: 'code_content', text: block }, region.insideTaggedContent, region.tagContext, region.codeQuote);
+                appendPiece({ type: 'code_content', text: block }, region.insideTaggedContent, region.tagContext, region.codeQuote, region.codeKind);
                 continue;
             }
 
@@ -4049,10 +4050,11 @@ function buildScopedOutputPromptInternal({
     scope = 'narration',
     speakerIdentity = {},
 }) {
-    const payload = (segments || []).map(({ id, type, text, tagContext }) => ({
+    const payload = (segments || []).map(({ id, type, text, tagContext, codeKind }) => ({
         id,
         type,
         ...(tagContext?.length ? { tag_context: tagContext } : {}),
+        ...(codeKind ? { code_kind: codeKind } : {}),
         text,
     }));
     const dialogue = scope === 'target_dialogue' || scope === 'other_dialogue';
@@ -4345,11 +4347,12 @@ export function buildOutputPrompt(segmented, settings = {}, ...rest) {
 }
 
 function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}) {
-    const payload = segmented.segments.map(({ id, type, text, tagContext }) => ({
+    const payload = segmented.segments.map(({ id, type, text, tagContext, codeKind }) => ({
         id,
         type,
         ...(type === 'dialogue_candidate' ? { speaker_scope: speakerScopes[id] || 'unknown_dialogue' } : {}),
         ...(tagContext?.length ? { tag_context: tagContext } : {}),
+        ...(codeKind ? { code_kind: codeKind } : {}),
         text,
     }));
     const galbwaeExclusive = galbwaeMode(settings) !== 'off';
