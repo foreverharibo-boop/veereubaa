@@ -1,3 +1,4 @@
+import { activeCustomOutput, promptRequestsScope, bilingualScopeRequested, maskRequestedBilingualSource, OUTPUT_FORMAT_POLICY, outputFormatReviewContext } from './output-format.js';
 import { replaceProtectedSource, codeAwareRegions, escapeCodeTranslation } from './code-content.js';
 import { bilingualPromptRequestsOutput } from './bilingual-intent.js';
 import { withTranslationComposition, translationProse } from './translation-composer.js';
@@ -233,8 +234,9 @@ export function maskProtectedForEnglishReview(value) {
 
 // Only a recognized source+translation pair may exempt its English half.
 // A bilingual instruction alone must not exempt untranslated narration.
-export function englishReviewWindow(segment, translation, nameTokens = [], protectedTokens = []) {
-    const text = String(translation || '');
+export function englishReviewWindow(segment, translation, nameTokens = [], protectedTokens = [], settings = {}) {
+    const text = maskRequestedBilingualSource(segment, translation, settings, value => restoreBilingualDetectionTokens(value, nameTokens, protectedTokens, 'source'));
+    if (segment?.type === 'tagged_content') return { text, start: 0 };
     const dialogue = { ...segment, type: 'dialogue_candidate' };
     const body = dialogueEnvelope(text).body;
     const pair = trailingParentheticalParts(body);
@@ -260,8 +262,7 @@ function promptRequestsBilingual(value) {
 }
 
 export function bilingualDialogueRequested(settings = {}) {
-    return promptRequestsBilingual(enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'))
-        || promptRequestsBilingual(enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'));
+    return bilingualScopeRequested(settings, 'dialogue');
 }
 
 const BILINGUAL_BRACKET_PAIRS = [
@@ -308,6 +309,7 @@ export function bilingualDialogueBracketPair(settings = {}) {
     const prompts = [
         enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'),
         enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'),
+        promptRequestsScope(activeCustomOutput(settings), 'dialogue') ? activeCustomOutput(settings) : '',
     ].filter(prompt => promptRequestsBilingual(prompt));
     for (const prompt of prompts) {
         const pair = bracketPairFromBilingualExample(prompt);
@@ -325,23 +327,9 @@ function allowsIntentionalForeignText(segment, settings = {}, speakerScopes = nu
     // 저장돼 있지만 비활성인 병기 지시가 이름 미번역 검사를 끄지 못하게 한다.
     if (galbwaeTranslationActive(settings)) return false;
 
-    // Visible text inside any existing paired tag is always Korean-only.
-    // A global bilingual-format prompt must not relax validation for this scope.
     if (segment?.type === 'tagged_content') return false;
-
-    if (promptRequestsBilingual(enabledPromptValue(settings, 'globalPrompt', 'globalPromptEnabled'))) return true;
-    if (segment?.type !== 'dialogue_candidate') return false;
-    if (promptRequestsBilingual(enabledPromptValue(settings, 'allDialoguePrompt', 'allDialoguePromptEnabled'))) return true;
-
-    const scoped = speakerScopes && typeof speakerScopes === 'object'
-        ? speakerScopes[segment.id]
-        : null;
-    if (scoped === 'target_dialogue') return promptRequestsBilingual(enabledPromptValue(settings, 'dialoguePrompt', 'dialoguePromptEnabled'));
-    if (scoped === 'other_dialogue') return promptRequestsBilingual(enabledPromptValue(settings, 'otherDialoguePrompt', 'otherDialoguePromptEnabled'));
-
-    // Without attribution, do not let a speaker-specific prompt relax foreign-
-    // text validation for every dialogue segment.
-    return false;
+    return bilingualScopeRequested(settings, segment?.type === 'dialogue_candidate' ? 'dialogue'
+        : segment?.type === 'code_content' ? 'code' : 'narration');
 }
 
 function normalizedLatinWords(value) {
@@ -840,7 +828,7 @@ export function ensureBilingualDialogueFormat(segment, translation, settings = {
     let source = sourceEnvelope.body;
     for (const entry of nameTokens || []) source = source.split(String(entry?.token || '')).join(String(entry?.original || entry?.source || entry?.value || ''));
     for (const entry of protectedTokens || []) source = source.split(String(entry?.token || '')).join(String(entry?.value || ''));
-    // An explicit GLOBAL/ALL-DIALOGUE prompt is authoritative. If it asks for
+    // An explicit GLOBAL/ALL-DIALOGUE/CUSTOM OUTPUT prompt is authoritative. If it asks for
     // square brackets but the model returns parentheses, normalize to the
     // configured pair. Only preserve the model's detected pair when bilingual
     // output came from a fully custom prompt that the legacy fields cannot see.
@@ -998,11 +986,10 @@ export function findUntranslatedSegments(segments, translations, settings = {}, 
     const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
     const invalid = [];
     for (const segment of segments || []) {
-        const translation = String(map.get(segment.id) || '');
+        const translation = maskRequestedBilingualSource(segment, String(map.get(segment.id) || ''), settings);
         if (
             !translation.trim()
-            || allowsIntentionalForeignText(segment, settings, speakerScopes)
-            || looksLikeBilingualDialogue(segment, translation)
+            || (allowsIntentionalForeignText(segment, settings, speakerScopes) && looksLikeBilingualDialogue(segment, translation))
         ) continue;
 
         const untranslatedNames = unchangedLatinCharacterNames(segment.text, translation, settings);
@@ -1569,13 +1556,13 @@ export function segmentSource(value, nameLocks = [], {
                 continue;
             }
 
-            if (region.insideTaggedContent && !region.insideCode && !translateTaggedContent) {
+            if (region.insideTaggedContent && !translateTaggedContent) {
                 parts.push({ type: 'passthrough', text: block });
                 continue;
             }
 
             if (region.insideCode) {
-                appendPiece({ type: 'tagged_content', text: block }, true, ['code', ...region.tagContext], region.codeQuote);
+                appendPiece({ type: 'code_content', text: block }, region.insideTaggedContent, region.tagContext, region.codeQuote);
                 continue;
             }
 
@@ -2860,7 +2847,7 @@ ${String(oneTimeInstruction || '').trim() || '(없음)'}`,
 - A higher-priority group does NOT replace or cancel unrelated instructions in lower-priority groups.
 - GLOBAL rules remain active together with ALL-DIALOGUE and speaker-specific dialogue rules.
 - ALL-DIALOGUE rules remain active together with the applicable speaker-specific dialogue rules.
-- Bilingual/parallel output formatting is controlled only by GLOBAL and ALL-DIALOGUE. Speaker-specific prompts are voice/style/restriction layers.
+- Bilingual/parallel output formatting is controlled only by GLOBAL, ALL-DIALOGUE and CUSTOM OUTPUT. Speaker-specific prompts are voice/style/restriction layers.
 - Formatting instructions and expression/style restrictions must both be obeyed when they are compatible.
 - Example: a GLOBAL dialogue format requirement and a TARGET-CHARACTER banned-expression rule must BOTH be applied.
 - Source fidelity, protected syntax/tokens, valid JSON, and banned-word avoidance remain absolute regardless of this order.
@@ -3750,7 +3737,7 @@ function extremeOutputRules(settings = {}, {
     const tagged = scope === 'tagged_content';
     return `E→K ULTRA-COMPRESSED — scope=${scope}
 ${baseTranslationPrompt(settings, ['mixed', 'dialogue_mixed'].includes(scope) ? 'mixed' : 'scoped')}
-- Preserve Markdown/HTML/tag attributes/code/style/script/macros/placeholders/URLs/emoji and protected tokens exactly. Return Korean only unless active GLOBAL or ALL-DIALOGUE explicitly requires bilingual output; speaker-specific rules cannot change bilingual format. Tagged visible text is always Korean-only and its tags remain unchanged.
+- Preserve Markdown/HTML/tag attributes/code/style/script/macros/placeholders/URLs/emoji and protected tokens exactly. Return Korean only unless active GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT explicitly requires bilingual output; speaker-specific rules cannot change bilingual format. Tagged visible text is always Korean-only and its tags remain unchanged.
 - Return valid JSON only with every supplied id once.
 ${extremeTranslationRuleBlocks(settings, { oneTimeInstruction, tuning, scope, speakerIdentity })}
 ${extremeIdentityBlock(speakerIdentity, scope)}
@@ -3787,7 +3774,7 @@ function compactTranslationRuleBlocks(settings = {}, {
         fineTuning: 'TRANSLATION FINE TUNING',
     };
     const ordered = normalizedTranslationRuleOrder(settings).filter(key => values[key]);
-    return `ACTIVE RULES — cumulative; number is used only to resolve a direct contradiction. Higher priority never cancels unrelated lower rules. GLOBAL applies to every scope; ALL-DIALOGUE applies to all dialogue; only the matching speaker-specific prompt applies. Only GLOBAL/ALL-DIALOGUE may request bilingual output.
+    return `ACTIVE RULES — cumulative; number is used only to resolve a direct contradiction. Higher priority never cancels unrelated lower rules. GLOBAL applies to every scope; ALL-DIALOGUE applies to all dialogue; only the matching speaker-specific prompt applies. Only GLOBAL/ALL-DIALOGUE/CUSTOM OUTPUT may request bilingual output.
 ${ordered.map((key, index) => `${index + 1}. ${labels[key]}\n${values[key]}`).join('\n\n')}`;
 }
 
@@ -3837,7 +3824,7 @@ ${baseTranslationPrompt(settings, scope === 'mixed' || scope === 'dialogue_mixed
 
 OUTPUT / FORMAT
 - Preserve Markdown, HTML/tag structure and attributes, code/style/script, macros, placeholders, URLs, quotation marks, and every non-name protected token exactly once. Follow NAME LOCK below.
-- Return Korean only unless GLOBAL or ALL-DIALOGUE explicitly requests bilingual output. Speaker-specific prompts cannot control bilingual format. Tagged content is always Korean-only while structure remains unchanged.
+- Return Korean only unless GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT explicitly requests bilingual output. Speaker-specific prompts cannot control bilingual format. Tagged content is always Korean-only while structure remains unchanged.
 - Return valid JSON only, no code fence/commentary, with every requested id exactly once.
 
 ${compactTranslationRuleBlocks(settings, { oneTimeInstruction, tuning, scope, speakerIdentity })}
@@ -3911,8 +3898,8 @@ ${String(oneTimeInstruction || '').trim() || '(없음)'}`,
 - Higher priority resolves ONLY the exact conflicting requirement. It NEVER disables, replaces, suppresses, or weakens unrelated instructions from a lower-priority group.
 - GLOBAL TRANSLATION PROMPT remains active together with every applicable dialogue prompt.
 - ALL-DIALOGUE COMMON PROMPT remains active together with the applicable speaker-specific dialogue prompt.
-- A speaker-specific dialogue prompt is an ADDITIONAL voice/style/restriction layer. It does NOT replace GLOBAL or ALL-DIALOGUE rules.
-- Output formatting, including bilingual/parallel-language formatting, comes only from GLOBAL and ALL-DIALOGUE. Speaker-specific prompts control the Korean-side voice/style/restrictions, not whether the source text is preserved.
+- A speaker-specific dialogue prompt is an ADDITIONAL voice/style/restriction layer. It does NOT replace GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT rules.
+- Output formatting, including bilingual/parallel-language formatting, comes only from GLOBAL, ALL-DIALOGUE and CUSTOM OUTPUT. Speaker-specific prompts control the Korean-side voice/style/restrictions, not whether the source text is preserved.
 - Formatting rules and style/restriction rules must be merged when they do not directly contradict each other.
 - Example: if GLOBAL requires a dialogue output format while TARGET-CHARACTER DIALOGUE PROMPT bans a certain expression, obey BOTH requirements at the same time.
 - TARGET-CHARACTER DIALOGUE PROMPT and USER/NPC/OTHER DIALOGUE PROMPT are speaker-specific layers and are never printed together.
@@ -3964,16 +3951,16 @@ HARD PROMPT ISOLATION
 - ALL-DIALOGUE COMMON PROMPT, when configured, is a base dialogue layer shared by every direct-dialogue scope.
 - TARGET-CHARACTER DIALOGUE PROMPT appears only for TARGET-CHARACTER dialogue and ADDS speaker-specific voice/style/restriction rules on top of GLOBAL + ALL-DIALOGUE.
 - USER/NPC/OTHER DIALOGUE PROMPT appears only for dialogue not spoken by TARGET CHARACTER and ADDS speaker-specific voice/style/restriction rules on top of GLOBAL + ALL-DIALOGUE.
-- Speaker-specific prompts are NOT output-format authorities. Ignore any bilingual/parallel-language directive found inside them; bilingual formatting is controlled only by GLOBAL and ALL-DIALOGUE.
-- Never treat a speaker-specific prompt as a replacement for GLOBAL or ALL-DIALOGUE rules.
+- Speaker-specific prompts are NOT output-format authorities. Ignore any bilingual/parallel-language directive found inside them; bilingual formatting is controlled only by GLOBAL, ALL-DIALOGUE and CUSTOM OUTPUT.
+- Never treat a speaker-specific prompt as a replacement for GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT rules.
 - Never infer, recreate, borrow, or imitate an omitted speaker-specific prompt.
 - Translate only the supplied TRANSLATION TARGETS. SOURCE CONTEXT is reference data only.
 
 ABSOLUTE RULES
 ${baseTranslationPrompt(settings, 'scoped')}
-- BILINGUAL FORMAT AUTHORITY: For narration, only GLOBAL may request bilingual formatting. For direct dialogue, only GLOBAL and/or ALL-DIALOGUE may request bilingual formatting.
+- BILINGUAL FORMAT AUTHORITY: For narration, GLOBAL or CUSTOM OUTPUT may request bilingual formatting. For direct dialogue, GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT may request bilingual formatting.
 - TARGET-CHARACTER DIALOGUE PROMPT and USER/NPC/OTHER DIALOGUE PROMPT are style/restriction layers only and do not authorize bilingual output.
-- If GLOBAL/ALL-DIALOGUE do not explicitly request bilingual output for this scope, return Korean only.
+- If GLOBAL/ALL-DIALOGUE/CUSTOM OUTPUT do not explicitly request bilingual output for this scope, return Korean only.
 - Preserve Markdown, HTML structure and attributes, code, macros, placeholders, URLs, and every non-name @@VERBA_DEEP_0000@@ style token exactly once.
 - Handle @@VERBA_DEEP_NAME_0000@@ style tokens only according to NAME LOCK TOKENS below.
 - Output valid JSON only. Do not use a code fence or add commentary.
@@ -4049,7 +4036,7 @@ ${JSON.stringify(allSegments)}`;
 }
 
 export function buildScopedOutputPrompt(options) {
-    return withTranslationComposition(options.settings || {}, 'output', current => buildScopedOutputPromptInternal({ ...options, settings: current }));
+    return withTranslationComposition(options.settings || {}, 'output', current => buildScopedOutputPromptInternal({ ...options, settings: current }).replace('\nTRANSLATION TARGETS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nTRANSLATION TARGETS\n'));
 }
 
 function buildScopedOutputPromptInternal({
@@ -4077,11 +4064,11 @@ function buildScopedOutputPromptInternal({
     const bilingual = !galbwaeExclusive && !madExclusive && dialogue && bilingualDialogueRequested(settings);
     const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
     const bilingualRule = bilingual
-        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
+        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL or CUSTOM OUTPUT explicitly says otherwise.`
         : '';
     let taskRules = '';
     if (compressed) {
-        taskRules = `- Produce one result for every TRANSLATION TARGET under the declared scope. ${madExclusive ? 'Re-author directly as Korean-original writing.' : 'Translate into Korean; include source text only when an active GLOBAL/ALL-DIALOGUE rule authorizes it.'}
+        taskRules = `- Produce one result for every TRANSLATION TARGET under the declared scope. ${madExclusive ? 'Re-author directly as Korean-original writing.' : 'Translate into Korean; include source text only when an active GLOBAL/ALL-DIALOGUE/CUSTOM OUTPUT rule authorizes it.'}
 - SOURCE CONTEXT is reference only; do not translate or return it. Preserve target quotation marks and return every id exactly once.`;
     } else {
         const scopeRules = madExclusive
@@ -4089,9 +4076,9 @@ function buildScopedOutputPromptInternal({
             : dialogue
                 ? `- Every target in this request is direct dialogue.
 - Apply GLOBAL + ALL-DIALOGUE + the applicable speaker-specific prompt CUMULATIVELY.
-- Do not drop a GLOBAL or ALL-DIALOGUE formatting rule merely because a speaker-specific style/restriction prompt is also present.
+- Do not drop a GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT formatting rule merely because a speaker-specific style/restriction prompt is also present.
 - If one prompt specifies output format and another bans/requests an expression style, satisfy BOTH unless they directly contradict.
-- If GLOBAL or ALL-DIALOGUE explicitly requests bilingual dialogue, preserve the source-language copy faithfully and pair it with Korean in exactly the requested format; do not paraphrase the preserved source-language side.
+- If GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT explicitly requests bilingual dialogue, preserve the source-language copy faithfully and pair it with Korean in exactly the requested format; do not paraphrase the preserved source-language side.
 - TARGET-CHARACTER and USER/NPC/OTHER prompts may change only the Korean-side voice/style/restrictions. They cannot turn bilingual formatting on or off.`
                 : taggedContent
                     ? `- Every target in this request is visible natural-language text inside an existing paired tag.
@@ -4100,7 +4087,7 @@ function buildScopedOutputPromptInternal({
 - Return Korean-only visible text while preserving all protected tag/code tokens exactly.
 - Translate supplied readable text inside inline backticks and fenced blocks; preserve delimiters, executable syntax and protected tokens. Style/script blocks remain untouched.`
                     : `- Every target in this request is narration. No dialogue prompt exists in this request and no dialogue-only style may affect it.
-- If the GLOBAL TRANSLATION PROMPT explicitly requests bilingual narration or full-response bilingual formatting, obey that format inside each narration target. Otherwise return Korean-only narration.`;
+- If GLOBAL or CUSTOM OUTPUT explicitly requests bilingual narration or full-response bilingual formatting, obey that format inside each narration target. Otherwise return Korean-only narration.`;
         const speakerRule = madExclusive
             ? ''
             : targetDialogue
@@ -4328,10 +4315,10 @@ ABSOLUTE RULES
 ${baseTranslationPrompt(settings, 'mixed')}
 - Preserve Markdown, HTML structure and attributes, code, macros, placeholders, URLs, and every non-name @@VERBA_DEEP_0000@@ style token exactly once.
 - Handle @@VERBA_DEEP_NAME_0000@@ style tokens only according to NAME LOCK TOKENS below.
-- BILINGUAL FORMAT AUTHORITY: Only the GLOBAL TRANSLATION PROMPT and ALL-DIALOGUE COMMON PROMPT may authorize bilingual/parallel-language output.
+- BILINGUAL FORMAT AUTHORITY: Only the GLOBAL TRANSLATION PROMPT, ALL-DIALOGUE COMMON PROMPT and CUSTOM OUTPUT TRANSLATION RULES may authorize bilingual/parallel-language output.
 - GLOBAL may request bilingual narration and/or dialogue. ALL-DIALOGUE may request bilingual formatting for direct dialogue only.
 - TARGET-CHARACTER DIALOGUE PROMPT and USER/NPC/OTHER DIALOGUE PROMPT are speaker-style/restriction layers only. They must NEVER enable, disable, widen, narrow, or change bilingual/parallel-language formatting by themselves.
-- If neither GLOBAL nor ALL-DIALOGUE explicitly requests bilingual output for the current scope, output Korean only.
+- If no active GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT explicitly requests bilingual output for the current scope, output Korean only.
 - Output valid JSON only. Do not use a code fence or add commentary.
 
 ${orderedTranslationRuleBlocks(settings, {
@@ -4354,7 +4341,7 @@ ${bannedWords.length ? bannedWords.join(', ') : '(없음)'}`;
 }
 
 export function buildOutputPrompt(segmented, settings = {}, ...rest) {
-    return withTranslationComposition(settings, 'output', current => buildOutputPromptInternal(segmented, current, ...rest));
+    return withTranslationComposition(settings, 'output', current => buildOutputPromptInternal(segmented, current, ...rest).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n'));
 }
 
 function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null) {
@@ -4370,24 +4357,24 @@ function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '',
     const bilingual = !galbwaeExclusive && !madExclusive && bilingualDialogueRequested(settings);
     const [bilingualOpen, bilingualClose] = bilingual ? bilingualDialogueBracketPair(settings) : ['(', ')'];
     const bilingualRule = bilingual
-        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL explicitly says otherwise.`
+        ? `BILINGUAL DIALOGUE IS REQUIRED: every direct-dialogue target must contain the exact source dialogue first, then one space and the Korean translation inside ${bilingualOpen}${bilingualClose}, all inside the same quotation marks. Korean-only dialogue is invalid. Narration remains Korean-only unless GLOBAL or CUSTOM OUTPUT explicitly says otherwise.`
         : '';
     const taskRules = galbwaeExclusive
         ? `Translate every supplied segment into final Korean under EXCLUSIVE TEMPORARY CHUSEOK GALBWAE TRANSLATION. Read all segments together for continuity, but return exactly one result for each id. Preserve narration/dialogue roles, quotation marks, Markdown and protected structure.`
         : compressed
         ? `- Produce one result for every segment id. Read all segments together for continuity and speaker attribution; preserve each narration/dialogue type and quotation marks.
-- ${madExclusive ? 'Re-author directly as Korean-original writing under MAD KOREAN EXCLUSIVE.' : 'Translate into Korean; include source text only where an active GLOBAL/ALL-DIALOGUE rule explicitly requires bilingual output.'}`
+- ${madExclusive ? 'Re-author directly as Korean-original writing under MAD KOREAN EXCLUSIVE.' : 'Translate into Korean; include source text only where an active GLOBAL/ALL-DIALOGUE/CUSTOM OUTPUT rule explicitly requires bilingual output.'}`
         : madExclusive
             ? `Re-author every supplied segment directly as final Korean-original prose/dialogue under MAD KOREAN EXCLUSIVE ENGINE. Do not perform an ordinary translation or draft-and-rewrite sequence.
 - Read all segments together to understand the scene, but return exactly one result for each original id.
 - Preserve each segment's narration/dialogue role and existing quotation marks while rebuilding its Korean wording and rhythm from the ground up.`
             : `Produce exactly one translation output for every supplied segment. Korean is the required translated language; preserve/include source text only when an applicable user prompt explicitly requests bilingual output for that segment's scope.
 - Read all segments as one continuous output before attributing any dialogue.
-- A segment with type "narration" contains only narration. Dialogue-only instructions must never make narration bilingual, but an explicit GLOBAL TRANSLATION PROMPT may request bilingual narration and must be obeyed.
+- A segment with type "narration" contains only narration. Dialogue-only instructions must never make narration bilingual, but an explicit GLOBAL or CUSTOM OUTPUT instruction may request bilingual narration and must be obeyed.
 - A segment with type "dialogue_candidate" contains exactly one paired-quotation passage. Apply the ALL-DIALOGUE PROMPT to it regardless of whether TARGET CHARACTER, USER, or an NPC speaks it.
 - Additionally apply the TARGET-CHARACTER DIALOGUE PROMPT only when that passage is attributed to TARGET CHARACTER under SPEAKER ATTRIBUTION CONTEXT.
 - USER and NPC dialogue receive the GLOBAL + ALL-DIALOGUE + USER/NPC/OTHER DIALOGUE rules when configured, but never the TARGET-CHARACTER dialogue rules.
-- If GLOBAL or ALL-DIALOGUE requests bilingual dialogue, preserve/reproduce the source text only inside that dialogue_candidate segment. Never expand dialogue-only bilingual formatting to an adjacent narration segment or the whole paragraph.
+- If GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT requests bilingual dialogue, preserve/reproduce the source text only inside that dialogue_candidate segment. Never expand dialogue-only bilingual formatting to an adjacent narration segment or the whole paragraph.
 - TARGET-CHARACTER and USER/NPC/OTHER prompts are speaker-style/restriction layers only; they cannot independently enable or disable bilingual output.
 - Close any parenthetical Korean dialogue translation before the dialogue_candidate segment ends. Narration following the closing quotation mark must remain separate Korean narration.
 - Preserve quotation marks already present in each source segment.
@@ -4844,7 +4831,7 @@ export function detectCharacterGender(character) {
     return 'unknown';
 }
 
-export function buildQualityAuditPrompt({
+function buildQualityAuditPromptInternal({
     segments,
     currentTranslations,
     sourceContext,
@@ -5026,7 +5013,7 @@ CANDIDATE SEGMENTS
 ${JSON.stringify(payload)}`;
 }
 
-export function buildBannedRepairPrompt(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
+function buildBannedRepairPromptInternal(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
     const bannedWords = parseBannedWords(settings.bannedWords);
     const genderedInsultGuard = developerGenderedInsultGuardEnabled(settings);
     const payload = segments.map(segment => ({
@@ -5060,7 +5047,7 @@ SEGMENTS TO REPAIR
 ${JSON.stringify(payload)}${developerCompressedPromptEnabled(settings) ? '' : `\n\nBANNED WORDS\n${bannedWords.join(', ')}${genderedInsultGuard ? '\nAUTOMATIC HARD BAN: person-directed 년 계열 및 여성 비하 인칭어 (연도·기간 단위 년은 허용)' : ''}`}`;
 }
 
-export function buildProtectedTokenRepairPrompt(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
+function buildProtectedTokenRepairPromptInternal(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
     const payload = segments.map(segment => ({
         id: segment.id,
         type: segment.type,
@@ -5097,7 +5084,7 @@ SEGMENTS TO REPAIR
 ${JSON.stringify(payload)}`;
 }
 
-export function buildUntranslatedRepairPrompt(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
+function buildUntranslatedRepairPromptInternal(segments, currentTranslations, settings, speakerIdentity = {}, nameTokens = [], tuning = null, scope = 'mixed') {
     const payload = segments.map(segment => ({
         id: segment.id,
         type: segment.type,
@@ -5571,3 +5558,19 @@ export function boundReference(value, limit = 16000) {
     return `${text.slice(0, half)}\n…(middle omitted from reference)…\n${text.slice(-half)}`;
 }
 
+
+export function buildQualityAuditPrompt(...args) {
+    return outputFormatReviewContext(args[0]?.settings || {}) + '\n' + buildQualityAuditPromptInternal(...args);
+}
+
+export function buildBannedRepairPrompt(...args) {
+    return outputFormatReviewContext(args[2] || {}) + '\n' + buildBannedRepairPromptInternal(...args);
+}
+
+export function buildProtectedTokenRepairPrompt(...args) {
+    return outputFormatReviewContext(args[2] || {}) + '\n' + buildProtectedTokenRepairPromptInternal(...args);
+}
+
+export function buildUntranslatedRepairPrompt(...args) {
+    return outputFormatReviewContext(args[2] || {}) + '\n' + buildUntranslatedRepairPromptInternal(...args);
+}
