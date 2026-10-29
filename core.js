@@ -4344,10 +4344,11 @@ export function buildOutputPrompt(segmented, settings = {}, ...rest) {
     return withTranslationComposition(settings, 'output', current => buildOutputPromptInternal(segmented, current, ...rest).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n'));
 }
 
-function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null) {
+function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}) {
     const payload = segmented.segments.map(({ id, type, text, tagContext }) => ({
         id,
         type,
+        ...(type === 'dialogue_candidate' ? { speaker_scope: speakerScopes[id] || 'unknown_dialogue' } : {}),
         ...(tagContext?.length ? { tag_context: tagContext } : {}),
         text,
     }));
@@ -4387,6 +4388,7 @@ ${promptIdentityAliasBlock(speakerIdentity)}
         : ''}
 
 TASK
+SPEAKER ROUTING: speaker_scope=target_dialogue is confirmed TARGET speech; other_dialogue is USER/NPC speech. Apply only the matching speaker rules. For unknown_dialogue infer from the full sequence conservatively. Narration and code_content never receive character dialogue voice.
 ${taskRules}
 ${bilingualRule}
 - Silently check that every segment id is returned exactly once.
@@ -5573,4 +5575,149 @@ export function buildProtectedTokenRepairPrompt(...args) {
 
 export function buildUntranslatedRepairPrompt(...args) {
     return outputFormatReviewContext(args[2] || {}) + '\n' + buildUntranslatedRepairPromptInternal(...args);
+}
+
+function comparableSpeakerName(value) {
+    return String(value || '').trim().toLocaleLowerCase();
+}
+
+function speakerNamesMatch(left, right) {
+    const a = comparableSpeakerName(left);
+    const b = comparableSpeakerName(right);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    // A saved Korean spelling may omit a Korean family name (김홍진 ↔ 홍진).
+    // Limit this bridge to Hangul-only names so similar romanized NPC names
+    // (Nyen/Nyon, etc.) are never merged by a fuzzy or suffix comparison.
+    if (!/^[가-힣]{2,6}$/u.test(a) || !/^[가-힣]{2,6}$/u.test(b)) return false;
+    return (a.length >= 2 && b.endsWith(a)) || (b.length >= 2 && a.endsWith(b));
+}
+
+function speakerAliasSets(segmented, identity = {}) {
+    const targetNames = [identity.sourceCharacterName, identity.characterName].filter(Boolean);
+    const userNames = [identity.sourceUserName, identity.userName].filter(Boolean);
+    for (const lock of normalizeNameLocks(identity.nameLocks)) {
+        if (targetNames.some(name => speakerNamesMatch(name, lock.target))) targetNames.push(lock.source, lock.target);
+        if (userNames.some(name => speakerNamesMatch(name, lock.target))) userNames.push(lock.source, lock.target);
+    }
+
+    const targetTokens = new Set();
+    const otherTokens = new Set();
+    for (const entry of segmented?.nameTokens || []) {
+        const names = [entry?.source, entry?.value];
+        if (names.some(name => targetNames.some(target => speakerNamesMatch(name, target)))) {
+            targetTokens.add(String(entry.token || ''));
+        } else if (names.some(name => userNames.some(user => speakerNamesMatch(name, user)))) {
+            otherTokens.add(String(entry.token || ''));
+        }
+    }
+    return { targetNames, userNames, targetTokens, otherTokens };
+}
+
+function startsWithSpeakerName(sentence, names) {
+    return [...new Set(names.map(String).filter(Boolean))]
+        .sort((left, right) => right.length - left.length)
+        .find(name => new RegExp(`^${escapeRegExp(name)}(?=$|[^\\p{L}\\p{N}_])`, 'iu').test(sentence)) || '';
+}
+
+function leadingSpeakerActor(text, aliases, targetGender, fallback = 'unknown') {
+    const sentences = String(text || '').split(/(?<=[.!?])\s+/u);
+    let actor = fallback;
+    const gender = String(targetGender || 'unknown').toLocaleLowerCase();
+    for (const rawSentence of sentences) {
+        const sentence = rawSentence.trim();
+        if (!sentence) continue;
+        const firstToken = sentence.match(/^(@@VERBA_NAME_\d{4}@@)/u)?.[1] || '';
+        if (firstToken && aliases.targetTokens.has(firstToken)) {
+            actor = 'target';
+            continue;
+        }
+        const targetName = startsWithSpeakerName(sentence, aliases.targetNames);
+        if (targetName) {
+            actor = 'target';
+            continue;
+        }
+        const userName = startsWithSpeakerName(sentence, aliases.userNames);
+        if (userName) {
+            if (!new RegExp(`^${escapeRegExp(userName)}['’]s\\b`, 'iu').test(sentence)) actor = 'user';
+            continue;
+        }
+        if (firstToken && aliases.otherTokens.has(firstToken)) {
+            // A possessive mention is not the acting subject: "Dam-eun's
+            // footsteps..." must not steal Hong-jin's continuing dialogue.
+            if (!new RegExp(`^${escapeRegExp(firstToken)}['’]s\\b`, 'u').test(sentence)) actor = 'user';
+            continue;
+        }
+        const pronoun = sentence.match(/^(he|she|they)\b/iu)?.[1]?.toLocaleLowerCase();
+        if (pronoun === 'he') actor = gender === 'female' ? 'other' : actor;
+        else if (pronoun === 'she') actor = gender === 'male' ? 'other' : actor;
+        else if (pronoun === 'they' && actor === 'unknown') actor = 'other';
+        else if (/^(?:a|an|the)\s+[\p{L}][\p{L}'’-]*(?:\s+[\p{L}][\p{L}'’-]*)?\s+(?:said|asked|replied|called|shouted|whispered|muttered|looked|raised|turned|walked|stepped|moved|stood|sat|reached|nodded)\b/iu.test(sentence)) {
+            actor = 'other';
+        }
+    }
+    return actor;
+}
+
+function postDialogueSpeaker(text, aliases, targetGender, activeActor) {
+    const lead = String(text || '').trim().slice(0, 240);
+    const speechVerb = '(?:said|asked|replied|answered|called|shouted|whispered|muttered|added|continued|snapped|growled|told)';
+    const token = lead.match(new RegExp(`^(@@VERBA_NAME_\\d{4}@@)(?:\\s+[^.!?]{0,50})?\\s+${speechVerb}\\b`, 'iu'))?.[1]
+        || lead.match(new RegExp(`^${speechVerb}\\s+(@@VERBA_NAME_\\d{4}@@)\\b`, 'iu'))?.[1]
+        || '';
+    if (token && aliases.targetTokens.has(token)) return 'target';
+    if (token && aliases.otherTokens.has(token)) return 'other';
+
+    const namedSpeechRole = (names, role) => names.some(name => {
+        const escaped = escapeRegExp(name);
+        return new RegExp(`^${escaped}(?:\\s+[^.!?]{0,50})?\\s+${speechVerb}\\b`, 'iu').test(lead)
+            || new RegExp(`^${speechVerb}\\s+${escaped}(?=$|[^\\p{L}\\p{N}_])`, 'iu').test(lead);
+    }) ? role : '';
+    const directRole = namedSpeechRole(aliases.targetNames, 'target')
+        || namedSpeechRole(aliases.userNames, 'other');
+    if (directRole) return directRole;
+
+    const pronoun = lead.match(new RegExp(`^(he|she|they)\\s+${speechVerb}\\b`, 'iu'))?.[1]?.toLocaleLowerCase();
+    const gender = String(targetGender || 'unknown').toLocaleLowerCase();
+    if (pronoun === 'he') {
+        if (gender === 'female') return 'other';
+        if (gender === 'male') return activeActor === 'other' ? 'other' : 'target';
+    }
+    if (pronoun === 'she') {
+        if (gender === 'male') return 'other';
+        if (gender === 'female') return activeActor === 'other' ? 'other' : 'target';
+    }
+    if (pronoun === 'they') return activeActor === 'target' ? 'target' : 'other';
+    return 'unknown';
+}
+
+// Fast, conservative speaker hints for the unified output request. This never
+// calls the model. Only locally certain TARGET/OTHER cases are fixed; uncertain
+// dialogue remains unknown_dialogue and is resolved inside the translation call.
+export function inferLocalTargetDialogueScopes(segmented, identity = {}) {
+    const aliases = speakerAliasSets(segmented, identity);
+    const segments = segmented?.segments || [];
+    const scopes = {};
+    let activeActor = 'unknown';
+
+    for (let index = 0; index < segments.length; index += 1) {
+        const segment = segments[index];
+        if (segment.type !== 'dialogue_candidate') {
+            activeActor = leadingSpeakerActor(segment.text, aliases, identity.characterGender, activeActor);
+            continue;
+        }
+
+        const next = segments[index + 1];
+        const tagged = next?.type === 'narration'
+            ? postDialogueSpeaker(next.text, aliases, identity.characterGender, activeActor)
+            : 'unknown';
+        const actor = tagged === 'unknown' ? activeActor : tagged;
+        scopes[segment.id] = actor === 'target'
+            ? 'target_dialogue'
+            : actor === 'other' || actor === 'user'
+                ? 'other_dialogue'
+                : 'unknown_dialogue';
+        if (tagged !== 'unknown') activeActor = tagged;
+    }
+    return scopes;
 }
