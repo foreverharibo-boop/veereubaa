@@ -1,7 +1,8 @@
+import { createOutputComparison, appendOutputComparison, createOutputComparisonStore } from './output-comparison.js';
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.54';
+import { createServerClient } from './server-client.js?v=0.6.55';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -66,9 +67,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.54';
+const EXTENSION_VERSION = '0.6.55';
 // This client-only fix uses the existing server translation engine unchanged.
-const SERVER_ENGINE_VERSION = '0.6.54';
+const SERVER_ENGINE_VERSION = '0.6.55';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -820,6 +821,7 @@ let lastTouchSelectionAt = 0;
 let lastDesktopSelectionPlacement = null;
 let lastDesktopSelectionAt = 0;
 let lastDebugDiagnostic = null;
+const outputComparisonStore = createOutputComparisonStore();
 const outputTiming = createOutputTiming();
 outputTiming.setEnabled(settings.debugMode);
 // Diagnostic-only runtime. It remains dormant unless debug mode is enabled.
@@ -1122,6 +1124,8 @@ function createDebugDiagnostic(stage = 'unknown', error = null, displayMessage =
         automaticOutput: recentDiagnosticEvents(automaticOutputLifecycle.diagnostics(), 22),
         browserExecution: recentDiagnosticEvents(executionTrace.diagnostics(), 24),
         serverTranslation: verbaServer.diagnostics(),
+        outputComparison: settings.debugMode && latest
+            ? outputComparisonStore.get(latest.message, hashText(source), currentSwipeId(latest.message)) : null,
         sourceChangeTrace: recentDiagnosticEvents(sourceChangeTracer.diagnostics(), 16),
         settingsState: {
             autoInput: Boolean(settings.autoInput),
@@ -3847,6 +3851,7 @@ Do not add markdown fences, commentary, explanations, or extra ids.`
             const raw = extractResponseText(response);
             const result = collectPartialSegmentTranslations(raw, pending);
             const { partial, parseError } = result;
+            options.onOutputResponse?.(partial, attempt);
             recoveryDiagnostic = recordSegmentRecovery(result, response, options, attempt) || recoveryDiagnostic;
 
             for (const [id, value] of partial) completed.set(id, value);
@@ -5171,11 +5176,16 @@ async function translateOutputText(source, options = {}) {
     }
     const speakerIdentity = options.speakerIdentity || {};
     const speakerScopes = inferLocalTargetDialogueScopes(segmented, speakerIdentity);
-    const translations = normalizeTaggedOutputTranslations(segmented, await requestScopedOutputTranslations(segmented, speakerScopes, {
+    const comparison = createOutputComparison(segmented, settings.debugMode === true);
+    const translations = await requestScopedOutputTranslations(segmented, speakerScopes, {
         ...options,
         speakerIdentity,
         stage: options.stage || 'output-translation',
-    }));
+        onOutputResponse: comparison.response,
+    });
+    comparison.initial(translations);
+    normalizeTaggedOutputTranslations(segmented, translations);
+    comparison.capture('tag-normalization', translations);
 
     // Deterministic cleanup is local and does not call the provider.
     normalizeLocallyRecoverableProtectedTokens(segmented, translations, settings, speakerScopes);
@@ -5289,6 +5299,7 @@ async function translateOutputText(source, options = {}) {
     }
 
     normalizeTaggedOutputTranslations(segmented, translations);
+    comparison.capture('repairs', translations);
 
     // Bilingual dialogue formatting is a deterministic display operation.
     // Rebuild omitted or malformed source+Korean pairs locally instead of
@@ -5307,7 +5318,9 @@ async function translateOutputText(source, options = {}) {
     }
 
 
+    comparison.capture('dialogue-format', translations);
     await reviewFinalEnglish({ segmented, translations, speakerIdentity, options });
+    comparison.capture('english-review', translations);
 
     const remaining = [...translations.values()].flatMap(text => findBannedWords(text, settings));
     if (remaining.length) {
@@ -5325,6 +5338,7 @@ async function translateOutputText(source, options = {}) {
     return {
         translation: result,
         sourceMap: buildSourceMap(segmented, translations, result),
+        ...(settings.debugMode === true ? { outputComparison: comparison.finish(result) } : {}),
     };
 }
 
@@ -6272,6 +6286,8 @@ async function translateMessage(messageId, options = {}) {
                     true,
                 );
             }
+            let outputComparison = settings.debugMode === true
+                ? appendOutputComparison(translated.outputComparison, 'received', undefined, translated.translation) : null;
             const lockedTranslation = translationWithLockedSegments(
                 translated,
                 snapshot.previousRecord?.lockedSegments,
@@ -6282,6 +6298,8 @@ async function translateMessage(messageId, options = {}) {
                 settings,
                 source,
             );
+            outputComparison = appendOutputComparison(outputComparison, 'locked-segments', translated.translation, lockedTranslation.translation);
+            outputComparison = appendOutputComparison(outputComparison, 'display-normalization', lockedTranslation.translation, finalTranslation.translation);
             if (options.automatic && !isTranslationExtensionActive(EXTENSION_KEY)) {
                 throw outputAbortReason(
                     'VERBA_DEEP_PAIR_INACTIVE',
@@ -6301,6 +6319,7 @@ async function translateMessage(messageId, options = {}) {
                     claimPairOwner: !options.automatic,
                 },
             );
+            outputComparisonStore.set(latest, hashText(source), currentSwipeId(latest), outputComparison);
             clearTransientTranslationSelections();
 
             if (applied?.renderResult?.status === 'failed') {
