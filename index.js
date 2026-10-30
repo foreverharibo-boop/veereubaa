@@ -1,9 +1,10 @@
+import { reviewBilingualOutput } from './bilingual-review.js';
 import { hasExplicitNonDialogueBilingualScope } from './output-format.js';
 import { createOutputComparison, appendOutputComparison, createOutputComparisonStore } from './output-comparison.js';
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.56';
+import { createServerClient } from './server-client.js?v=0.6.57';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -68,9 +69,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.56';
+const EXTENSION_VERSION = '0.6.57';
 // This client-only fix uses the existing server translation engine unchanged.
-const SERVER_ENGINE_VERSION = '0.6.56';
+const SERVER_ENGINE_VERSION = '0.6.57';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -5094,6 +5095,30 @@ async function runExperimentalQualityAudit({
     }
 }
 
+// One bounded provider attempt; no normal retry/race/fallback pipeline.
+async function reviewFinalBilingual({ segmented, translations, options = {} }) {
+    const result = await reviewBilingualOutput({
+        segmented, translations, settings, options,
+        request: async (prompt, targets, requestOptions) => {
+            const profiles = configuredProfileCycle();
+            const response = await sendProfileRequest(prompt, {
+                ...requestOptions,
+                profileId: profiles.active,
+                profileSlot: profiles.slot,
+                stage: 'final-bilingual-review',
+                timeoutSecondsOverride: Math.min(60, normalizedProfileFailureTimeoutSeconds()),
+            });
+            const parsed = collectPartialSegmentTranslations(extractResponseText(response), targets);
+            if (parsed.parseError || parsed.partial.size !== targets.length) {
+                throw new Error('병기 검수 응답 형식이 불완전합니다.');
+            }
+            return parsed.partial;
+        },
+    });
+    if (result.status === 'failed') console.warn('[Verba] 병기 AI 검수 실패 — 검수 전 번역을 유지합니다.');
+    return result;
+}
+
 async function reviewFinalEnglish({ segmented, translations, speakerIdentity = {}, options = {} }) {
     const result = await reviewEnglishLeftovers({
         segmented, translations, settings, identity: speakerIdentity, options,
@@ -5163,7 +5188,7 @@ async function translateOutputText(source, options = {}) {
     const initialSegmented = segmentSource(source, characterNameLocks, segmentationOptions);
     await planBilingualDialogueVerdicts(initialSegmented, { signal: options.signal, timing: options.timing });
     if (minimalOutputEnabled(settings)) {
-        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish });
+        return translateMinimalOutput(initialSegmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish: reviewFinalEnglish, reviewBilingual: reviewFinalBilingual });
     }
     const roleTermLocks = await planRepeatedRoleTermLocks(initialSegmented, {
         signal: options.signal,
@@ -5323,6 +5348,8 @@ async function translateOutputText(source, options = {}) {
     comparison.capture('dialogue-format', translations);
     await reviewFinalEnglish({ segmented, translations, speakerIdentity, options });
     comparison.capture('english-review', translations);
+    comparison.bilingualReview(await reviewFinalBilingual({ segmented, translations, options }));
+    comparison.capture('bilingual-review', translations);
 
     const remaining = [...translations.values()].flatMap(text => findBannedWords(text, settings));
     if (remaining.length) {
@@ -10952,7 +10979,7 @@ function developerSettingsMarkup() {
                                 <input type="checkbox" id="verba-deep-quality-audit-enabled" ${settings.qualityAuditEnabled ? 'checked' : ''} ${POST_TRANSLATION_AI_REPAIR_ENABLED ? '' : 'disabled'}>
                                 <span>품질 검수 사용</span>
                             </label>
-                            <div class="verba-deep-help">${POST_TRANSLATION_AI_REPAIR_ENABLED ? '로컬에서 이상 징후가 있을 때만 AI 품질 검수를 실행합니다.' : '현재 버전은 일반·미친 한출·김홍진 AI 후검수가 모두 꺼져 있습니다. 기능 코드는 보관되며 저장된 검수 설정은 유지됩니다. 별도로 한국어 영역에 영어가 남으면 해당 부분만 최대 1회 AI 검수합니다. 검수 실패 시 기존 번역을 유지합니다.'}</div>
+                            <div class="verba-deep-help">${POST_TRANSLATION_AI_REPAIR_ENABLED ? '로컬에서 이상 징후가 있을 때만 AI 품질 검수를 실행합니다.' : '현재 버전은 일반·미친 한출·김홍진 AI 후검수가 모두 꺼져 있습니다. 기능 코드는 보관되며 저장된 검수 설정은 유지됩니다. 별도로 한국어 영역에 영어가 남으면 해당 부분만 최대 1회 AI 검수합니다. 병기 지시가 적용된 구간은 별도 AI가 최대 1회 형식을 검수합니다. 검수 실패 시 기존 번역을 유지합니다.'}</div>
 
                             <div id="verba-deep-quality-audit-controls" class="${settings.qualityAuditEnabled ? '' : 'verba-deep-control-disabled'}">
                                 <label class="verba-deep-check-row"><input type="checkbox" id="verba-deep-quality-audit-meaning" ${settings.qualityAuditMeaning !== false ? 'checked' : ''}><span>의미 보존 검사</span></label>

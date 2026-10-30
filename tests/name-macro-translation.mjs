@@ -61,7 +61,7 @@ const env = {
     settings: {}, normalizedCharacterNameLocks: () => [], segmentSource,
     minimalOutputEnabled: () => minimal,
     translateMinimalOutput: async prepared => prepared,
-    requestSegments: () => {}, buildSourceMap: () => [], reviewFinalEnglish: () => {},
+    requestSegments: () => {}, buildSourceMap: () => [], reviewFinalEnglish: () => {}, reviewFinalBilingual: () => {},
     planBilingualDialogueVerdicts: async () => {},
     planRepeatedRoleTermLocks: async prepared => {
         assert.equal(prepared.source, 'Dana waited. "Hi, Dana."');
@@ -88,3 +88,4 @@ const result = await translateMinimalOutput(segmented, { developerMode: true, de
 assert.equal(reviews, 1);
 assert.equal(result.translation, '다나는 기다렸다. "Hi, Dana. (안녕, 다나.)"');
 console.log('PASS: visible identity macros, protected contexts, name locks/particles, bilingual source, normal/minimal entry and final review.');
+

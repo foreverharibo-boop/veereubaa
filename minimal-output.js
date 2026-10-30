@@ -48,7 +48,7 @@ ${JSON.stringify(payload)}`;
 }
 
 // Prompt content is independent of the developer split setting.
-export async function translateMinimalOutput(segmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish }) {
+export async function translateMinimalOutput(segmented, settings, options, { requestSegments, buildSourceMap, reviewEnglish, reviewBilingual }) {
     const config = {
         customTranslatorEnabled: settings.customTranslatorEnabled,
         customTranslatorTemplates: settings.customTranslatorTemplates,
@@ -164,6 +164,8 @@ export async function translateMinimalOutput(segmented, settings, options, { req
     comparison.capture('tag-normalization', translations);
     await reviewEnglish?.({ segmented, translations, speakerIdentity: options.speakerIdentity || {}, options });
     comparison.capture('english-review', translations);
+    comparison.bilingualReview(await reviewBilingual?.({ segmented, translations, options }));
+    comparison.capture('bilingual-review', translations);
 
     const translation = assembleTranslation(segmented, translations, {
         allowDamagedProtected: !POST_TRANSLATION_AI_REPAIR_ENABLED,
