@@ -1,3 +1,4 @@
+import { enforceMadKoreanOnly } from './mad-output.js';
 import { createOutputComparison } from './output-comparison.js';
 import { withTranslationComposition, translationProse } from './translation-composer.js';
 import { outputSplitCount, runOutputBatches } from './output-splitting.js';
@@ -62,7 +63,8 @@ export async function translateMinimalOutput(segmented, settings, options, { req
                 : 'off',
     };
     const oneTime = String(options.oneTimeInstruction || '');
-    const comparison = createOutputComparison(segmented, settings.debugMode === true);
+    const comparison = createOutputComparison(segmented, settings.debugMode === true, settings, options.diagnosticBinding || null, 'minimal');
+    comparison.translationSettings(config);
     const firstTranslations = new Map();
     const translations = await runOutputBatches(segmented, outputSplitCount(settings), options, async (segments, batchOptions) => {
         const request = (targets, repair = '') => {
@@ -108,14 +110,19 @@ export async function translateMinimalOutput(segmented, settings, options, { req
     comparison.initial(firstTranslations);
     comparison.capture('repairs', translations);
     normalizeLocallyRecoverableProtectedTokens(segmented, translations, config, {});
+    comparison.capture('local-normalization', translations, config);
     for (const segment of segmented.segments) {
         if (segment.type === 'tagged_content') translations.set(segment.id, normalizeStructuredMetadataTranslation(translations.get(segment.id)));
     }
 
     comparison.capture('tag-normalization', translations);
+    enforceMadKoreanOnly(segmented, translations, settings);
+    comparison.capture('mad-korean-only', translations);
     comparison.postReview(await reviewOutput?.({ segmented, translations,
         speakerIdentity: options.speakerIdentity || {}, reviewSettings: settings, options }));
     comparison.capture('output-post-review', translations);
+    enforceMadKoreanOnly(segmented, translations, settings);
+    comparison.capture('mad-korean-only-final', translations);
 
     const translation = assembleTranslation(segmented, translations, {
         allowDamagedProtected: !POST_TRANSLATION_AI_REPAIR_ENABLED,
