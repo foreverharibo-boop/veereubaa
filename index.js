@@ -69,14 +69,14 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.58';
+const EXTENSION_VERSION = '0.6.59';
 // This client-only fix uses the existing server translation engine unchanged.
 const SERVER_ENGINE_VERSION = '0.6.58';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
-const TOUCH_SELECTION_QUIET_MS = 2000;
+const TOUCH_SELECTION_CAPTURE_MS = 0;
 const STATE_KEY = 'verba_deep_current_translation';
 const PEER_STATE_KEY = 'verba_current_translation';
 const SOURCE_VIEW_KEY = 'verba_deep_source_view';
@@ -816,6 +816,7 @@ let suppressMessageCopyClickUntil = 0;
 let multiSelectionState = null;
 let selectionHighlightTimer = null;
 let selectionGestureActive = false;
+let selectionTouchActive = false;
 let selectionNeedsCapture = false;
 let selectionPointerType = '';
 let preservedGestureSelection = null;
@@ -9109,11 +9110,12 @@ function scheduleSelectionCapture(delay = 80, { hideOnFailure = true, preserved 
 
     // Capture a fully resolved snapshot NOW, while mobile browsers still expose
     // the tiny selected range. Samsung/Chromium can collapse a 1–2 character
-    // selection while its native selection toolbar is settling during the 2 s
-    // quiet period; a cloned DOM Range alone is not always enough afterwards.
+    // selection while its native selection toolbar settles; a cloned DOM
+    // Range alone is not always enough afterwards.
     const preservedSnapshot = preserved ? resolveSelection(preserved) : null;
 
     selectionTimer = setTimeout(() => {
+        if (selectionGestureActive || selectionTouchActive) return;
         const liveSnapshot = resolveSelection();
         const snapshot = liveSnapshot
             || (preservedSnapshot && selectionStillCurrent(preservedSnapshot) ? preservedSnapshot : null)
@@ -9856,7 +9858,6 @@ Your previous replacement was empty or unchanged. Return a genuinely different K
 }
 
 function setupSelection() {
-    const hasPointerEvents = 'PointerEvent' in globalThis;
     // Desktop browsers expose PointerEvent too, so mouseup cannot be only a
     // no-PointerEvent fallback. Capture it before themes/extensions can stop it.
     document.addEventListener('mouseup', event => {
@@ -9881,17 +9882,28 @@ function setupSelection() {
             scheduleSelectionCapture(30, { hideOnFailure: false, preserved });
         }
     }, true);
-    if (!hasPointerEvents) {
-        document.addEventListener('touchend', event => {
-            if (event.target?.closest?.('#verba-deep-selection-actions, #verba-deep-selection-more-menu')) return;
-            lastTouchSelectionAt = Date.now();
-            const preserved = captureSelectionState();
-            scheduleSelectionCapture(TOUCH_SELECTION_QUIET_MS, {
-                hideOnFailure: false,
-                preserved,
-            });
-        }, { passive: true });
-    }
+    document.addEventListener('touchstart', () => {
+        selectionTouchActive = true;
+        clearTimeout(selectionTimer);
+    }, { passive: true, capture: true });
+    const finishTouchSelection = event => {
+        selectionTouchActive = Boolean(event.touches?.length);
+        if (selectionTouchActive) return;
+        if (event.target?.closest?.('#verba-deep-selection-actions, #verba-deep-selection-more-menu')) return;
+        lastTouchSelectionAt = Date.now();
+        const preserved = captureSelectionState() || preservedGestureSelection;
+        selectionGestureActive = false;
+        selectionNeedsCapture = false;
+        preservedGestureSelection = null;
+        scheduleSelectionCapture(TOUCH_SELECTION_CAPTURE_MS, {
+            hideOnFailure: false,
+            preserved,
+        });
+    };
+    // Also listen when PointerEvent exists: native selection can cancel that
+    // pointer before the finger is released, while touchend still arrives.
+    document.addEventListener('touchend', finishTouchSelection, { passive: true, capture: true });
+    document.addEventListener('touchcancel', finishTouchSelection, { passive: true, capture: true });
     document.addEventListener('pointerdown', event => {
         if (event.target?.closest?.('#verba-deep-selection-actions, #verba-deep-selection-more-menu')) return;
         if (document.querySelector('#verba-deep-selection-actions, #verba-deep-selection-more-menu')) {
@@ -9941,7 +9953,7 @@ function setupSelection() {
         }
         if (shouldCapture) {
             scheduleSelectionCapture(
-                pointerType === 'touch' || pointerType === 'pen' ? TOUCH_SELECTION_QUIET_MS : 100,
+                TOUCH_SELECTION_CAPTURE_MS,
                 { preserved },
             );
         }
@@ -9959,7 +9971,7 @@ function setupSelection() {
         // completed touch selection instead of throwing the selected word away.
         if ((pointerType === 'touch' || pointerType === 'pen') && preserved) {
             lastTouchSelectionAt = Date.now();
-            scheduleSelectionCapture(TOUCH_SELECTION_QUIET_MS, {
+            scheduleSelectionCapture(TOUCH_SELECTION_CAPTURE_MS, {
                 hideOnFailure: false,
                 preserved,
             });
@@ -9978,29 +9990,19 @@ function setupSelection() {
             }
             const preserved = captureSelectionState();
             scheduleSelectionCapture(
-                touchSelectionRecentlyActive() ? TOUCH_SELECTION_QUIET_MS : 220,
+                touchSelectionRecentlyActive() ? TOUCH_SELECTION_CAPTURE_MS : 220,
                 { hideOnFailure: false, preserved },
             );
         }
     });
     document.addEventListener('selectionchange', () => {
         const currentSelection = captureSelectionState();
-        if (selectionGestureActive) {
+        if (selectionGestureActive || selectionTouchActive) {
             selectionNeedsCapture = true;
             preservedGestureSelection = currentSelection || preservedGestureSelection;
 
-            // A simple long-press word selection may never produce pointerup on
-            // mobile: the browser can hand control to its native selection UI and
-            // emit pointercancel instead. Start the same 2-second quiet timer as
-            // soon as any real non-collapsed selection exists. Further handle
-            // movement fires selectionchange again and resets this timer.
-            if (preservedGestureSelection && touchSelectionRecentlyActive()) {
-                lastTouchSelectionAt = Date.now();
-                scheduleSelectionCapture(TOUCH_SELECTION_QUIET_MS, {
-                    hideOnFailure: false,
-                    preserved: preservedGestureSelection,
-                });
-            }
+            // Keep tracking the range during a drag. Release events (including
+            // touchend after native pointercancel) open the menu immediately.
             return;
         }
         // mouseup already opened the desktop menu at the real pointer position.
@@ -10018,7 +10020,7 @@ function setupSelection() {
             const isTouchSelection = touchSelectionRecentlyActive();
             if (isTouchSelection) lastTouchSelectionAt = Date.now();
             scheduleSelectionCapture(
-                isTouchSelection ? TOUCH_SELECTION_QUIET_MS : 100,
+                isTouchSelection ? TOUCH_SELECTION_CAPTURE_MS : 100,
                 { hideOnFailure: false, preserved },
             );
         }
