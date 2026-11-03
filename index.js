@@ -10,7 +10,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.76';
+import { createServerClient } from './server-client.js?v=0.6.77';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -75,9 +75,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.76';
+const EXTENSION_VERSION = '0.6.77';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.76';
+const SERVER_ENGINE_VERSION = '0.6.77';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -392,6 +392,7 @@ const DEFAULT_SETTINGS = {
     developerTargetToUserAddressFrequency: 'natural',
     developerTargetToUserRegister: 'unset',
     developerTargetToOtherRegister: 'unset',
+    developerUserToTargetRegister: 'unset',
     developerHongjinFlavorEnabled: false,
     developerMadKoreanOutputEnabled: false,
     developerMadKoreanTargetToUserRegister: 'source',
@@ -551,6 +552,9 @@ settings.developerTargetToUserRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.som
     : 'unset';
 settings.developerTargetToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === settings.developerTargetToOtherRegister)
     ? settings.developerTargetToOtherRegister
+    : 'unset';
+settings.developerUserToTargetRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === settings.developerUserToTargetRegister)
+    ? settings.developerUserToTargetRegister
     : 'unset';
 settings.developerHongjinFlavorEnabled = settings.developerHongjinFlavorEnabled === true;
 settings.developerMadKoreanOutputEnabled = settings.developerMadKoreanOutputEnabled === true;
@@ -1451,6 +1455,7 @@ function normalizedPromptPresetDeveloperSettings(value = null) {
         developerTargetToUserAddressFrequency: valid(DEVELOPER_USER_ADDRESS_FREQUENCY_OPTIONS, raw.developerTargetToUserAddressFrequency, DEFAULT_SETTINGS.developerTargetToUserAddressFrequency),
         developerTargetToUserRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToUserRegister, DEFAULT_SETTINGS.developerTargetToUserRegister),
         developerTargetToOtherRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToOtherRegister, DEFAULT_SETTINGS.developerTargetToOtherRegister),
+        developerUserToTargetRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerUserToTargetRegister, DEFAULT_SETTINGS.developerUserToTargetRegister),
 
         developerMadKoreanOutputEnabled: raw.developerMadKoreanOutputEnabled === true,
         developerMadKoreanTargetToUserRegister: valid(DEVELOPER_MAD_KOREAN_REGISTER_OPTIONS, raw.developerMadKoreanTargetToUserRegister, DEFAULT_SETTINGS.developerMadKoreanTargetToUserRegister),
@@ -1498,6 +1503,7 @@ function currentPromptPresetDeveloperSettingsSnapshot(source = settings) {
         developerTargetToUserAddressFrequency: source.developerTargetToUserAddressFrequency,
         developerTargetToUserRegister: source.developerTargetToUserRegister,
         developerTargetToOtherRegister: source.developerTargetToOtherRegister,
+        developerUserToTargetRegister: source.developerUserToTargetRegister,
 
         developerMadKoreanOutputEnabled: source.developerMadKoreanOutputEnabled,
         developerMadKoreanTargetToUserRegister: source.developerMadKoreanTargetToUserRegister,
@@ -2095,6 +2101,7 @@ function applyPromptPresetDeveloperSettings(value) {
     settings.developerTargetToUserAddressFrequency = next.developerTargetToUserAddressFrequency;
     settings.developerTargetToUserRegister = next.developerTargetToUserRegister;
     settings.developerTargetToOtherRegister = next.developerTargetToOtherRegister;
+    settings.developerUserToTargetRegister = next.developerUserToTargetRegister;
 
     settings.developerMadKoreanOutputEnabled = next.developerMadKoreanOutputEnabled;
     settings.developerMadKoreanTargetToUserRegister = next.developerMadKoreanTargetToUserRegister;
@@ -2229,6 +2236,7 @@ function applyPromptPresetTranslationSettings(value) {
     setControlValue('#verba-deep-developer-speech-distance', settings.developerSpeechDistance);
     setControlValue('#verba-deep-developer-target-user-register', settings.developerTargetToUserRegister);
     setControlValue('#verba-deep-developer-target-other-register', settings.developerTargetToOtherRegister);
+    setControlValue('#verba-deep-developer-user-target-register', settings.developerUserToTargetRegister);
     setControlValue('#verba-deep-developer-target-user-address', settings.developerTargetToUserAddress);
     setControlValue('#verba-deep-developer-target-user-address-strength', settings.developerTargetToUserAddressStrength);
     setControlValue('#verba-deep-developer-target-user-address-frequency', settings.developerTargetToUserAddressFrequency);
@@ -10936,19 +10944,24 @@ function generalRelationshipSettingsMarkup() {
                                 <section class="verba-deep-relationship-section">
                                     <div class="verba-deep-relationship-section-title">청자별 말투 분리</div>
 
-                                    <label for="verba-deep-developer-target-user-register">USER에게</label>
+                                    <label for="verba-deep-developer-target-user-register">캐릭터 → USER</label>
                                     <select id="verba-deep-developer-target-user-register" class="text_pole">
                                         ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerTargetToUserRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
                                     </select>
 
-                                    <label for="verba-deep-developer-target-other-register">타인에게</label>
+                                    <label for="verba-deep-developer-target-other-register">캐릭터 → 타인</label>
                                     <select id="verba-deep-developer-target-other-register" class="text_pole">
                                         ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerTargetToOtherRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
                                     </select>
 
+                                    <label for="verba-deep-developer-user-target-register">USER → 캐릭터</label>
+                                    <select id="verba-deep-developer-user-target-register" class="text_pole">
+                                        ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerUserToTargetRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
+                                    </select>
+
                                     <div class="verba-deep-help verba-deep-relationship-help">
                                         <span>미설정이면 기존 말투 거리감과 프롬프트를 따릅니다.</span>
-                                        <span>반말·존댓말은 캐릭터가 그 청자에게 말하는 것이 확실할 때만 적용합니다.</span>
+                                        <span>반말·존댓말은 선택한 화자와 청자의 직접 대화가 확실할 때만 적용합니다.</span>
                                         <span>청자가 애매하면 추측하지 않습니다.</span>
                                     </div>
                                 </section>
@@ -11492,6 +11505,7 @@ function injectSettingsPanel() {
     if (existingPanels.length) {
         const keep = existingPanels[0];
         existingPanels.slice(1).forEach(panel => panel.remove());
+        characterTranslationReference.refresh();
         return keep;
     }
 
@@ -12461,6 +12475,14 @@ function injectSettingsPanel() {
 
         if (target.id === 'verba-deep-developer-target-other-register' && target instanceof HTMLSelectElement) {
             settings.developerTargetToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === target.value)
+                ? target.value
+                : 'unset';
+            saveSettings();
+            return;
+        }
+
+        if (target.id === 'verba-deep-developer-user-target-register' && target instanceof HTMLSelectElement) {
+            settings.developerUserToTargetRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === target.value)
                 ? target.value
                 : 'unset';
             saveSettings();

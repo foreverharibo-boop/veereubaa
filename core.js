@@ -1,3 +1,4 @@
+import { effectiveMadUserRegister } from './user-character-register.js';
 import { translationContext } from './translation-context.js';
 import { withDeepseekKoreanPrompt } from './deepseek-korean.js';
 import { activeCustomOutput, promptRequestsScope, bilingualScopeRequested, maskRequestedBilingualSource, OUTPUT_FORMAT_POLICY, outputFormatReviewContext } from './output-format.js';
@@ -2530,8 +2531,8 @@ function madKoreanPairRegisterBlock(settings = {}, speakerIdentity = {}) {
     const targetToUser = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, settings?.developerMadKoreanTargetToUserRegister)
         ? settings.developerMadKoreanTargetToUserRegister
         : 'source';
-    const userToTarget = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, settings?.developerMadKoreanUserToTargetRegister)
-        ? settings.developerMadKoreanUserToTargetRegister
+    const userToTarget = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, effectiveMadUserRegister(settings))
+        ? effectiveMadUserRegister(settings)
         : 'source';
     const characterName = String(speakerIdentity.characterName || '').trim() || 'TARGET CHARACTER';
     const userName = String(speakerIdentity.userName || '').trim() || 'USER';
@@ -2598,7 +2599,7 @@ ${madKoreanEverydayExamples()}
 ${madKoreanTimeAndGroupRule(true)}
 ${madKoreanMetricUnitsRule()}
 - References: TARGET CHARACTER=${JSON.stringify(characterName)}; TARGET gender=${JSON.stringify(String(speakerIdentity.characterGender || 'unknown'))}; USER=${JSON.stringify(userName)}. Transliterate clear Latin-script human names into Hangul, excluding non-person terms; explicit name locks override transliteration. Never expand a short source name or repeat display names mechanically. PERSONAL PRONOUN DEFAULT: human he/him → 그, she/her → 그녀, his → 그의, possessive her → 그녀의, with grammatical particles. Prefer these when clear; never turn a source pronoun into 여자/남자/녀석 or another gender/age/size/role label for variety. Names clarify ambiguity, not replace pronouns mechanically. Omit a subject/possessive only when omission itself is clearly more natural in an immediately linked sentence; re-anchor with name/pronoun after actor changes or intervening description. Never rotate a known person through 여자/남자/녀석/상대/사람/사내/청년/작은 몸, guess an identity, split a name, or output particle-choice notation such as (이)는/이(가)/은(는).
-- Speech lock only for the named pair's direct conversation: TARGET→USER=${register(settings?.developerMadKoreanTargetToUserRegister)}; USER→TARGET=${register(settings?.developerMadKoreanUserToTargetRegister)}. JONDAETMAL normally uses conversational 해요체. Do not apply pair locks to NPC/quoted/ambiguous speech.
+- Speech lock only for the named pair's direct conversation: TARGET→USER=${register(settings?.developerMadKoreanTargetToUserRegister)}; USER→TARGET=${register(effectiveMadUserRegister(settings))}. JONDAETMAL normally uses conversational 해요체. Do not apply pair locks to NPC/quoted/ambiguous speech.
 - Preserve every source ellipsis sequence exactly in order and form: .../…/…… keep the same count and characters; invent none. Preserve stable terminology. Default only unstated cultural context to contemporary Korea; retain every explicit foreign location, institution, brand, garment, currency, historical/legal/fictional fact.
 - Translate visible natural language inside tags, including metadata/date/weekday/time/weather/location; preserve HTML/tag attributes, code/style/script, Markdown, macros, URLs, emoji, punctuation, numbers, layout, and protected tokens exactly. Return Korean-only valid JSON with every supplied id once.
 ${madKoreanTasteAddOn(settings, scope)}
@@ -2616,8 +2617,8 @@ function compactMadKoreanExclusiveRules(settings = {}, scope = 'mixed', nameToke
     const targetToUser = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, settings?.developerMadKoreanTargetToUserRegister)
         ? settings.developerMadKoreanTargetToUserRegister
         : 'source';
-    const userToTarget = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, settings?.developerMadKoreanUserToTargetRegister)
-        ? settings.developerMadKoreanUserToTargetRegister
+    const userToTarget = Object.hasOwn(MAD_KOREAN_REGISTER_LABELS, effectiveMadUserRegister(settings))
+        ? effectiveMadUserRegister(settings)
         : 'source';
     const registerRule = value => value === 'source'
         ? 'infer once from source/relationship context and keep consistent unless the source explicitly switches'
@@ -4133,7 +4134,7 @@ ${JSON.stringify(allSegments)}`;
 }
 
 export function buildScopedOutputPrompt(options) {
-    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'output', current => (translationContext(current, options.speakerIdentity) + '\n\n' + buildScopedOutputPromptInternal({ ...options, settings: current })).replace('\nTRANSLATION TARGETS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nTRANSLATION TARGETS\n')), options.settings || {});
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'output', current => (translationContext(current, options.speakerIdentity, options.scope || 'narration') + '\n\n' + buildScopedOutputPromptInternal({ ...options, settings: current })).replace('\nTRANSLATION TARGETS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nTRANSLATION TARGETS\n')), options.settings || {});
 }
 
 function buildScopedOutputPromptInternal({
@@ -5314,7 +5315,7 @@ function selectionTouchesTaggedContent(value, start, end) {
 }
 
 export function buildSelectionPrompt(options) {
-    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => translationContext(current, options.speakerIdentity) + '\n\n' + buildSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => translationContext(current, options.speakerIdentity, selectionTouchesDialogue(options.translation, options.start, options.end) ? 'dialogue_mixed' : 'narration') + '\n\n' + buildSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
 }
 
 function buildSelectionPromptInternal({
@@ -5450,7 +5451,7 @@ ${JSON.stringify(right)}`;
 }
 
 export function buildMultiSelectionPrompt(options) {
-    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => translationContext(current, options.speakerIdentity) + '\n\n' + buildMultiSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => translationContext(current, options.speakerIdentity, (options.selections || []).some(row => selectionTouchesDialogue(options.translation, row.start, row.end)) ? 'mixed' : 'narration') + '\n\n' + buildMultiSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
 }
 
 function buildMultiSelectionPromptInternal({
