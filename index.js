@@ -10,7 +10,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.77';
+import { createServerClient } from './server-client.js?v=0.6.78';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -75,9 +75,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.77';
+const EXTENSION_VERSION = '0.6.78';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.77';
+const SERVER_ENGINE_VERSION = '0.6.78';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -393,6 +393,7 @@ const DEFAULT_SETTINGS = {
     developerTargetToUserRegister: 'unset',
     developerTargetToOtherRegister: 'unset',
     developerUserToTargetRegister: 'unset',
+    developerUserToOtherRegister: 'unset',
     developerHongjinFlavorEnabled: false,
     developerMadKoreanOutputEnabled: false,
     developerMadKoreanTargetToUserRegister: 'source',
@@ -555,6 +556,9 @@ settings.developerTargetToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.so
     : 'unset';
 settings.developerUserToTargetRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === settings.developerUserToTargetRegister)
     ? settings.developerUserToTargetRegister
+    : 'unset';
+settings.developerUserToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === settings.developerUserToOtherRegister)
+    ? settings.developerUserToOtherRegister
     : 'unset';
 settings.developerHongjinFlavorEnabled = settings.developerHongjinFlavorEnabled === true;
 settings.developerMadKoreanOutputEnabled = settings.developerMadKoreanOutputEnabled === true;
@@ -1456,6 +1460,7 @@ function normalizedPromptPresetDeveloperSettings(value = null) {
         developerTargetToUserRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToUserRegister, DEFAULT_SETTINGS.developerTargetToUserRegister),
         developerTargetToOtherRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerTargetToOtherRegister, DEFAULT_SETTINGS.developerTargetToOtherRegister),
         developerUserToTargetRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerUserToTargetRegister, DEFAULT_SETTINGS.developerUserToTargetRegister),
+        developerUserToOtherRegister: valid(DEVELOPER_AUDIENCE_REGISTER_OPTIONS, raw.developerUserToOtherRegister, DEFAULT_SETTINGS.developerUserToOtherRegister),
 
         developerMadKoreanOutputEnabled: raw.developerMadKoreanOutputEnabled === true,
         developerMadKoreanTargetToUserRegister: valid(DEVELOPER_MAD_KOREAN_REGISTER_OPTIONS, raw.developerMadKoreanTargetToUserRegister, DEFAULT_SETTINGS.developerMadKoreanTargetToUserRegister),
@@ -1504,6 +1509,7 @@ function currentPromptPresetDeveloperSettingsSnapshot(source = settings) {
         developerTargetToUserRegister: source.developerTargetToUserRegister,
         developerTargetToOtherRegister: source.developerTargetToOtherRegister,
         developerUserToTargetRegister: source.developerUserToTargetRegister,
+        developerUserToOtherRegister: source.developerUserToOtherRegister,
 
         developerMadKoreanOutputEnabled: source.developerMadKoreanOutputEnabled,
         developerMadKoreanTargetToUserRegister: source.developerMadKoreanTargetToUserRegister,
@@ -2102,6 +2108,7 @@ function applyPromptPresetDeveloperSettings(value) {
     settings.developerTargetToUserRegister = next.developerTargetToUserRegister;
     settings.developerTargetToOtherRegister = next.developerTargetToOtherRegister;
     settings.developerUserToTargetRegister = next.developerUserToTargetRegister;
+    settings.developerUserToOtherRegister = next.developerUserToOtherRegister;
 
     settings.developerMadKoreanOutputEnabled = next.developerMadKoreanOutputEnabled;
     settings.developerMadKoreanTargetToUserRegister = next.developerMadKoreanTargetToUserRegister;
@@ -2237,6 +2244,7 @@ function applyPromptPresetTranslationSettings(value) {
     setControlValue('#verba-deep-developer-target-user-register', settings.developerTargetToUserRegister);
     setControlValue('#verba-deep-developer-target-other-register', settings.developerTargetToOtherRegister);
     setControlValue('#verba-deep-developer-user-target-register', settings.developerUserToTargetRegister);
+    setControlValue('#verba-deep-developer-user-other-register', settings.developerUserToOtherRegister);
     setControlValue('#verba-deep-developer-target-user-address', settings.developerTargetToUserAddress);
     setControlValue('#verba-deep-developer-target-user-address-strength', settings.developerTargetToUserAddressStrength);
     setControlValue('#verba-deep-developer-target-user-address-frequency', settings.developerTargetToUserAddressFrequency);
@@ -10959,6 +10967,11 @@ function generalRelationshipSettingsMarkup() {
                                         ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerUserToTargetRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
                                     </select>
 
+                                    <label for="verba-deep-developer-user-other-register">USER → 타인(NPC)</label>
+                                    <select id="verba-deep-developer-user-other-register" class="text_pole">
+                                        ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerUserToOtherRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
+                                    </select>
+
                                     <div class="verba-deep-help verba-deep-relationship-help">
                                         <span>미설정이면 기존 말투 거리감과 프롬프트를 따릅니다.</span>
                                         <span>반말·존댓말은 선택한 화자와 청자의 직접 대화가 확실할 때만 적용합니다.</span>
@@ -12483,6 +12496,14 @@ function injectSettingsPanel() {
 
         if (target.id === 'verba-deep-developer-user-target-register' && target instanceof HTMLSelectElement) {
             settings.developerUserToTargetRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === target.value)
+                ? target.value
+                : 'unset';
+            saveSettings();
+            return;
+        }
+
+        if (target.id === 'verba-deep-developer-user-other-register' && target instanceof HTMLSelectElement) {
+            settings.developerUserToOtherRegister = DEVELOPER_AUDIENCE_REGISTER_OPTIONS.some(option => option.value === target.value)
                 ? target.value
                 : 'unset';
             saveSettings();
