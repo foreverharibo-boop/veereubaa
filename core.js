@@ -1,3 +1,4 @@
+import { withDeepseekKoreanPrompt } from './deepseek-korean.js';
 import { activeCustomOutput, promptRequestsScope, bilingualScopeRequested, maskRequestedBilingualSource, OUTPUT_FORMAT_POLICY, outputFormatReviewContext } from './output-format.js';
 import { replaceProtectedSource, codeAwareRegions, escapeCodeTranslation } from './code-content.js';
 import { bilingualPromptRequestsOutput } from './bilingual-intent.js';
@@ -4071,7 +4072,7 @@ ${JSON.stringify(allSegments)}`;
 }
 
 export function buildScopedOutputPrompt(options) {
-    return withTranslationComposition(options.settings || {}, 'output', current => buildScopedOutputPromptInternal({ ...options, settings: current }).replace('\nTRANSLATION TARGETS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nTRANSLATION TARGETS\n'));
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'output', current => buildScopedOutputPromptInternal({ ...options, settings: current }).replace('\nTRANSLATION TARGETS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nTRANSLATION TARGETS\n')), options.settings || {});
 }
 
 function buildScopedOutputPromptInternal({
@@ -4377,7 +4378,7 @@ ${bannedWords.length ? bannedWords.join(', ') : '(없음)'}`;
 }
 
 export function buildOutputPrompt(segmented, settings = {}, ...rest) {
-    return withTranslationComposition(settings, 'output', current => buildOutputPromptInternal(segmented, current, ...rest).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n'));
+    return withDeepseekKoreanPrompt(withTranslationComposition(settings, 'output', current => buildOutputPromptInternal(segmented, current, ...rest).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n')), settings);
 }
 
 function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}) {
@@ -5255,7 +5256,7 @@ function selectionTouchesTaggedContent(value, start, end) {
 }
 
 export function buildSelectionPrompt(options) {
-    return withTranslationComposition(options.settings || {}, 'selection', current => buildSelectionPromptInternal({ ...options, settings: current }));
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => buildSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
 }
 
 function buildSelectionPromptInternal({
@@ -5391,7 +5392,7 @@ ${JSON.stringify(right)}`;
 }
 
 export function buildMultiSelectionPrompt(options) {
-    return withTranslationComposition(options.settings || {}, 'selection', current => buildMultiSelectionPromptInternal({ ...options, settings: current }));
+    return withDeepseekKoreanPrompt(withTranslationComposition(options.settings || {}, 'selection', current => buildMultiSelectionPromptInternal({ ...options, settings: current })), options.settings || {});
 }
 
 function buildMultiSelectionPromptInternal({

@@ -1,3 +1,4 @@
+import { deepseekKoreanEnabled } from './deepseek-korean.js';
 import { enforceMadKoreanOnly } from './mad-output.js';
 import { createOutputComparison } from './output-comparison.js';
 import { withTranslationComposition, translationProse } from './translation-composer.js';
@@ -11,7 +12,7 @@ import { assembleTranslation, findProtectedTokenIntegrityProblems, findUntransla
 export const POST_TRANSLATION_AI_REPAIR_ENABLED = false;
 
 export function minimalOutputEnabled(settings = {}) {
-    return settings.developerMode === true && settings.developerMinimalPromptEnabled === true;
+    return !deepseekKoreanEnabled(settings) && settings.developerMode === true && settings.developerMinimalPromptEnabled === true;
 }
 
 export function buildMinimalOutputPrompt(segments, settings = {}, ...rest) {

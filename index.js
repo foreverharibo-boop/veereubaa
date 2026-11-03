@@ -1,3 +1,4 @@
+import { deepseekKoreanEnabled, DEEPSEEK_KOREAN_PROMPT } from './deepseek-korean.js';
 import { enforceMadKoreanOnly } from './mad-output.js';
 import { bilingualSettingsDiagnostic, outputBinding } from './bilingual-diagnostics.js';
 import { POST_REVIEW_CHECKS, normalizePostReview, postReviewSettingsMarkup, reviewOutputOnce } from './post-review.js';
@@ -7,7 +8,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.62';
+import { createServerClient } from './server-client.js?v=0.6.63';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -72,9 +73,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.62';
-// This client-only fix uses the existing server translation engine unchanged.
-const SERVER_ENGINE_VERSION = '0.6.62';
+const EXTENSION_VERSION = '0.6.63';
+// Keep this in sync with the shared server manifest for the verba-deep engine.
+const SERVER_ENGINE_VERSION = '0.6.63';
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 globalThis.veereubaaToastTest = createNoticePreview({ prefix: EXTENSION_KEY, title: '베에르으바아' });
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -368,6 +369,7 @@ const DEFAULT_SETTINGS = {
     developerAccessFingerprint: '',
     developerOutputSplitCount: 1,
     developerMinimalPromptEnabled: false,
+    developerDeepseekKoreanEnabled: false,
     developerMinimalPrompt: '자연스럽게 한국어로 번역하라.',
     developerCompressedPromptEnabled: false,
     developerExtremeCompressedPromptEnabled: false,
@@ -524,6 +526,7 @@ if (
 settings.developerCompressedPromptEnabled = settings.developerCompressedPromptEnabled === true;
 settings.developerOutputSplitCount = [2, 3].includes(Number(settings.developerOutputSplitCount)) ? Number(settings.developerOutputSplitCount) : 1;
 settings.developerMinimalPromptEnabled = settings.developerMinimalPromptEnabled === true;
+settings.developerDeepseekKoreanEnabled = settings.developerDeepseekKoreanEnabled === true;
 settings.developerMinimalPrompt = typeof settings.developerMinimalPrompt === 'string' ? settings.developerMinimalPrompt : DEFAULT_SETTINGS.developerMinimalPrompt;
 settings.developerExtremeCompressedPromptEnabled = settings.developerExtremeCompressedPromptEnabled === true;
 if (settings.developerExtremeCompressedPromptEnabled) settings.developerCompressedPromptEnabled = false;
@@ -1408,6 +1411,7 @@ function normalizedPromptPresetDeveloperSettings(value = null) {
     return {
         developerOutputSplitCount: [2, 3].includes(Number(raw.developerOutputSplitCount)) ? Number(raw.developerOutputSplitCount) : 1,
         developerMinimalPromptEnabled: raw.developerMinimalPromptEnabled === true,
+        developerDeepseekKoreanEnabled: raw.developerDeepseekKoreanEnabled === true,
         developerMinimalPrompt: typeof raw.developerMinimalPrompt === 'string' ? raw.developerMinimalPrompt : DEFAULT_SETTINGS.developerMinimalPrompt,
         developerCompressedPromptEnabled: raw.developerCompressedPromptEnabled === true && !extremeCompressed,
         developerExtremeCompressedPromptEnabled: extremeCompressed,
@@ -1454,6 +1458,7 @@ function currentPromptPresetDeveloperSettingsSnapshot(source = settings) {
     return normalizedPromptPresetDeveloperSettings({
         developerOutputSplitCount: source.developerOutputSplitCount,
         developerMinimalPromptEnabled: source.developerMinimalPromptEnabled,
+        developerDeepseekKoreanEnabled: source.developerDeepseekKoreanEnabled,
         developerMinimalPrompt: source.developerMinimalPrompt,
         developerCompressedPromptEnabled: source.developerCompressedPromptEnabled,
         developerExtremeCompressedPromptEnabled: source.developerExtremeCompressedPromptEnabled,
@@ -2049,6 +2054,7 @@ function applyPromptPresetDeveloperSettings(value) {
 
     settings.developerOutputSplitCount = next.developerOutputSplitCount;
     settings.developerMinimalPromptEnabled = next.developerMinimalPromptEnabled;
+    settings.developerDeepseekKoreanEnabled = next.developerDeepseekKoreanEnabled;
     settings.developerMinimalPrompt = next.developerMinimalPrompt;
     settings.aiPostReview = normalizePostReview(next.aiPostReview);
     settings.qualityAuditEnabled = next.qualityAuditEnabled;
@@ -2504,6 +2510,11 @@ function renderCurrentAppliedRules() {
     host.innerHTML = `
         <div class="verba-deep-current-rules-note">현재 아웃풋 E→K 번역에 적용되는 사용자 규칙을 정리해서 보여줍니다. 인풋 K→E 자동번역 규칙은 포함하지 않으며 API 호출도 하지 않습니다.</div>
 
+        ${deepseekKoreanEnabled(settings) ? currentRulesSimpleCard('딥식 번역 지침 · 일반 설정 함께 적용', [
+            ['기본 지침', DEEPSEEK_KOREAN_PROMPT],
+            ['함께 적용', '일반 긴르바의 활성 프롬프트·맛·미세조정·금지어·일회성 요구사항·AI 후검수'],
+            ['우선순위', '기존 적용 범위와 우선순위 유지 · 미친 한출/갈봬의 한국어 전용 규칙도 유지'],
+        ]) : ''}
         <div class="verba-deep-current-rule-grid">
             ${currentRulesPromptSlotMarkup('전체 번역 전역 프롬프트', settings.globalPrompt, settings.globalPromptEnabled !== false)}
             ${currentRulesPromptSlotMarkup('모든 대사 공통 프롬프트', settings.allDialoguePrompt, settings.allDialoguePromptEnabled !== false)}
@@ -6240,7 +6251,7 @@ async function translateMessage(messageId, options = {}) {
     const outputJobSlot = activeProfileSlot();
     const timing = outputTiming.begin({
         retranslation: options.force === true, slot: outputJobSlot, splitCount: outputSplitCount(settings),
-        mode: minimalOutputEnabled(settings) ? '최소 프롬프트'
+        mode: deepseekKoreanEnabled(settings) ? '딥식플한출' : minimalOutputEnabled(settings) ? '최소 프롬프트'
             : settings.developerMode && settings.developerExtremeCompressedPromptEnabled ? '미친압축'
             : settings.developerMode && settings.developerCompressedPromptEnabled ? '압축' : '일반',
     });
@@ -10982,6 +10993,19 @@ function developerSettingsMarkup() {
             <div class="verba-deep-tool-details-content">
                 ${settings.developerMode ? `
                     <div class="verba-deep-developer-enabled-note">개발자 모드가 활성화되어 있어요.</div>
+                    <details id="verba-deep-developer-deepseek-korean-lab" class="verba-deep-tool-details verba-deep-developer-lab">
+                        <summary>딥식플한출 <small>영미권 문체 번역 실험</small></summary>
+                        <div class="verba-deep-tool-details-content">
+                            <label class="verba-deep-check-row">
+                                <input type="checkbox" id="verba-deep-developer-deepseek-korean-enabled" ${settings.developerDeepseekKoreanEnabled ? 'checked' : ''}>
+                                <span>딥식플한출 사용</span>
+                            </label>
+                            <div class="verba-deep-help">한국어 출력·전체/선택 재번역에 전용 영어 번역 지침을 추가하고, 일반 긴르바에서 켜둔 프롬프트·영캐/한캐의 맛·관계와 현지화·말투·커스텀 지침·금지어·일회성 요구사항을 기존 적용 범위대로 함께 사용합니다. 프롬프트 우선순위와 미친 한출/갈봬의 전용 규칙은 그대로 유지됩니다. 선택한 AI 후검수도 일반 번역과 동일하게 적용합니다.</div>
+                            <div class="verba-deep-help">최소 프롬프트 실험이 함께 켜져 있어도 이 모드에서는 일반 번역 경로를 사용합니다. 원문·문맥·이름 고정·JSON·보호 요소 규칙도 유지합니다. AI 연결 프로필에서 테스트할 모델을 직접 선택해 주세요. 모델은 자동 변경되지 않으며 무료 구글 번역에는 적용되지 않습니다.</div>
+                            <div class="verba-deep-help">끄면 저장된 기존 설정으로 돌아갑니다. 한국어→영어 인풋 번역은 기존 설정을 사용합니다. 서버 번역 사용자는 베르바 서버 플러그인도 업데이트해 주세요.</div>
+                            <details><summary>영어 번역 프롬프트 보기</summary><pre class="verba-deep-help" style="white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(DEEPSEEK_KOREAN_PROMPT)}</pre></details>
+                        </div>
+                    </details>
                     ${developerChuseokGalbwaeMarkup()}
                     <details id="verba-deep-developer-minimal-prompt-lab" class="verba-deep-tool-details verba-deep-developer-lab">
                         <summary>🧪 최소 프롬프트 실험 <small>출력·전체 재번역</small></summary>
@@ -12197,6 +12221,7 @@ function injectSettingsPanel() {
         if (target.closest('#verba-deep-developer-mode-off')) {
             settings.developerMode = false;
             settings.developerMinimalPromptEnabled = false;
+            settings.developerDeepseekKoreanEnabled = false;
             settings.developerCompressedPromptEnabled = false;
             settings.developerExtremeCompressedPromptEnabled = false;
             settings.qualityAuditEnabled = false;
@@ -12247,6 +12272,13 @@ function injectSettingsPanel() {
 
         if (target.id === 'verba-deep-developer-output-split-count' && target instanceof HTMLSelectElement) {
             settings.developerOutputSplitCount = [2, 3].includes(Number(target.value)) ? Number(target.value) : 1;
+            saveSettings();
+            if (document.querySelector('#verba-deep-current-rules')?.open) renderCurrentAppliedRules();
+            return;
+        }
+
+        if (target.id === 'verba-deep-developer-deepseek-korean-enabled' && target instanceof HTMLInputElement) {
+            settings.developerDeepseekKoreanEnabled = target.checked;
             saveSettings();
             if (document.querySelector('#verba-deep-current-rules')?.open) renderCurrentAppliedRules();
             return;
