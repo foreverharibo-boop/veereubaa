@@ -1,6 +1,12 @@
+import { customTranslationInstruction } from './translation-composer.js';
+
 // Verba-only base guidance composed through the regular output/selection policy.
 export function deepseekKoreanEnabled(settings = {}) {
-    return settings.developerMode === true && settings.developerDeepseekKoreanEnabled === true;
+    return settings.developerDeepseekKoreanEnabled === true;
+}
+
+export function deepseekKoreanPrompt(settings = {}) {
+    return customTranslationInstruction(settings, 'deepseek') ?? DEEPSEEK_KOREAN_PROMPT;
 }
 
 export const DEEPSEEK_KOREAN_PROMPT = `HIGHEST-PRIORITY TRANSLATION PRINCIPLE: Thoroughly eliminate translationese from the Korean translation while accurately preserving the source's meaning and scene. Do not allow awkward expressions caused by mechanically copying English word order, sentence structures, or word combinations. First understand the action, state, and speech intent conveyed by each sentence, then reconstruct it in natural Korean as if the fiction had originally been written in Korean. However, never delete source information or imagery, weaken or intensify the language, or add new meaning for the sake of fluency. This principle governs Korean expression; preserve the specified bilingual format and output structure.
@@ -153,7 +159,7 @@ Before output, read the Korean translation on its own and revise English-shaped 
 // Preserve the complete ordinary long-form request beneath the shared baseline.
 export function withDeepseekKoreanPrompt(prompt, settings = {}) {
     if (!deepseekKoreanEnabled(settings)) return prompt;
-    return [DEEPSEEK_KOREAN_PROMPT, 'ACTIVE SETTINGS PRECEDENCE: The preceding text is baseline translation guidance. Apply the same active user prompts, custom translation instructions, tastes, localization, register, one-time instructions, protected structure and output format as an ordinary Verba request below. Explicit active style/format settings override conflicting baseline wording only within their authorized scopes; preserve the ordinary priority and exclusive-mode rules. Never broaden a speaker or bilingual scope. MAD or GALBWAE exclusive Korean-only rules override the baseline bilingual exception. Do not invent factual content.', prompt].join('\n');
+    return [deepseekKoreanPrompt(settings), 'ACTIVE SETTINGS PRECEDENCE: The preceding text is baseline translation guidance. Apply the same active user prompts, custom translation instructions, tastes, localization, register, one-time instructions, protected structure and output format as an ordinary Verba request below. Explicit active style/format settings override conflicting baseline wording only within their authorized scopes; preserve the ordinary priority and exclusive-mode rules. Never broaden a speaker or bilingual scope. MAD or GALBWAE exclusive Korean-only rules override the baseline bilingual exception. Do not invent factual content.', prompt].join('\n');
 }
 
 // Selected through the existing unified output post-review checklist.

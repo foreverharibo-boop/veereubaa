@@ -1,3 +1,4 @@
+import { DEEPSEEK_KOREAN_PROMPT } from './deepseek-korean.js';
 import { collectTranslationProse } from './translation-composer.js';
 import {
     buildBannedRepairPrompt,
@@ -178,6 +179,7 @@ export function buildDefaultCustomTranslatorTemplates(ruleOrder = []) {
     const hongjin = collectTranslationProse({ ...baseSettings, developerHongjinFlavorEnabled: true }, 'hongjin', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null));
 
     return {
+        deepseek: DEEPSEEK_KOREAN_PROMPT,
         output: collectTranslationProse(baseSettings, 'output', current => buildOutputPrompt(segmented, current, '', speakerIdentity, null)),
         input: collectTranslationProse(baseSettings, 'input', current => buildInputPrompt('{{KOREAN_INPUT}}', current, 'unknown', speakerIdentity)),
         selection: collectTranslationProse(baseSettings, 'selection', current => buildSelectionPrompt({

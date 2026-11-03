@@ -28,9 +28,9 @@ const builders=s=>[
 test('developer gate and precedence over minimal mode do not alter saved settings',()=>{
  for(const developerMode of [false,true])for(const enabled of [false,true]){
   const s={...settings,developerMode,developerDeepseekKoreanEnabled:enabled},before=structuredClone(s);
-  assert.equal(deepseekKoreanEnabled(s),developerMode&&enabled);
+  assert.equal(deepseekKoreanEnabled(s),enabled);
   assert.equal(minimalOutputEnabled(s),developerMode&&!enabled);
-  assert.equal(buildOutputPrompt(segmented,s).includes(DEEPSEEK_KOREAN_PROMPT),developerMode&&enabled);
+  assert.equal(buildOutputPrompt(segmented,s).includes(DEEPSEEK_KOREAN_PROMPT),enabled);
   assert.deepEqual(s,before);
  }
 });
@@ -66,24 +66,17 @@ const index=fs.readFileSync(new URL('../index.js',import.meta.url),'utf8');
 const between=(a,b)=>{const start=index.indexOf(a),end=index.indexOf(b,start);assert.ok(start>=0&&end>start,a);return index.slice(start,end);};
 const defs=between('const RELATION_TEMPERATURE_OPTIONS','const baseContext =');
 const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-test('real developer UI hides the toggle while locked and displays escaped prompt when unlocked',()=>{
- const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup','DEEPSEEK_KOREAN_PROMPT','normalizePostReview','postReviewSettingsMarkup',defs+'\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
- const options={...settings,developerMinimalPrompt:'minimal'};
- const html=markup(options,escapeHtml,()=>'', '',()=>'',DEEPSEEK_KOREAN_PROMPT,normalizePostReview,postReviewSettingsMarkup);
- assert.match(html,/id="verba-deep-developer-deepseek-korean-enabled" checked/);
- assert.ok(html.includes(escapeHtml(DEEPSEEK_KOREAN_PROMPT)));
- assert.doesNotMatch(markup({...options,developerMode:false},escapeHtml,()=>'', '',()=>'',DEEPSEEK_KOREAN_PROMPT,normalizePostReview,postReviewSettingsMarkup),/id="verba-deep-developer-deepseek-korean-enabled"/);
-});
-test('real toggle persists only its setting; developer shutdown turns it off',()=>{
- class Input{};let saves=0,refreshes=0;const s=structuredClone(settings);
- const change=Function('target','settings','HTMLInputElement','saveSettings','document','renderCurrentAppliedRules',between("        if (target.id === 'verba-deep-developer-deepseek-korean-enabled'","        if (target.id === 'verba-deep-developer-minimal-prompt-enabled'"));
+test('promoted toggle is visible without developer mode and persists independently',()=>{
+ const markup=Function('settings',between('function deepseekSettingsMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn deepseekSettingsMarkup();');
+ assert.match(markup({...settings,developerMode:false}),/id="verba-deep-deepseek-enabled" checked/);
+ assert.doesNotMatch(markup({...settings,developerMode:false}),/영어 번역 프롬프트 보기|verba-deep-help|개발자/);
+ class Input{};let saves=0,refreshes=0;const s={...settings,developerMode:false};
+ const change=Function('target','settings','HTMLInputElement','saveSettings','document','renderCurrentAppliedRules',between("        if (target.id === 'verba-deep-deepseek-enabled'","        if (target.id === 'verba-deep-beginner-character-enabled'"));
  for(const checked of [false,true]){
-  change(Object.assign(new Input(),{id:'verba-deep-developer-deepseek-korean-enabled',checked}),s,Input,()=>saves++,{querySelector:()=>({open:true})},()=>refreshes++);
-  assert.deepEqual(s,{...settings,developerDeepseekKoreanEnabled:checked});
+  change(Object.assign(new Input(),{id:'verba-deep-deepseek-enabled',checked}),s,Input,()=>saves++,{querySelector:()=>({open:true})},()=>refreshes++);
+  assert.deepEqual(s,{...settings,developerMode:false,developerDeepseekKoreanEnabled:checked});
  }
  assert.equal(saves,2);assert.equal(refreshes,2);
- const disable=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
- Function('settings',disable)(s);assert.equal(s.developerMode,false);assert.equal(s.developerDeepseekKoreanEnabled,false);assert.equal(s.globalPrompt,settings.globalPrompt);
 });
 test('developer preset snapshot, normalize and restore keep the toggle',()=>{
  const factory=Function('normalizeBaseTranslationCustom','normalizePostReview',defs+'\n'+between('function normalizedPromptPresetDeveloperSettings(', 'function normalizedPromptPresetTranslationSettings(')+'\nconst settings=structuredClone(DEFAULT_SETTINGS);\n'+between('function applyPromptPresetDeveloperSettings(', 'function applyPromptPresetTranslationSettings(')+'\nreturn {settings,snapshot:currentPromptPresetDeveloperSettingsSnapshot,normalize:normalizedPromptPresetDeveloperSettings,apply:applyPromptPresetDeveloperSettings};');

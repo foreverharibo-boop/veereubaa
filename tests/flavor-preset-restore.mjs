@@ -1,3 +1,5 @@
+import { normalizePostReview, postReviewSettingsMarkup } from '../post-review.js';
+const Function = (...args) => globalThis.Function('normalizePostReview', 'postReviewSettingsMarkup', ...args).bind(null, normalizePostReview, postReviewSettingsMarkup);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { normalizeBaseTranslationCustom } from '../base-editor.js';
@@ -43,7 +45,7 @@ const code = between('const RELATION_TEMPERATURE_OPTIONS','const baseContext =')
  + between('function normalizedPromptPresetName(', 'function normalizedPromptPresets(')
  + between('function normalizeTranslationRuleOrder(', 'function renderTranslationRuleOrder(')
  + between('function setCheckedValue(', 'function defaultPromptPresetTranslationSettingsSnapshot(')
- + between('function syncDeveloperQualityControls(', 'function refreshSettingsPanelForDeveloperMode(')
+ + between('function syncDeveloperQualityControls(', 'function enabledQualityAuditChecks(')
  + between('function setPromptFieldsFromPreset(', 'function optionLabel(')
  + '\nreturn {settings, save:currentPromptPresetSaveSnapshot, apply:setPromptFieldsFromPreset};';
 const api=Function('normalizeBaseTranslationCustom','document','HTMLInputElement','HTMLSelectElement','HTMLTextAreaElement','renderTranslationRuleOrder','refreshSettingsPanelForDeveloperMode','renderCurrentAppliedRules','syncPromptSlotUi','saveSettings','renderPromptConflictInspector',code)(normalizeBaseTranslationCustom,document,Input,Select,Textarea,noop,noop,noop,noop,noop,noop);

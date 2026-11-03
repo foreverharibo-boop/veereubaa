@@ -2021,7 +2021,7 @@
 }
 
 .verba-deep-developer-lab {
-    border-style: dashed !important;
+    border-style: solid !important;
 }
 
 #verba-deep-settings #verba-deep-developer-output-split-lab,
@@ -2180,7 +2180,7 @@
 
 .verba-deep-developer-lab {
     margin: 6px 0 10px !important;
-    border-style: dashed !important;
+    border-style: solid !important;
 }
 
 @media (max-width: 600px) {
@@ -3482,4 +3482,8 @@
     white-space: nowrap;
     word-break: keep-all;
     writing-mode: horizontal-tb;
+}
+
+.verba-deep-deepseek-settings {
+    border-style: solid !important;
 }

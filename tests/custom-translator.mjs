@@ -102,7 +102,7 @@ assert.equal(outgoing(input,{stage:'input-translation'}),input);
 assert.match(outgoing('LIVE_REPAIR_CONTEXT',{stage:'protected-token-repair'}),/My saved repair preference\.[\s\S]*LIVE_REPAIR_CONTEXT/);
 
 const ui=index.slice(index.indexOf('function customTranslatorSettingsMarkup('),index.indexOf('function syncCustomTranslatorControls('));
-assert.match(ui,/new Set\(\['output', 'input', 'selection', 'mad', 'hongjin'\]\)/);
+assert.match(ui,/new Set\(\['output', 'input', 'selection', 'mad', 'hongjin', 'deepseek'\]\)/);
 assert.doesNotMatch(ui,/advancedFields|고급 내부 항목|custom-translator-advanced/);
 assert.match(ui,/기존 영어 번역 지침 원문/);
 assert.match(ui,/그 부분만 교체/);
@@ -145,7 +145,7 @@ const defs=Function(index.slice(defsStart,defsEnd)+';return CUSTOM_TRANSLATOR_PR
 const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const uiStart=index.indexOf('function customTranslatorInstructionPlaceholder('),uiEnd=index.indexOf('function syncCustomTranslatorControls(',uiStart);
 const html=Function('settings','CUSTOM_TRANSLATOR_PROMPT_DEFINITIONS','escapeHtml',index.slice(uiStart,uiEnd)+';return customTranslatorSettingsMarkup();')(settings,defs,escapeHtml);
-assert.equal((html.match(/data-verba-deep-custom-translator-key=/g)||[]).length,5);
+assert.equal((html.match(/data-verba-deep-custom-translator-key=/g)||[]).length,6);
 for(const key of ['flavor','name','repair','quality','consistency','other']) assert.ok(!html.includes(`data-verba-deep-custom-translator-key="${key}"`));
 console.log('PASS: exact one-time taste migration, independent reset/reload, compression modes, speaker scopes and five rendered fields.');
 

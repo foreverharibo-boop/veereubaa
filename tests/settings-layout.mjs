@@ -1,3 +1,5 @@
+import { normalizePostReview, postReviewSettingsMarkup } from '../post-review.js';
+const Function = (...args) => globalThis.Function('normalizePostReview', 'postReviewSettingsMarkup', ...args).bind(null, normalizePostReview, postReviewSettingsMarkup);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { POST_TRANSLATION_AI_REPAIR_ENABLED } from '../minimal-output.js';
@@ -15,6 +17,7 @@ const render=Function('dev','escapeHtml','normalizedServerRetryLimit','POST_TRAN
     const EXTENSION_VERSION='0.6.24',lastQualityAuditSummary='',lastDebugDiagnostic=null;
     const outputTiming={latest:()=>null},outputTimingText=()=>'',normalizedPromptPresets=()=>[],normalizedPromptPresetBackups=()=>[],promptPresetSelectMarkup=()=>'',baseTranslationEditorMarkup=()=>'';
     const sourceChangeTracer={diagnostics:()=>({fullTextEnabled:false})};
+    const displayStateTrace={diagnostics:()=>({})};
     const executionTrace={diagnostics:()=>({})};
     const normalizedProfileRaceTimeoutMinutes=()=>5,normalizedProfileRaceStaggerSeconds=()=>35,normalizedProfileFailureTimeoutSeconds=()=>120,normalizedProfileFailureTimeoutMinutes=()=>2;
 `+between('function serverTranslationSettingsMarkup(', 'function bindServerTranslationSetting(')
@@ -27,7 +30,8 @@ const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;')
 const panels=[false,true].map(dev=>render(dev,escapeHtml,normalizedServerRetryLimit,POST_TRANSLATION_AI_REPAIR_ENABLED));
 for(const html of panels){
     assert.match(html, /id="verba-deep-server-settings"/);
-    assert.ok(html.indexOf('id="verba-deep-server-settings"') < html.indexOf('id="verba-deep-developer-settings"'));
+    assert.ok(html.indexOf('id="verba-deep-server-settings"') < html.indexOf('id="verba-deep-deepseek-settings"'));
+    assert.doesNotMatch(html, /id="verba-deep-developer-settings"/);
     assert.match(html, /data-verba-deep-visibility-key="serverTranslation"/);
     assert.doesNotMatch(html, /id="verba-deep-server-translation" checked/);
     assert.doesNotMatch(html, /id="verba-deep-server-settings"[^>]* open/);
@@ -40,13 +44,13 @@ for(const html of panels){
     assert.doesNotMatch(html,/<small>v\$?\{?EXTENSION_VERSION|<small>v0\.5\./);
     assert.match(html,/id="verba-deep-prompt-conflict-settings"[\s\S]*?<\/details>\s*<details id="verba-deep-developer-output-split-lab"/);
     assert.match(html,/id="verba-deep-expression-detail"[\s\S]*?<\/details>\s*<details id="verba-deep-developer-relationship-lab"/);
+    assert.match(html,/id="verba-deep-developer-relationship-lab"[\s\S]*?<\/details>\s*<details id="verba-deep-deepseek-settings"/);
     const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
     assert.equal(new Set(ids).size,ids.length,'No duplicated IDs in complete settings markup');
     assert.equal(ids.filter(x=>x==='verba-deep-developer-output-split-lab').length,1);
     assert.equal(ids.filter(x=>x==='verba-deep-developer-relationship-lab').length,1);
 }
 assert.doesNotMatch(panels[0],/id="verba-deep-chuseok-galbwae-(?:all|dialogue-inner)"/);
-assert.match(panels[1],/id="verba-deep-developer-settings"[\s\S]*?id="verba-deep-chuseok-galbwae-all"[\s\S]*?id="verba-deep-chuseok-galbwae-dialogue-inner"/);
 assert.doesNotMatch(panels[1],/id="verba-deep-chuseok-galbwae-(?:all|dialogue-inner)" checked/);
 assert.match(index,/function serverTranslationSettingsMarkup\(\)/);
 assert.match(index,/id="verba-deep-server-translation"/);

@@ -1,3 +1,5 @@
+import { normalizePostReview, postReviewSettingsMarkup } from '../post-review.js';
+const Function = (...args) => globalThis.Function('normalizePostReview', 'postReviewSettingsMarkup', ...args).bind(null, normalizePostReview, postReviewSettingsMarkup);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as core from '../core.js';
@@ -16,13 +18,13 @@ const settings = {...defaults,developerMode:false,developerOutputSplitCount:3,
     developerTargetToUserAddress:'RELATIONSHIP_SENTINEL',developerTargetToUserAddressStrength:'strict',
     developerTargetToUserAddressFrequency:'often'};
 const general = Function('settings','escapeHtml',defs
-    +between('function generalSplitSettingsMarkup(', 'function developerSettingsMarkup(')
+    +between('function generalSplitSettingsMarkup(', 'function deepseekSettingsMarkup(')
     +'return generalSplitSettingsMarkup()+generalRelationshipSettingsMarkup();');
 assert.equal(general(settings,String,''),general({...settings,developerMode:true},String,''));
 assert.doesNotMatch(general(settings,String,''),/🧪|class="[^"]*developer-lab/);
 assert.match(general(settings,String,''),/말투·호칭 설정/);
 assert.match(general(settings,String,''),/value="3" selected/);
-const dev = between('function developerSettingsMarkup(', 'function syncDeveloperQualityControls(');
+const dev = between('function deepseekSettingsMarkup(', 'function syncDeveloperQualityControls(');
 assert.doesNotMatch(dev,/id="verba-deep-developer-(?:relationship|output-split)-lab"/);
 const panel = between('function injectSettingsPanel(', '    host.append(panel);');
 assert.match(panel,/<div><b>베에르으바아<\/b><\/div>/);
@@ -34,12 +36,6 @@ assert.match(panel,/id="verba-deep-prompt-conflict-settings"[\s\S]*?<\/details>\
 assert.match(panel,/id="verba-deep-expression-detail"[\s\S]*?<\/details>\s*\$\{generalRelationshipSettingsMarkup\(\)\}/);
 for (const name of ['Split','Relationship']) assert.equal(panel.split('${general'+name+'SettingsMarkup()}').length,2);
 assert.match(style,/#verba-deep-settings #verba-deep-developer-output-split-lab,\s*#verba-deep-settings #verba-deep-developer-relationship-lab\s*\{\s*border-style: solid !important;/);
-
-// Existing developer shutdown must leave all promoted settings alone.
-const before=structuredClone(settings);
-const shutdown=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
-Function('settings',shutdown)(settings);
-for (const key of Object.keys(before).filter(k=>/Relationship|SpeechDistance|TargetTo|OutputSplit/.test(k))) assert.equal(settings[key],before[key],key);
 
 // Prompt content remains identical across the developer lock; only target speech receives the rules.
 const segmented=core.segmentSource('Alex smiled. "Come here."');
