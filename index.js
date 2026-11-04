@@ -70,6 +70,7 @@ import {
     replaceOutsideProtected,
     restoreProtected,
     restoreTranslationSurface,
+    recoverSourceMapGaps,
     resolveOutputSpeakerIdentity,
     inferLocalTargetDialogueScopes,
     segmentSource,
@@ -77,7 +78,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.82';
+const EXTENSION_VERSION = '0.6.83';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
 const SERVER_ENGINE_VERSION = '0.6.81';
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -5693,7 +5694,12 @@ function currentRecord(message, explicitId = null) {
 function currentSelectionRecord(message) {
     if (!isTranslationExtensionActive(EXTENSION_KEY)) return null;
     const record = currentRecord(message);
-    if (record) return record;
+    if (record) {
+        const sourceMap = recoverSourceMapGaps(segmentSource(messageSource(message)), record.translation, normalizedSourceMap(record.sourceMap));
+        // Derived view only: preserve the saved translation and original metadata.
+        // Selection edits will persist the recovered map through the normal path.
+        return { ...record, sourceMap };
+    }
 
     // A model may already return Korean-English bilingual dialogue. Automatic
     // translation can then skip the message as Korean-dominant, leaving no Verba Deep
