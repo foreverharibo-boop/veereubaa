@@ -1,14 +1,16 @@
-const Function = (...args) => globalThis.Function('verbaServer', 'POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, { hasPendingGeneration: () => false }, POST_TRANSLATION_AI_REPAIR_ENABLED);
+import { outputBinding } from '../bilingual-diagnostics.js';
+import { escapeCodeTranslation } from '../code-content.js';
+const Function = (...args) => globalThis.Function('outputBinding', 'verbaServer', 'POST_TRANSLATION_AI_REPAIR_ENABLED', ...args).bind(null, outputBinding, { hasPendingGeneration: () => false }, POST_TRANSLATION_AI_REPAIR_ENABLED);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { minimalOutputEnabled, buildMinimalOutputPrompt, POST_TRANSLATION_AI_REPAIR_ENABLED, translateMinimalOutput } from '../minimal-output.js';
 import { splitOutputSegments } from '../output-splitting.js';
 const splitMinimalOutputSegments = segmented => splitOutputSegments(segmented, 2);
-import { segmentSource, restoreProtected, assembleTranslation, buildOutputPrompt } from '../core.js';
+import { segmentSource, restoreProtected, restoreTranslationSurface, assembleTranslation, buildOutputPrompt } from '../core.js';
 import { collectSegmentResponse } from '../response-parser.js';
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 const between=(a,b)=>index.slice(index.indexOf(a),index.indexOf(b,index.indexOf(a)));
-const buildSourceMap=Function('restoreProtected', between('function escapeRegularExpression(', 'function repairIndivisibleIdentityNames(') + between('function hasKoreanFinalConsonant(', 'function outputScopeForSegment(') + between('function restoredSegmentText(', 'const CONSISTENCY_ROLE_TERMS')+'\nreturn buildSourceMap;')(restoreProtected);
+const buildSourceMap=Function('restoreProtected','restoreTranslationSurface','escapeCodeTranslation', between('function restoredSegmentText(', 'const CONSISTENCY_ROLE_TERMS')+'\nreturn buildSourceMap;')(restoreProtected,restoreTranslationSurface,escapeCodeTranslation);
 const settings={developerMode:true,developerOutputSplitCount:2,developerMinimalPromptEnabled:true,developerMinimalPrompt:'자연스럽게 한국어로 번역하라.',
  developerMadKoreanOutputEnabled:true,developerHongjinFlavorEnabled:true,developerExtremeCompressedPromptEnabled:true,
  qualityAuditEnabled:true,developerRelationshipExperimentEnabled:true,globalPrompt:'GLOBAL_SENTINEL',dialoguePrompt:'VOICE_SENTINEL',bannedWords:'번역'};
@@ -46,7 +48,7 @@ for(const count of [1,2,3]){
 
 // Actual entry point must branch before any optional planning, classification,
 // banned-word repair or quality audit, even when all those options are enabled.
-const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planBilingualDialogueVerdicts','planRepeatedRoleTermLocks','reviewFinalEnglish',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\nreturn translateOutputText;');
+const route=Function('settings','normalizedCharacterNameLocks','segmentSource','minimalOutputEnabled','translateMinimalOutput','requestSegments','buildSourceMap','planBilingualDialogueVerdicts','planRepeatedRoleTermLocks','reviewFinalOutput',between('async function translateOutputText(', 'function inputIdentitySpellingContext(')+'\nreturn translateOutputText;');
 const run=route(settings,()=>[],segmentSource,minimalOutputEnabled,translateMinimalOutput,requestSegments,buildSourceMap,async()=>{},()=>{throw Error('NORMAL_PATH');},async ({translations})=>{assert.ok(translations instanceof Map);});
 calls=[];await run('He waited.');assert.equal(calls.length,1);
 settings.developerMode=false;await assert.rejects(run('He waited.'),/NORMAL_PATH/);settings.developerMode=true;
@@ -117,25 +119,10 @@ const off={...settings,developerMode:false};
 assert.equal(buildOutputPrompt(prose,off),buildOutputPrompt(prose,{...off,developerMinimalPromptEnabled:false}));
 console.log('PASS: minimal-only prompt and actual entry path, lock/enable gates, optional call exclusion, name/code/tag preservation, source mapping, local cleanup, repair bounds and cancellation.');
 
-// Real developer markup and delegated toggle, including escaped user text.
-const defs=between('const RELATION_TEMPERATURE_OPTIONS','const baseContext =');
-const escapeHtml=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const markup=Function('settings','escapeHtml','baseTranslationEditorMarkup','lastQualityAuditSummary','serverTranslationSettingsMarkup',defs+'\n'+between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
-settings.developerMinimalPrompt='</textarea><script>TEST</script>';
-assert.match(markup(settings,escapeHtml,()=>'', '', ()=> ''), /&lt;\/textarea&gt;/);
-assert.ok(!markup({...settings,developerMode:false},escapeHtml,()=>'', '', ()=> '').includes('id="verba-deep-developer-minimal-prompt"'));
-class Input {}
-let saves=0;
-const change=Function('target','settings','HTMLInputElement','saveSettings','document','renderCurrentAppliedRules',between("        if (target.id === 'verba-deep-developer-minimal-prompt-enabled'", "        if (target.id === 'verba-deep-developer-compressed-prompt-enabled'"));
-const preserved=structuredClone(settings);
-for(const checked of [false,true]) {
- change(Object.assign(new Input(),{id:'verba-deep-developer-minimal-prompt-enabled',checked}),settings,Input,()=>saves++,{querySelector:()=>null},()=>{});
- assert.deepEqual(settings,{...preserved,developerMinimalPromptEnabled:checked});
+// Minimal translation remains a legacy engine path; its UI was retired.
+const markup=Function('settings',between('function developerChuseokGalbwaeMarkup(', 'function syncDeveloperQualityControls(')+'\nreturn developerSettingsMarkup();');
+for(const developerMode of [false,true]){
+ const html=markup({...settings,developerMode,developerMinimalPrompt:'</textarea><script>TEST</script>'});
+ assert.doesNotMatch(html,/developer-minimal-prompt|<script>TEST/);
 }
-assert.equal(saves,2);
-const disable=between("        if (target.closest('#verba-deep-developer-mode-off')) {",'            saveSettings();').split('\n').slice(1).join('\n');
-Function('settings',disable)(settings);
-assert.equal(settings.developerMode,false);assert.equal(settings.developerMinimalPromptEnabled,false);
-assert.equal(settings.developerMinimalPrompt,preserved.developerMinimalPrompt);
-assert.equal(settings.developerMadKoreanOutputEnabled,true);assert.equal(settings.developerHongjinFlavorEnabled,true);
-console.log('PASS: developer-only escaped UI, toggle restores saved settings, developer shutdown disables experiment but retains text/flavors.');
+console.log('PASS: retired minimal prompt controls stay absent in both developer states.');

@@ -1687,6 +1687,32 @@ function preserveSegmentMarkup(source, translated, markupTokens) {
     return JSON.stringify(signature(source)) === JSON.stringify(signature(translated)) ? translated : source;
 }
 
+// Full assembly and source-map fragments must use exactly the same final
+// name/particle/token rendering. Fragment mode only relaxes whole-message
+// token-count checks; assembly still validates all protected structure.
+export function restoreTranslationSurface(value, segmented, options = {}) {
+    const fragment = options.fragment === true;
+    const markupEntries = (segmented.tokens || []).filter(entry => /^<(?:!--|\/?[\p{L}_])/u.test(entry.value));
+    const markupTokens = new Set(markupEntries.map(entry => entry.token));
+    const particlesRepaired = repairLockedTokenParticles(canonicalizeProtectedTokenVariants(value), segmented.nameTokens);
+    // A missing NAME token can be a natural Korean subject omission. Restore
+    // only markers that survived translation; duplicated markers still fail.
+    const namesRestored = stripLeakedNameTokens(restoreProtected(particlesRepaired, segmented.nameTokens, {
+        strict: !fragment,
+        allowMissing: true,
+    }));
+    // Structural markup is never optional, even when non-structural token
+    // recovery is allowed to fall back to an imperfect initial translation.
+    const markupRestored = restoreProtected(namesRestored, markupEntries, { strict: !fragment });
+    const fullyRestored = restoreProtected(markupRestored, (segmented.tokens || []).filter(entry => !markupTokens.has(entry.token)), {
+        strict: !fragment && options?.allowDamagedProtected !== true,
+    });
+
+    // Critical final surface pass: malformed alternatives can become visible
+    // only after an opaque NAME token is restored, which is AFTER AI QA.
+    return repairRenderedKoreanParticleAlternatives(fullyRestored);
+}
+
 export function assembleTranslation(segmented, translations, options = {}) {
     const map = translations instanceof Map ? translations : new Map(Object.entries(translations || {}));
     const markupEntries = (segmented.tokens || []).filter(entry => /^<(?:!--|\/?[\p{L}_])/u.test(entry.value));
@@ -1703,23 +1729,7 @@ export function assembleTranslation(segmented, translations, options = {}) {
         map.set(part.id, repaired);
         return escapeCodeTranslation(repaired, part.codeQuote);
     }).join('');
-    const particlesRepaired = repairLockedTokenParticles(canonicalizeProtectedTokenVariants(joined), segmented.nameTokens);
-    // A missing NAME token can be a natural Korean subject omission. Restore
-    // only markers that survived translation; duplicated markers still fail.
-    const namesRestored = stripLeakedNameTokens(restoreProtected(particlesRepaired, segmented.nameTokens, {
-        strict: true,
-        allowMissing: true,
-    }));
-    // Structural markup is never optional, even when non-structural token
-    // recovery is allowed to fall back to an imperfect initial translation.
-    const markupRestored = restoreProtected(namesRestored, markupEntries, { strict: true });
-    const fullyRestored = restoreProtected(markupRestored, (segmented.tokens || []).filter(entry => !markupTokens.has(entry.token)), {
-        strict: options?.allowDamagedProtected !== true,
-    });
-
-    // Critical final surface pass: malformed alternatives can become visible
-    // only after an opaque NAME token is restored, which is AFTER AI QA.
-    return repairRenderedKoreanParticleAlternatives(fullyRestored);
+    return restoreTranslationSurface(joined, segmented, options);
 }
 
 export function replaceOutsideProtected(value, search, replacement) {
