@@ -75,7 +75,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.78';
+const EXTENSION_VERSION = '0.6.79';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
 const SERVER_ENGINE_VERSION = '0.6.78';
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -10967,7 +10967,7 @@ function generalRelationshipSettingsMarkup() {
                                         ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerUserToTargetRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
                                     </select>
 
-                                    <label for="verba-deep-developer-user-other-register">USER → 타인(NPC)</label>
+                                    <label for="verba-deep-developer-user-other-register">USER → 타인</label>
                                     <select id="verba-deep-developer-user-other-register" class="text_pole">
                                         ${DEVELOPER_AUDIENCE_REGISTER_OPTIONS.map(option => `<option value="${option.value}" ${settings.developerUserToOtherRegister === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
                                     </select>
