@@ -78,9 +78,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.90';
+const EXTENSION_VERSION = '0.6.91';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.89';
+const SERVER_ENGINE_VERSION = '0.6.91';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -5164,7 +5164,7 @@ async function reviewFinalOutput({ segmented, translations, speakerIdentity = {}
     try {
         const config = { ...(reviewSettings || settings), aiPostReview: normalizePostReview(settings.aiPostReview) };
         const selected = config.aiPostReview;
-        const reference = selected.voice || selected.mad || selected.hongjin || (selected.deepseekTranslationese && deepseekKoreanEnabled(config))
+        const reference = selected.voice || selected.mad || selected.hongjin || (config.developerMode === true && selected.deepseekTranslationese && deepseekKoreanEnabled(config))
             ? buildOutputPrompt({ ...segmented, segments: [], protectedText: '' }, config,
                 options.oneTimeInstruction || '', { ...speakerIdentity, omitTranslationContext: true }, options.tuning || null, speakerScopes)
             : '';
@@ -11085,6 +11085,13 @@ function developerSettingsMarkup() {
             <div class="verba-deep-tool-details-content">
                 ${settings.developerMode ? `
                     ${developerChuseokGalbwaeMarkup()}
+                    <details id="verba-deep-developer-deepseek-review" class="verba-deep-tool-details">
+                        <summary>딥식 플래시 전용 후검수 <small>개발자 · 기본 OFF</small></summary>
+                        <div class="verba-deep-tool-details-content">
+                            <label class="verba-deep-check-row"><input type="checkbox" data-post-review="deepseekTranslationese" ${settings.aiPostReview?.deepseekTranslationese === true ? 'checked' : ''}><span>딥식플 전용 직역투</span></label>
+                            <div class="verba-deep-help">개발자 모드와 딥식 플래시 전용 프롬프트를 모두 켠 상태에서 체크하면 작동합니다. 다른 후검수 항목과 함께 한 번에 검수하며, 대상이 있으면 API 요청이 1회 추가됩니다. 개발자 모드를 끄면 체크 상태는 보관하지만 이 검수는 실행하지 않아요.</div>
+                        </div>
+                    </details>
                     <button type="button" id="verba-deep-developer-mode-off" class="menu_button verba-deep-wide">개발자 모드 끄기</button>
                 ` : `
                     <label for="verba-deep-developer-code">개발자 번호</label>
@@ -12808,13 +12815,15 @@ function injectSettingsPanel() {
         saveSettings();
     });
     syncProfileRaceUi();
-    panel.querySelectorAll('[data-post-review]').forEach(input => {
-        input.addEventListener('change', event => {
-            const key = event.target.dataset.postReview;
-            if (!POST_REVIEW_CHECKS.some(check => check.key === key)) return;
-            settings.aiPostReview = { ...normalizePostReview(settings.aiPostReview), [key]: event.target.checked };
-            saveSettings();
-        });
+    // Developer controls are replaced when the mode changes; delegate to the panel.
+    panel.addEventListener('change', event => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || !input.matches('[data-post-review]')) return;
+        const key = input.dataset.postReview;
+        if (!POST_REVIEW_CHECKS.some(check => check.key === key)) return;
+        if (key === 'deepseekTranslationese' && settings.developerMode !== true) return;
+        settings.aiPostReview = { ...normalizePostReview(settings.aiPostReview), [key]: input.checked };
+        saveSettings();
     });
     const debugModeInput = panel.querySelector('#verba-deep-debug-mode');
     const fullSourceInput = panel.querySelector('#verba-deep-debug-full-source');
