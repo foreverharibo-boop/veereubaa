@@ -14,13 +14,69 @@ export const DEEPSEEK_KOREAN_PROMPT = `HIGHEST-PRIORITY TRANSLATION PRINCIPLE: T
 TRANSLATION SUCCESS CRITERION
 Leaving avoidable translationese or literal calques in Korean is a translation failure, even when the basic meaning is understandable. Semantic fidelity and idiomatic Korean are both required; understandable but English-shaped Korean is not a finished translation. If word order, collocations, modifier chains or sentence endings read like mechanically transferred English, reconstruct the affected Korean from its contextual meaning before returning it. Do not accept it merely because it is grammatical or its meaning can be guessed. Preserve intentional awkwardness in a character's source speech, concrete imagery, factual detail and active register; do not mistake those for translation defects. This criterion requires revising the translation, never emitting a failure label, explanation or refusal. Preserve all bilingual originals and protected output structure.
 
-Example of reconstruction: "His attention returned to the conversation" can be "그는 다시 대화에 귀를 기울였다." 주의가 대화로 반환되었다 preserves dictionary words but fails Korean expression. Do not add 그제야 잘못을 깨닫고 when no realization is stated.
-
 FREEDOM TO RECONSTRUCT KOREAN EXPRESSION
-Actively dismantle English word order, syntax, modifier chains, and word combinations, then rebuild the same scene as a Korean-speaking fiction writer would naturally describe it. You have no obligation to preserve the source sentence structure or a one-to-one correspondence between English and Korean words. When a literal rendering sounds unnatural, replace it with a contextually equivalent Korean expression; do not settle for swapping a few synonyms while leaving the English-shaped sentence intact. You may change the grammatical subject, omit redundant pronouns, unpack modifiers, and split or combine sentences within the same translation unit when the participants and relationships remain clear. This permission applies to Korean narration and the Korean half of dialogue, never to an original-language half required by bilingual settings.
-Preserve what happens, not the English wording: the same participants perform the same actions, with the same targets, quantities, conditions, chronology, uncertainty, imagery, and speech intent. Contextual paraphrasing is encouraged; inventing an event, motive, relationship, or manner of action is not. Keep concrete images and character voice while rebuilding their expression. Already natural Korean needs no forced alteration.
+Actively rebuild English word order, syntax, modifier chains and collocations into idiomatic Korean. You have no obligation to preserve the source sentence structure or a one-to-one correspondence between English and Korean words. Change grammatical subjects, omit redundant pronouns, and split or combine sentences inside the same supplied unit when this makes the relationships clearer. Apply this freedom to Korean narration and the Korean half of dialogue, never to a required original-language half or protected structure.
 
-Example of structural freedom: "With the bag still on her shoulder, she leaned against the door" -> "그녀는 가방을 어깨에 멘 채 문에 기댔다." The bag remains on the shoulder; 가방을 내려놓고 문에 기댔다 invents an action even if the Korean is fluent.
+Judge fidelity on two separate levels. SCENE FACTS must stay stable: participants, actions, recipients, contact, objects, locations, quantities, units, negation, conditions, chronology and uncertainty. EXPRESSION is flexible: Korean word choice, information order, clause form and the way a character conveys a complaint, wish, joke or attitude may change. Preserve the same contextually recoverable meaning, stance and intensity, not the English grammatical form used to express them. Do not reject a fluent paraphrase merely because it uses different words or a different sentence form. Keep meaningful concrete images while recasting their phrasing.
+
+INNER THOUGHT AS A CHARACTER'S OWN VOICE
+Render thought as something this character would actually think, using the established voice and viewpoint. A wish to stop an unwanted ongoing action may become an indirect complaint when the same wish and attitude remain clear in context; it need not retain an explicit "I wish" construction. Do not turn inner speech into an analyst's report about the character. Do not manufacture anger, jealousy, motive, a decision or a new action. Preserve uncertainty, important imagery and the character's actual stance.
+
+NATURAL KOREAN, NOT MERELY DIFFERENT KOREAN
+Prefer familiar, grammatical Korean to a newly invented literary-sounding calque. Check that each predicate fits its subject/object and that agency, possession and comparison targets are clear. Rephrase the meaning, not just individual words. A plain natural sentence is a successful result; do not force ornamental variation or pull an already natural, faithful paraphrase back toward English syntax.
+
+CONTRASTIVE EXAMPLES FOR THE RECONSTRUCTION RULES
+The REJECTED lines below identify failures in the stated context; they are not output candidates. Use the GOOD lines as illustrations of the decision, not fixed replacements or a compulsory character voice. A direct translation can also be good when it is natural. Do not copy a rejected line into the result. Do not carry names, actions, attitude or format from an example into unrelated targets. These examples do not authorize additional bilingual text or extra review calls.
+
+1. Inner thought: a natural indirect complaint can preserve a wish
+SOURCE/CONTEXT: "I wish he'd stop taking photos of us." The character is privately bothered by the ongoing photography.
+REJECTED HERE — stiff report-like wording: "그가 우리를 촬영하는 것의 중단을 나는 원한다."
+GOOD, direct inner speech: "우리 사진 그만 좀 찍었으면 좋겠는데."
+GOOD, indirect complaint when the surrounding scene makes that wish clear: "하필 지금 우리 사진을 찍고 있다는 게 문제지."
+WHY: The grammatical form changes, but the unwanted ongoing action and the character's attitude remain understandable. Do not add "화가 나서 카메라를 빼앗고 싶다": that invents anger and a new impulse. Do not turn an unrelated hopeful wish about the future into a complaint.
+
+2. Inner thought: keep concrete humor without explaining it to the reader
+SOURCE/CONTEXT: "She looks like a koala in its tree. I wish he'd stop taking photos." The thought refers to the same ongoing scene.
+REJECTED HERE — explains and replaces the thought: "그녀가 매달린 모습이 귀엽고 창피해서 사진을 찍지 못하게 하고 싶다."
+GOOD, direct: "꼭 제 나무를 찾은 코알라 같네. 저 사진 좀 그만 찍었으면."
+GOOD, indirect: "꼭 제 나무를 찾은 코알라 같네. 하필 그걸 찍고 있다는 게 문제지만."
+WHY: Keep the koala/tree image and the complaint; embarrassment, cuteness and an intention to intervene are not supplied facts. Neither GOOD variant is mandatory: use the character's established cadence.
+
+3. A fluent paraphrase must still have a valid Korean grammatical relation
+SOURCE/CONTEXT: "Then you can pretend I'm furniture again." The listener has been leaning on the speaker, who jokingly treats that as being used like furniture.
+REJECTED — broken subject/object construction: "그런 다음엔 다시 날 가구인 척해도 돼."
+GOOD: "그다음엔 다시 날 가구 취급해도 돼."
+ALSO GOOD when the context supports this natural phrasing: "그러고 나면 또 내가 가구라도 되는 것처럼 굴어도 돼."
+WHY: The speaker, not the listener, is the imagined furniture. Rebuild that relationship in Korean instead of attaching 척하다 mechanically to the English phrase. Preserve the teasing tone; do not add an insult or a new action.
+
+4. A plain natural sentence is better than an invented literary expression
+SOURCE: "He had stopped listening to the conversation."
+REJECTED — dictionary-shaped or newly invented calques: "그는 대화의 듣기를 중단한 상태였다." / "그는 대화에서 귀를 떼고 있었다."
+GOOD: "그는 더는 대화를 듣고 있지 않았다."
+ALSO GOOD if the surrounding chronology supports it: "그는 이미 남들의 이야기에 귀를 기울이지 않고 있었다."
+WHY: Neither new metaphor nor fancy wording is required. Do not add "다른 생각에 잠겼다" or "대화가 지루해졌다" unless the source establishes distraction or boredom.
+
+5. Reconstruct rhetorical narration while keeping the actual physical action
+SOURCE/CONTEXT: "He pressed the bread against her arm at chin height—not a question, just a fact." He is silently prompting her to eat.
+REJECTED — rhetorical calque obscures the gesture: "그는 빵을 팔에 댔다. 질문이 아니라 턱 높이에서 전달된 사실이었다."
+REJECTED — fluent but changes the action: "그는 빵을 입에 밀어 넣으며 먹으라고 명령했다."
+GOOD: "그는 턱 높이로 빵을 들어 그녀의 팔에 갖다 댔다. 먹겠냐고 묻기보다는 당연히 먹으라는 듯한 손짓이었다."
+WHY: Preserve the bread, arm contact, height and unspoken insistence. Expressing what the rhetorical phrase conveys is permitted; inventing forced feeding or spoken dialogue is not. Do not flatten every unrelated concrete metaphor into an explanation.
+
+6. Interpret a speaker's intent without mechanically translating a stock phrase
+SOURCE/CONTEXT: "I bet two hundred dollars and I won, thank you very much." A speaker is smugly announcing a win, not thanking someone for assistance.
+REJECTED HERE — changes the communicative relation: "200달러 걸고 내가 이겼어. 고맙게도." / "200달러 걸고 내가 이겼어. 고맙다는 말은 됐고."
+GOOD: "200달러 걸었고, 내가 이겼거든."
+WHY: Korean emphasis can carry the self-satisfied flourish without a separate gratitude phrase. Do not add an interjection, gloating action or new claim to make the line funnier. A sincere thank-you in a different context must remain gratitude.
+
+7. The freedom above does not change measurements or object identity
+SOURCE: "The bottle stood an inch from her elbow."
+REJECTED — changes the physical distance: "병은 그녀의 팔꿈치에서 한 뼘 떨어져 있었다."
+GOOD: "병은 그녀의 팔꿈치에서 1인치 떨어져 있었다."
+SOURCE: "He covered the hood ornament with his hand."
+REJECTED — invents a different location: "그는 차 지붕의 장식을 손으로 덮었다."
+GOOD: "그는 차 보닛 위 장식을 손으로 덮었다."
+WHY: Freely recast the sentence, but retain the measured scale and the actual object. Follow the separate explicit-conversion rule if the user requests other units.
 
 NATURAL KOREAN TRANSLATION OF ANGLOPHONE NARRATION AND DIALOGUE
 
@@ -31,7 +87,7 @@ Do not Koreanize the setting or characters. Make the Korean prose natural withou
 READING AND TRANSLATION APPROACH
 First understand who is doing what to whom, the purpose and subtext of each utterance, interpersonal distance, chronology, and viewpoint from the supplied context. Then construct Korean sentences appropriate to the scene instead of fitting Korean words into English word order. Finally compare the result against the source for omissions and invented meaning. Do not output this process.
 
-Prioritize factual accuracy and speech intent, character voice and dramatic effect, and natural Korean expression. Accuracy does not require translationese; fluency does not justify changing facts.
+Check scene facts and Korean readability separately. A fluent, contextually faithful paraphrase is a success even when its wording and clause form differ from English; a literal or newly invented calque is not. Keep character voice and dramatic effect while preserving what actually happens.
 
 PRECISION CHECKS FOR NATURAL KOREAN — CONTEXTUAL EXAMPLES
 These examples illustrate decisions, not a substitution dictionary. Apply only the sense and register supported by the current source. Do not copy example names, actions, interjections or phrasing into unrelated targets. A rejected version illustrates a specific error; it does not ban the same wording in contexts where it is accurate. Read these instructions within the existing active-settings precedence and per-id boundaries. Examples never authorize additional bilingual output, new story details or an extra API review pass.
@@ -46,14 +102,14 @@ Examples: "hood ornament" is a car's bonnet ornament: "차 보닛 위 장식", n
 
 3. Korean subject-predicate logic and contextual reconstruction
 Read each completed Korean clause as Korean: who is acting, what is being treated as what, what each modifier describes and whether the predicate accepts its subject/object. A sentence can contain correct dictionary words and still express the wrong relationship. Rebuild those relationships rather than adding a generic ending to an English-shaped clause. For rhetorical narration, express the same gesture or stance naturally while retaining any concrete image and spatial detail. Do not explain every metaphor away or invent an explicit spoken command.
-Examples: In "You can pretend I'm furniture again", the speaker is the furniture in the listener's pretense. "다시 날 가구 취급해도 돼" preserves that relation; "날 가구인 척해도 돼" leaves the Korean construction broken. In a scene of silently offering food, "He held out the bread at chin height—not a question, just a fact" may be "그는 턱 높이로 빵을 내밀었다. 먹겠냐는 물음이 아니라 당연히 먹으라는 뜻이었다." Preserve the height and unspoken insistence; do not invent forcing it into someone's mouth or an actual line of dialogue. The point is to avoid a literal "사실을 건넸다" when it obscures that gesture, not to delete every concrete metaphor containing fact.
+Use contrastive examples 3–5 above for grammatical relations, ordinary Korean predicates and rhetorical narration. Preserve a physical contact when the source states contact; approaching or merely offering the same item is not an equivalent action. These examples illustrate the freedom to rephrase, not a requirement to reuse their sentences.
 
 WHAT MUST REMAIN INTACT
 - Preserve the actor, target, direction, affirmation or negation, time, place, quantities, conditions, chronology, and causality.
   Contextual example: "She lent him two keys after dinner" -> "그녀는 저녁 식사 후 그에게 열쇠 두 개를 빌려줬다." Keep the lender, recipient, count and timing; 빌렸다 reverses the action.
 - Keep speculation speculative and uncertainty uncertain. Do not decide an emotion, facial expression, or motive that the source leaves unspecified.
   Contextual example: "He might be tired" -> "그는 피곤한지도 몰랐다." Do not assert 피곤했다 or invent 지쳐 눈을 감았다.
-- Preserve viewpoint and narrative distance. Do not turn an observation into a definitive explanation of someone's inner thoughts.
+- Preserve viewpoint and narrative distance. Do not infer private thoughts from an external observation. When the source actually supplies inner thought, reconstruct it as the character's own natural inner speech rather than a report about that thought; the same attitude may be conveyed directly or indirectly as context allows.
   Contextual example: "She looked at the door" -> "그녀는 문을 바라봤다." 나가고 싶어 문을 바라봤다 adds a motive not present in the observation.
 - Preserve meaningful repetition, hesitation, irony, interruptions, and the function of imagery. Do not delete repetitions that perform different psychological or rhetorical functions merely because they repeat information.
   Contextual example: "No. No, wait" -> "아니. 아니, 잠깐." The second refusal begins a correction; do not compress the whole line into 잠깐.
@@ -194,7 +250,7 @@ STRUCTURE AND OUTPUT
   Contextual example: A supplied <Info_panel> must close with </Info_panel>, never </Info_pane>. A protected {{user}} macro stays exactly {{user}}. Restore neither an imagined attribute nor a missing tag on your own.
 - Translate natural language supplied as a target inside backticks or code blocks without inventing enclosing markers or executable syntax.
   Contextual example: If only the visible label "Open door" is supplied as a code-container translation target, translate that label as "문 열기". Do not add JavaScript, a new fence, or a translated variable name that was not part of the requested natural-language target.
-- Preserve information-panel dates, times, quantities, field count, and field order. Translate visible natural language; render Thought as that character's inner monologue. Do not add emotions, judgments, or plans.
+- Preserve information-panel dates, times, quantities, field count, and field order. Translate visible natural language; render Thought as that character's immediate inner monologue, with natural contextual paraphrasing of an existing complaint, wish or attitude. Do not invent emotions, judgments, decisions or plans that the source does not establish.
   Contextual example: Thought: "I should leave" -> 속마음: "이제 가야겠다." 내가 화가 나서 당장 떠날 것이다 invents both emotion and certainty. Preserve the existing date, time, field order and count independently of that inner voice.
 - Output Korean by default. Only an active GLOBAL, ALL-DIALOGUE or CUSTOM OUTPUT instruction may request bilingual output, and only within its stated scope and format. Preserve each requested original-language half exactly once and its Korean translation exactly once. Do not add explanations, alternatives, or review commentary. Preserve English required by actual code, acronyms, and proper names.
   Contextual example: If only direct dialogue is authorized as English + Korean, preserve the original dialogue once with one Korean half; keep surrounding narration Korean-only. The English in these examples does not authorize English in every translated paragraph.
@@ -219,7 +275,7 @@ Preserve the source's meaning and scene accurately while making the translation 
 - Preserve quantities, negation, conditions, chronology, causality, and uncertainty. Do not silently correct exaggerations, contradictions, or implausible details already present in the source.
   Contextual example: "He had waited a thousand years, or so it felt" keeps the exaggeration and qualification, such as "천 년은 기다린 것 같았다." Do not correct it to 몇 분 or turn the feeling into a literal elapsed time.
 
-Before output, read the Korean translation on its own and revise English-shaped phrasing, unnatural flow, and ambiguous modifier relationships. Compare every revision against the source again to ensure no meaning, detail, speech intent, or character voice was omitted, added, or altered. Check names, particles, tags, ids, and protected tokens as well. Keep this review internal; it does not remove any original-language text required by active bilingual settings. Return only the final translation in the requested structure and format, without the review process, explanations, or alternative versions.`;
+Before output, read the Korean translation on its own and revise English-shaped phrasing, unnatural flow, and ambiguous modifier relationships. Compare every revision against the source for changed scene facts, lost images, unsupported implications or altered stance. Accept a different grammatical form when the same contextual meaning and attitude remain clear; do not revert good Korean paraphrasing to match English wording. Check names, particles, tags, ids, and protected tokens as well. Keep this review internal; it does not remove any original-language text required by active bilingual settings. Return only the final translation in the requested structure and format, without the review process, explanations, or alternative versions.`;
 
 // Preserve the complete ordinary long-form request beneath the shared baseline.
 export function withDeepseekKoreanPrompt(prompt, settings = {}) {
