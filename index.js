@@ -13,7 +13,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.100';
+import { createServerClient } from './server-client.js?v=0.6.101';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -80,9 +80,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.100';
+const EXTENSION_VERSION = '0.6.101';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.99';
+const SERVER_ENGINE_VERSION = '0.6.101';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -5173,7 +5173,7 @@ async function reviewFinalOutput({ segmented, translations, speakerIdentity = {}
         const config = { ...(reviewSettings || settings), aiPostReview: normalizePostReview(settings.aiPostReview) };
         const selected = config.aiPostReview;
         if (options.secondTranslationCompleted === true) {
-            selected.translationese = false;
+            // General Korean fluency review still applies to the rewritten result.
             selected.deepseekTranslationese = false;
         }
         const reference = selected.voice || selected.mad || selected.hongjin || (config.developerMode === true && selected.deepseekTranslationese && deepseekKoreanEnabled(config))
