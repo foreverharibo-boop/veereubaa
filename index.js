@@ -12,7 +12,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.97';
+import { createServerClient } from './server-client.js?v=0.6.98';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -79,9 +79,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.97';
+const EXTENSION_VERSION = '0.6.98';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.97';
+const SERVER_ENGINE_VERSION = '0.6.98';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -5336,7 +5336,7 @@ async function translateOutputText(source, options = {}) {
     if (secondTranslationEnabled(settings)) {
         const rewritten = await requestSecondTranslation({
             segmented, translations,
-            basePrompt: buildOutputPrompt(segmented, settings, options.oneTimeInstruction || '', speakerIdentity, options.tuning || null, speakerScopes),
+            basePrompt: buildOutputPrompt(segmented, settings, options.oneTimeInstruction || '', speakerIdentity, options.tuning || null, speakerScopes, { omitDeepseekBaseline: true }),
             options: { ...options, speakerIdentity }, request: requestSegments,
         });
         translations.clear();

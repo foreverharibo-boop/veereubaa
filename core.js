@@ -4505,8 +4505,9 @@ BANNED TRANSLATION RULES
 ${bannedWordsPrompt(settings)}`;
 }
 
-export function buildOutputPrompt(segmented, settings = {}, ...rest) {
-    return withDeepseekKoreanPrompt(withTranslationComposition(settings, 'output', current => (translationContext(current, rest[1]) + '\n\n' + buildOutputPromptInternal(segmented, current, ...rest)).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n')), settings);
+export function buildOutputPrompt(segmented, settings = {}, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}, promptOptions = {}) {
+    const regular = withTranslationComposition(settings, 'output', current => (translationContext(current, speakerIdentity) + '\n\n' + buildOutputPromptInternal(segmented, current, oneTimeInstruction, speakerIdentity, tuning, speakerScopes)).replace('\nSEGMENTS\n', '\n' + OUTPUT_FORMAT_POLICY + '\nSEGMENTS\n'));
+    return promptOptions.omitDeepseekBaseline === true ? regular : withDeepseekKoreanPrompt(regular, settings);
 }
 
 function buildOutputPromptInternal(segmented, settings, oneTimeInstruction = '', speakerIdentity = {}, tuning = null, speakerScopes = {}) {
