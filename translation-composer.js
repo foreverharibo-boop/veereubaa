@@ -45,8 +45,7 @@ export function withTranslationComposition(settings = {}, key, build) {
         || settings.chuseokGalbwaeEnabled === true);
     context.disabled = galbwaeActive;
     const active = !galbwaeActive && (
-        ((key !== 'output' || settings.developerMadKoreanOutputEnabled !== true)
-            && customTranslationInstruction(settings, key) !== null)
+        (customTranslationInstruction(settings, key) !== null)
         || (key !== 'input'
             && ((settings.developerMadKoreanOutputEnabled === true && customTranslationInstruction(settings, 'mad') !== null)
                 || (settings.developerHongjinFlavorEnabled === true && customTranslationInstruction(settings, 'hongjin') !== null)))
