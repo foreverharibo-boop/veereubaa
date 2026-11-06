@@ -1,5 +1,6 @@
+import { createSecondTranslationAttempt } from './second-translation-diagnostics.js';
 import { exportDebugText } from './debug-export.js';
-import { secondTranslationEnabled, requestSecondTranslation } from './second-translation.js?v=0.6.105';
+import { secondTranslationEnabled, requestSecondTranslation } from './second-translation.js?v=0.6.106';
 import { sourceMapSummary, createSourceViewDiagnostics } from './source-map-diagnostics.js';
 import { createCharacterTranslationReference } from './character-translation-reference.js';
 import { createDisplayStateTrace } from './display-state-trace.js';
@@ -13,7 +14,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.105';
+import { createServerClient } from './server-client.js?v=0.6.106';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -80,9 +81,9 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.105';
+const EXTENSION_VERSION = '0.6.106';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
-const SERVER_ENGINE_VERSION = '0.6.105';
+const SERVER_ENGINE_VERSION = '0.6.106';
 const DEVELOPER_ACCESS_CODE = '130918';
 const DEVELOPER_ACCESS_FINGERPRINT = `verba-deep-dev-${hashText(DEVELOPER_ACCESS_CODE)}`;
 const noticeUI = createNoticeUI({ prefix: EXTENSION_KEY, title: '베에르으바아' });
@@ -899,6 +900,14 @@ function traceLatestAssistantSource(phase) {
         }
     }
 }
+let lastSecondTranslationTrace = null;
+function rememberSecondTranslationTrace(record) {
+    if (settings.debugMode !== true || record?.version !== 1 || !Array.isArray(record.events)) return;
+    if (lastSecondTranslationTrace && (record.capturedAt < lastSecondTranslationTrace.capturedAt
+        || record.capturedAt === lastSecondTranslationTrace.capturedAt && record.revision <= lastSecondTranslationTrace.revision)) return;
+    lastSecondTranslationTrace = record;
+}
+
 let lastPromptConflicts = [];
 
 
@@ -942,6 +951,7 @@ const verbaServer = createServerClient({
 function applyServerTranslationProgress(state) {
     const prefix = `server:${state.id}:`;
     for (const event of state.events || []) {
+        if (event.kind === 'second-translation-trace') rememberSecondTranslationTrace({ ...event.record, serverJobId: state.id });
         if (event.kind === 'profile') recordProfileAttempt(event.slot, event);
         if (event.kind === 'notice') notify(event.message, event.type);
         if (event.kind === 'retry') {
@@ -953,6 +963,7 @@ function applyServerTranslationProgress(state) {
             });
         }
     }
+    if (state.result?.secondTranslationTrace) rememberSecondTranslationTrace({ ...state.result.secondTranslationTrace, serverJobId: state.id });
     if (['completed', 'failed', 'cancelled'].includes(state.state)) {
         for (const key of serverRetryStates.keys()) if (typeof key === 'string' && key.startsWith(prefix)) serverRetryStates.delete(key);
     }
@@ -1136,6 +1147,7 @@ function createDebugDiagnostic(stage = 'unknown', error = null, displayMessage =
     const viewport = globalThis.visualViewport;
     const errorChain = debugErrorChain(error);
     return {
+        ...(settings.debugMode === true ? { secondTranslationTrace: lastSecondTranslationTrace } : {}),
         report: 'VERBA_DEEP_DEEP_DEBUG_DIAGNOSTIC',
         verbaDeepVersion: EXTENSION_VERSION,
         time: new Date().toISOString(),
@@ -1181,6 +1193,9 @@ function createDebugDiagnostic(stage = 'unknown', error = null, displayMessage =
         displayStateTrace: displayStateTrace.diagnostics(),
         sourceChangeTrace: recentDiagnosticEvents(sourceChangeTracer.diagnostics(), 16),
         settingsState: {
+            secondTranslationEnabled: secondTranslationEnabled(settings),
+            developerDeepseekKoreanEnabled: settings.developerDeepseekKoreanEnabled === true,
+            developerSecondTranslationEnabled: settings.developerSecondTranslationEnabled === true,
             autoInput: Boolean(settings.autoInput),
             autoOutput: settings.autoOutput !== false,
             selectionCandidates: Boolean(settings.selectionCandidates),
@@ -1192,7 +1207,7 @@ function createDebugDiagnostic(stage = 'unknown', error = null, displayMessage =
             timeoutSeconds: Number(settings.timeoutSeconds) || 0,
             mountedMessageCount: document.querySelectorAll('.mes[mesid]').length,
         },
-        privacy: error?.verbaDeepProtectedRecovery ? '보호 표식 문제 구간의 원문·번역 일부를 포함합니다. 민감값 마스킹·길이 제한을 적용하며 공유 전 확인하세요.' : '채팅·프롬프트는 별도로 수집하지 않음. 후검수 금지어 거부 진단에는 검출된 표현·조건부 규칙의 원문 단어·판정 방식·수정 전 존재 여부가 포함됩니다. 전달된 서버 오류는 민감값을 마스킹하고 길이를 제한함. 서버가 오류에 본문 일부를 포함할 수 있으므로 공유 전 확인하세요.',
+        privacy: error?.verbaDeepProtectedRecovery ? '보호 표식 문제 구간의 원문·번역 일부를 포함합니다. 민감값 마스킹·길이 제한을 적용하며 공유 전 확인하세요.' : '2차 번역 진단에는 원문·초안·실제 요청과 응답 본문이 포함됩니다. 공유 전 내용을 확인하세요. 후검수 금지어 거부 진단에는 검출된 표현·조건부 규칙의 원문 단어·판정 방식·수정 전 존재 여부가 포함됩니다. 전달된 서버 오류는 민감값을 마스킹하고 길이를 제한함. 서버가 오류에 본문 일부를 포함할 수 있으므로 공유 전 확인하세요.',
         ...(sourceChangeTracer.diagnostics().fullTextEnabled && settings.debugMode === true
             ? { fullSourceWarning: '원문 전체 비교 기록이 활성화되어 있습니다. sourceChangeTrace.events에는 변경 전후의 RP 본문 전체, 삭제/추가된 글이 포함됩니다. 외부 공유 전 반드시 내용을 검토하세요.' } : {}),
         limitation: '숨김은 브라우저 동결의 증거가 아닙니다. freeze 이벤트나 타이머 지연은 참고 정황이며, 실제 동결 중에는 브라우저 로그를 기록할 수 없습니다. 터먹스 로그는 별도입니다.',
@@ -3318,6 +3333,7 @@ async function sendProfileRequest(prompt, options = {}) {
     if (availableProfiles.length && !availableProfiles.some(profile => profile.id === profileId)) {
         throw new Error(`프로필 ${profileSlot}의 저장된 연결 프로필을 찾을 수 없습니다. 새로고침 후 다시 선택해 주세요.`);
     }
+    const wire = createSecondTranslationAttempt(options, profileSlot, prompt);
     const startedAt = performance.now();
     let attemptSucceeded = false;
     let attemptError = null;
@@ -3368,15 +3384,17 @@ async function sendProfileRequest(prompt, options = {}) {
             const request = Promise.resolve().then(() => {
                 if (controller.signal.aborted) throw abortError();
                 outputTiming.sent(options.timing, timingRequest);
+                wire?.request();
                 return service.sendRequest(
                     profileId,
                     [{ role: 'user', content: prompt }],
                     options.stage === 'bilingual-check' ? 512 : VERBA_DEEP_MAX_TOKENS,
-                    { signal: controller.signal },
+                    { signal: controller.signal, ...(wire ? { onDiagnostic: wire.provider } : {}) },
                 );
             });
             const response = await Promise.race([request, hardStop]);
             outputTiming.received(options.timing, timingRequest);
+            wire?.response(extractResponseText(response));
 
             if (!extractResponseText(response).trim()) {
                 const error = new Error('AI가 빈 응답을 반환했습니다.');
@@ -3402,6 +3420,7 @@ async function sendProfileRequest(prompt, options = {}) {
         // "취소 중" until every earlier request had finished.
         return await Promise.race([queuedRequest, hardStop]);
     } catch (error) {
+        wire?.error(error);
         outputTiming.received(options.timing, timingRequest);
         if (timedOut) {
             const timeoutError = new Error(`응답 대기 시간 ${timeoutSeconds}초를 초과했습니다.`);
@@ -5333,10 +5352,16 @@ async function translateOutputText(source, options = {}) {
     normalizeLocallyRecoverableProtectedTokens(segmented, translations, settings, speakerScopes);
     comparison.capture('local-normalization', translations);
 
+    let secondTranslationTrace = null;
     if (secondTranslationEnabled(settings)) {
         const rewritten = await requestSecondTranslation({
             segmented, translations,
             options: { ...options, speakerIdentity }, request: requestSegments,
+            binding: outputBinding(source, options, options.diagnosticRuntime || 'browser'),
+            onDiagnostic: settings.debugMode === true ? record => {
+                secondTranslationTrace = record;
+                rememberSecondTranslationTrace(record);
+            } : undefined,
         });
         translations.clear();
         for (const [id, text] of rewritten) translations.set(id, text);
@@ -5491,7 +5516,7 @@ async function translateOutputText(source, options = {}) {
     return {
         translation: result,
         sourceMap: buildSourceMap(segmented, translations, result),
-        ...(settings.debugMode === true ? { outputComparison: comparison.finish(result) } : {}),
+        ...(settings.debugMode === true ? { outputComparison: comparison.finish(result), ...(secondTranslationTrace ? { secondTranslationTrace } : {}) } : {}),
     };
 }
 
@@ -11083,7 +11108,7 @@ function deepseekSettingsMarkup() {
                     <input type="checkbox" id="verba-deep-second-translation-enabled" ${settings.developerSecondTranslationEnabled ? 'checked' : ''}>
                     <span>2차 번역</span>
                 </label>
-                <small>원문·초안·2차 재작성 지시만 보내 한 번 더 번역하고 최종본만 표시해요. 사용자 프롬프트와 취향 설정은 1차에서 적용하며, 2차에는 다시 보내지 않아요. 추가 시간과 API 사용량이 발생해요.</small>
+                <small>원문·초안·2차 재작성 지시만 보내 한 번 더 번역하고 최종본만 표시해요. 사용자 프롬프트와 취향 설정은 1차에서 적용하며, 2차에는 다시 보내지 않아요. 2차에서도 거의 그대로인 긴 서술은 모아서 한 번 더 편집해요. 추가 시간과 API 사용량이 발생해요.</small>
             </div>
         </details>`;
 }
@@ -12197,7 +12222,7 @@ function injectSettingsPanel() {
                             <input type="checkbox" id="verba-deep-debug-mode" ${settings.debugMode ? 'checked' : ''}>
                             <span>디버그 모드</span>
                         </label>
-                        <div class="verba-deep-help">오류가 없어도 로그 복사로 현재 번역 대기·재시도 상태와 백그라운드 전환 기록을 확인할 수 있어요. 마지막 오류·응답 형식·보호 표식 복구 1건도 함께 기록합니다. 복구에 성공해도 원인과 결과를 복사할 수 있어요. 끄거나 새로고침하면 지워집니다. 문제 구간의 원문·번역 일부가 포함됩니다. 공유 전에 확인해 주세요. 서버 터미널 로그는 제외합니다.</div>
+                        <div class="verba-deep-help">오류가 없어도 로그 복사로 현재 번역 대기·재시도 상태와 백그라운드 전환 기록을 확인할 수 있어요. 마지막 오류·응답 형식·보호 표식 복구 1건도 함께 기록합니다. 복구에 성공해도 원인과 결과를 복사할 수 있어요. 2차 번역을 사용하면 원문·1차 초안·2차 요청/응답·추가 편집 결과도 로그에 포함돼요. 브라우저 기록은 끄거나 새로고침하면 지워지며, 서버 작업 기록은 로그 저장 시 다시 읽어올 수 있어요. 공유 전에 확인해 주세요. 서버 터미널 로그는 제외합니다.</div>
                         <label class="verba-deep-check-row">
                             <input type="checkbox" id="verba-deep-debug-full-source" ${sourceChangeTracer.diagnostics().fullTextEnabled ? 'checked' : ''} ${settings.debugMode ? '' : 'disabled'}>
                             <span>원문 변경 전·후 전체 기록 (선택)</span>
@@ -12884,6 +12909,7 @@ function injectSettingsPanel() {
             displayStateTrace.reset();
             executionTrace.clear({ dropTimer: true });
             lastDebugDiagnostic = null;
+            lastSecondTranslationTrace = null;
         } else {
             executionTrace.start();
             traceLatestAssistantSource('debug-enabled');
@@ -12892,7 +12918,7 @@ function injectSettingsPanel() {
         renderOutputTiming();
         saveSettings();
         syncDebugCopyButton();
-        notify(settings.debugMode ? '디버그를 켰어요. 다음 출력 번역 시간과 마지막 오류를 기록해요.' : '디버그를 끄고 오류·시간 기록을 지웠어요.', 'info');
+        notify(settings.debugMode ? '디버그를 켰어요. 다음 번역 시간·오류와 2차 번역 요청/응답을 기록해요.' : '디버그를 끄고 오류·시간 기록을 지웠어요.', 'info');
     });
     fullSourceInput?.addEventListener('change', event => {
         fullSourceSnapshotsEnabled = Boolean(event.target.checked)
