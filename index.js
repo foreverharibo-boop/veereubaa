@@ -1,3 +1,4 @@
+import { exportDebugText } from './debug-export.js';
 import { secondTranslationEnabled, requestSecondTranslation } from './second-translation.js';
 import { sourceMapSummary, createSourceViewDiagnostics } from './source-map-diagnostics.js';
 import { createCharacterTranslationReference } from './character-translation-reference.js';
@@ -12,7 +13,7 @@ import { createOutputComparison, appendOutputComparison, createOutputComparisonS
 import { escapeCodeTranslation } from './code-content.js';
 import { buildBilingualVerdictPrompt, bilingualPromptsNeedingVerdict, resolveBilingualIntent } from './bilingual-intent.js';
 import { reconcileCompletedResult, compatibleCompletedSource, hasVerifiedSceneReport } from './server-result-compat.js?v=2';
-import { createServerClient } from './server-client.js?v=0.6.99';
+import { createServerClient } from './server-client.js?v=0.6.100';
 import { createAutomaticOutputLifecycle } from './automatic-output.js?v=0.6.44';
 import { createSourceChangeTracer } from './source-change-tracer.js?v=0.6.44';
 import { createBrowserExecutionDiagnostics } from './browser-execution-diagnostics.js?v=0.6.44';
@@ -79,7 +80,7 @@ import {
 } from './core.js';
 
 const EXTENSION_KEY = 'verba-deep';
-const EXTENSION_VERSION = '0.6.99';
+const EXTENSION_VERSION = '0.6.100';
 // Keep this in sync with the shared server manifest for the verba-deep engine.
 const SERVER_ENGINE_VERSION = '0.6.99';
 const DEVELOPER_ACCESS_CODE = '130918';
@@ -1203,8 +1204,8 @@ function debugDiagnosticText(diagnostic) {
     return `베에르으바아 오류 진단\n${JSON.stringify(diagnostic, null, 2)}`;
 }
 
-async function copyDebugDiagnostic(diagnostic = lastDebugDiagnostic) {
-    if (!settings.debugMode) throw new Error('복사하려면 디버그 모드를 켜 주세요.');
+async function copyDebugDiagnostic(diagnostic = lastDebugDiagnostic, { fileOnly = false } = {}) {
+    if (!settings.debugMode) throw new Error('로그를 내보내려면 디버그 모드를 켜 주세요.');
     executionTrace.heartbeat();
     traceLatestAssistantSource('log-copy');
     await verbaServer.refreshDiagnostics();
@@ -1222,7 +1223,8 @@ async function copyDebugDiagnostic(diagnostic = lastDebugDiagnostic) {
         })),
     };
     if (diagnostic) snapshot.lastRecordedDiagnostic = diagnostic;
-    await copyText(debugDiagnosticText(snapshot));
+    const filename = 'verba-deep-debug-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt';
+    return exportDebugText(debugDiagnosticText(snapshot), { copy: copyText, filename, fileOnly });
 }
 
 function reportError(stage, error, displayMessage = '') {
@@ -12203,6 +12205,8 @@ function injectSettingsPanel() {
                         </label>
                         <div class="verba-deep-help">디버그를 켠 뒤 이 옵션까지 켜면 변경 전·후 본문과 삭제/추가된 문장이 로그에 포함됩니다. 실제 본문은 최근 변경 8건만 메모리에 보관하며, 체크 상태만 기기에 저장됩니다. 한 번 켜면 직접 끌 때까지 새로고침 후에도 유지됩니다. 외부 공유 전 RP 내용을 반드시 확인해 주세요.</div>
                         <button type="button" id="verba-deep-copy-last-debug" class="menu_button verba-deep-wide" ${settings.debugMode ? '' : 'disabled'}>로그 복사</button>
+                        <button type="button" id="verba-deep-save-debug-file" class="menu_button verba-deep-wide" ${settings.debugMode ? '' : 'disabled'}>로그 파일 저장</button>
+                        <div class="verba-deep-help">로그가 길거나 클립보드 복사가 막히면 TXT 파일로 저장할 수 있어요. 로그 복사에 실패해도 파일 다운로드로 전환합니다.</div>
                         <details class="verba-deep-tool-details">
                             <summary>마지막 출력 번역 소요 시간</summary>
                             <div class="verba-deep-tool-details-content">
@@ -12864,8 +12868,10 @@ function injectSettingsPanel() {
     const debugModeInput = panel.querySelector('#verba-deep-debug-mode');
     const fullSourceInput = panel.querySelector('#verba-deep-debug-full-source');
     const debugCopyButton = panel.querySelector('#verba-deep-copy-last-debug');
+    const debugFileButton = panel.querySelector('#verba-deep-save-debug-file');
     const syncDebugCopyButton = () => {
         if (debugCopyButton) debugCopyButton.disabled = !settings.debugMode;
+        if (debugFileButton) debugFileButton.disabled = !settings.debugMode;
         if (fullSourceInput) {
             fullSourceInput.disabled = !settings.debugMode;
             fullSourceInput.checked = sourceChangeTracer.diagnostics().fullTextEnabled;
@@ -12905,11 +12911,20 @@ function injectSettingsPanel() {
     });
     debugCopyButton?.addEventListener('click', async () => {
         try {
-            await copyDebugDiagnostic();
-            notify('현재 번역 상태와 최근 오류 로그를 복사했어요.', 'success');
+            const method = await copyDebugDiagnostic();
+            notify(method === 'file' ? '클립보드 복사가 막혀 로그 파일 다운로드를 요청했어요.' : '현재 번역 상태와 최근 오류 로그를 복사했어요.', 'success');
         } catch (error) {
             console.error('[베에르으바아] 최근 오류 진단 복사 실패', error);
-            notify('로그 복사에 실패했어요. 디버그 모드와 클립보드 권한을 확인해 주세요.', 'warning');
+            notify('로그를 내보내지 못했어요. 디버그 상태와 브라우저 다운로드 허용 여부를 확인해 주세요.', 'warning');
+        }
+    });
+    debugFileButton?.addEventListener('click', async () => {
+        try {
+            await copyDebugDiagnostic(lastDebugDiagnostic, { fileOnly: true });
+            notify('로그 파일 다운로드를 요청했어요.', 'success');
+        } catch (error) {
+            console.error('[베에르으바아] 진단 파일 저장 실패', error);
+            notify('로그 파일을 저장하지 못했어요. 디버그 상태와 브라우저 다운로드 허용 여부를 확인해 주세요.', 'warning');
         }
     });
     syncDebugCopyButton();
