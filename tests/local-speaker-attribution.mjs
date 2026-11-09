@@ -90,8 +90,8 @@ const prompt = buildOutputPrompt(segmented, {
     developerHongjinProfanity: 'high',
 }, '', identity, null, scopes);
 assert.match(prompt, /"speaker_scope":"target_dialogue"/);
-assert.match(prompt, /already confirmed as TARGET CHARACTER speech/);
-assert.match(prompt, /Never apply that voice to speaker_scope="other_dialogue"/);
+assert.match(prompt, /speaker_scope=target_dialogue is confirmed TARGET speech/);
+assert.match(prompt, /other_dialogue is USER\/NPC speech. Apply only the matching speaker rules/);
 
 const index = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
 assert.match(index, /inferLocalTargetDialogueScopes\(segmented, speakerIdentity\)/);

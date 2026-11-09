@@ -1,3 +1,4 @@
+import { hasUnrecognizedSpeechActor, introducesIndirectSpeech, hasAttachedSpeechTag, hasUncertainPostQuoteTag } from './speaker-attribution-guards.js';
 import { effectiveMadUserRegister } from './user-character-register.js';
 import { translationContext } from './translation-context.js';
 import { withDeepseekKoreanPrompt } from './deepseek-korean.js';
@@ -5769,6 +5770,10 @@ function leadingSpeakerActor(text, aliases, targetGender, fallback = 'unknown') 
     for (const rawSentence of sentences) {
         const sentence = rawSentence.trim();
         if (!sentence) continue;
+        if (hasUnrecognizedSpeechActor(sentence, aliases) || introducesIndirectSpeech(sentence)) {
+            actor = 'uncertain';
+            continue;
+        }
         const firstToken = sentence.match(/^(@@VERBA_DEEP_NAME_\d{4}@@)/u)?.[1] || '';
         if (firstToken && aliases.targetTokens.has(firstToken)) {
             actor = 'target';
@@ -5821,6 +5826,7 @@ function postDialogueSpeaker(text, aliases, targetGender, activeActor) {
 
     const pronoun = lead.match(new RegExp(`^(he|she|they)\\s+${speechVerb}\\b`, 'iu'))?.[1]?.toLocaleLowerCase();
     const gender = String(targetGender || 'unknown').toLocaleLowerCase();
+    if (pronoun && activeActor === 'uncertain') return 'uncertain';
     if (pronoun === 'he') {
         if (gender === 'female') return 'other';
         if (gender === 'male') return activeActor === 'other' ? 'other' : 'target';
@@ -5851,15 +5857,20 @@ export function inferLocalTargetDialogueScopes(segmented, identity = {}) {
 
         const next = segments[index + 1];
         const tagged = next?.type === 'narration'
+            && (activeActor !== 'uncertain' || hasAttachedSpeechTag(segment.text, next.text))
             ? postDialogueSpeaker(next.text, aliases, identity.characterGender, activeActor)
             : 'unknown';
-        const actor = tagged === 'unknown' ? activeActor : tagged;
+        const previous = segments[index - 1];
+        const needsReview = (previous?.type === 'narration' && introducesIndirectSpeech(previous.text))
+            || (next?.type === 'narration' && hasUncertainPostQuoteTag(segment.text, next.text, aliases));
+        const actor = needsReview ? 'uncertain' : tagged === 'unknown' ? activeActor : tagged;
         scopes[segment.id] = actor === 'target'
             ? 'target_dialogue'
             : actor === 'other' || actor === 'user'
                 ? 'other_dialogue'
                 : 'unknown_dialogue';
-        if (tagged !== 'unknown') activeActor = tagged;
+        if (needsReview) activeActor = 'uncertain';
+        else if (tagged !== 'unknown') activeActor = tagged;
     }
     return scopes;
 }
