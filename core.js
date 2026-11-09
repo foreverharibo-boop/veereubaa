@@ -5769,7 +5769,7 @@ function leadingSpeakerActor(text, aliases, targetGender, fallback = 'unknown') 
     for (const rawSentence of sentences) {
         const sentence = rawSentence.trim();
         if (!sentence) continue;
-        const firstToken = sentence.match(/^(@@VERBA_NAME_\d{4}@@)/u)?.[1] || '';
+        const firstToken = sentence.match(/^(@@VERBA_DEEP_NAME_\d{4}@@)/u)?.[1] || '';
         if (firstToken && aliases.targetTokens.has(firstToken)) {
             actor = 'target';
             continue;
@@ -5804,8 +5804,8 @@ function leadingSpeakerActor(text, aliases, targetGender, fallback = 'unknown') 
 function postDialogueSpeaker(text, aliases, targetGender, activeActor) {
     const lead = String(text || '').trim().slice(0, 240);
     const speechVerb = '(?:said|asked|replied|answered|called|shouted|whispered|muttered|added|continued|snapped|growled|told)';
-    const token = lead.match(new RegExp(`^(@@VERBA_NAME_\\d{4}@@)(?:\\s+[^.!?]{0,50})?\\s+${speechVerb}\\b`, 'iu'))?.[1]
-        || lead.match(new RegExp(`^${speechVerb}\\s+(@@VERBA_NAME_\\d{4}@@)\\b`, 'iu'))?.[1]
+    const token = lead.match(new RegExp(`^(@@VERBA_DEEP_NAME_\\d{4}@@)(?:\\s+[^.!?]{0,50})?\\s+${speechVerb}\\b`, 'iu'))?.[1]
+        || lead.match(new RegExp(`^${speechVerb}\\s+(@@VERBA_DEEP_NAME_\\d{4}@@)(?=$|[^\\p{L}\\p{N}_])`, 'iu'))?.[1]
         || '';
     if (token && aliases.targetTokens.has(token)) return 'target';
     if (token && aliases.otherTokens.has(token)) return 'other';
