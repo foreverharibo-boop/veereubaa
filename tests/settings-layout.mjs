@@ -1,5 +1,6 @@
+import { normalizedTranslationMaxTokens } from '../output-tokens.js';
 import { normalizePostReview, postReviewSettingsMarkup } from '../post-review.js';
-const Function = (...args) => globalThis.Function('normalizePostReview', 'postReviewSettingsMarkup', ...args).bind(null, normalizePostReview, postReviewSettingsMarkup);
+const Function = (...args) => globalThis.Function('normalizedTranslationMaxTokens', 'normalizePostReview', 'postReviewSettingsMarkup', ...args).bind(null, normalizedTranslationMaxTokens, normalizePostReview, postReviewSettingsMarkup);
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { POST_TRANSLATION_AI_REPAIR_ENABLED } from '../minimal-output.js';
